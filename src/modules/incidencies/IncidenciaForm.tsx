@@ -3,16 +3,6 @@ import { X, AlertCircle, Loader2 } from 'lucide-react'
 import type { IncidenciaFormData, TipusProblema, PrioritatIncidencia } from './types'
 import { useConfigStore } from '../../store/configStore'
 
-// Mock d'inventari — es substituirà per dades reals al punt 6
-const INVENTARI_MOCK = [
-  { id: 'INV-001', nom: 'HP EliteBook 840', ubicacio: 'Aula 55' },
-  { id: 'INV-002', nom: 'iMac 27"', ubicacio: 'BAXT-1A' },
-  { id: 'INV-003', nom: 'MacBook Air M2', ubicacio: 'Sala Professors' },
-  { id: 'INV-004', nom: 'Projector Epson EB-X41', ubicacio: 'Aula 32' },
-  { id: 'INV-005', nom: 'Impressora HP LaserJet', ubicacio: 'Secretaria' },
-]
-
-
 const PRIORITAT_OPTIONS: PrioritatIncidencia[] = ['Alta', 'Mitjana', 'Baixa']
 
 interface ItemInventari {
@@ -39,7 +29,7 @@ export function IncidenciaForm({
   onClose,
   onGuardar,
   isCoordinador = false,
-  inventari = INVENTARI_MOCK,
+  inventari = [],
 }: Props) {
   const tipusOptions = useConfigStore((s) => s.getValues('incidencies.tipus')) as TipusProblema[]
   const localitzacionsConfig = useConfigStore((s) => s.getValues('incidencies.localitzacions'))

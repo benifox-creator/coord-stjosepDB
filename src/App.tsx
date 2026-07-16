@@ -122,6 +122,8 @@ function AuthSync() {
 
 function IncidenciesWrapper() {
   const { incidencies, loading, error, crear, canviarEstat, assignar, editarComentaris, eliminar, refetch } = useIncidencies()
+  const { items: inventariItems } = useInventari()
+  const inventariPerSelector = inventariItems.map((item) => ({ id: item.ID, nom: item.Nom, ubicacio: item.Ubicació }))
   const rol = useUsuarisStore((s) => s.rol)
   const pGestionar = potGestionar(rol)
   const pEliminar = potEliminar(rol)
@@ -149,6 +151,7 @@ function IncidenciesWrapper() {
           onClose={() => setFormObert(false)}
           onGuardar={crear}
           isCoordinador={pGestionar}
+          inventari={inventariPerSelector}
         />
       )}
       {seleccionada && (
