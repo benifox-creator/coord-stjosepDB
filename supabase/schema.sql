@@ -189,6 +189,7 @@ create table public.material (
 create or replace function public.adjust_material_stock(p_material_id uuid, p_delta integer)
 returns void
 language sql
+set search_path = public
 as $$
   update public.material
   set quantitat_disponible = greatest(0, quantitat_disponible + p_delta)
@@ -221,6 +222,8 @@ create table public.prestec_items (
   material_id  uuid not null references public.material(id),
   quantitat    integer not null check (quantitat > 0)
 );
+create index prestec_items_prestec_id_idx on public.prestec_items(prestec_id);
+create index prestec_items_material_id_idx on public.prestec_items(material_id);
 
 -- ---------- reserves ----------
 create sequence public.reserves_codi_seq;
