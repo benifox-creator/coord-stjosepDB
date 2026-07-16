@@ -12,28 +12,28 @@ const MOCK: Reserva[] = [
     Usuari: 'Pere Fonts', Email: 'pere.fonts@stjosep.org',
     Data: AVUI, Hora_inici: '10:00', Hora_fi: '12:00',
     Motiu: 'Classe de programació amb 4t ESO',
-    Estat: 'Confirmada', Creat_el: '2026-06-20 09:15', _rowIndex: 0,
+    Estat: 'Confirmada', Creat_el: '2026-06-20 09:15', id: "mock-0",
   },
   {
     ID: 'RES-002', Espai: 'Sala de reunions',
     Usuari: 'Maria López', Email: 'maria.lopez@stjosep.org',
     Data: AVUI, Hora_inici: '14:00', Hora_fi: '15:30',
     Motiu: 'Reunió de cicle amb equip docent',
-    Estat: 'Pendent', Creat_el: '2026-06-22 11:00', _rowIndex: 1,
+    Estat: 'Pendent', Creat_el: '2026-06-22 11:00', id: "mock-1",
   },
   {
     ID: 'RES-003', Espai: "Sala d'actes",
     Usuari: 'Anna Puig', Email: 'anna.puig@stjosep.org',
     Data: '2026-06-25', Hora_inici: '09:00', Hora_fi: '13:00',
     Motiu: 'Acte final de curs',
-    Estat: 'Confirmada', Creat_el: '2026-06-15 10:30', _rowIndex: 2,
+    Estat: 'Confirmada', Creat_el: '2026-06-15 10:30', id: "mock-2",
   },
   {
     ID: 'RES-004', Espai: 'Biblioteca',
     Usuari: 'Jordi Mas', Email: 'jordi.mas@stjosep.org',
     Data: '2026-06-24', Hora_inici: '11:00', Hora_fi: '12:00',
     Motiu: 'Sessió de lectura amb 1r ESO',
-    Estat: 'Pendent', Creat_el: '2026-06-22 16:00', _rowIndex: 3,
+    Estat: 'Pendent', Creat_el: '2026-06-22 16:00', id: "mock-3",
   },
 ]
 

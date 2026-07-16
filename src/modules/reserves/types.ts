@@ -1,6 +1,7 @@
 export type EstatReserva = 'Pendent' | 'Confirmada' | 'Cancel·lada'
 
 export interface Reserva {
+  id: string
   ID: string
   Espai: string
   Usuari: string
@@ -11,7 +12,6 @@ export interface Reserva {
   Motiu: string
   Estat: EstatReserva
   Creat_el: string    // ISO datetime
-  _rowIndex: number
 }
 
-export type ReservaFormData = Omit<Reserva, 'ID' | 'Estat' | 'Creat_el' | '_rowIndex'>
+export type ReservaFormData = Omit<Reserva, 'id' | 'ID' | 'Estat' | 'Creat_el'>

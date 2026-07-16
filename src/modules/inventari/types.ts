@@ -12,7 +12,7 @@ export type CategoriaInventari =
   | 'Altre'
 
 export interface ItemInventari {
-  // Ordre idèntic a les columnes del Sheet
+  id: string
   ID: string               // INV-001, INV-002...
   Nom: string
   Categoria: CategoriaInventari
@@ -28,9 +28,6 @@ export interface ItemInventari {
   IP_LAN: string
   IP_WAN: string
   Notes: string
-
-  // Intern, no persistit al Sheet
-  _rowIndex: number
 }
 
-export type ItemInventariFormData = Omit<ItemInventari, 'ID' | '_rowIndex'>
+export type ItemInventariFormData = Omit<ItemInventari, 'id' | 'ID'>

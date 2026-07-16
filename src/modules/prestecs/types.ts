@@ -1,6 +1,7 @@
 export type EstatPrestec = 'Actiu' | 'Retornat' | 'Vençut'
 
 export interface Prestec {
+  id: string
   ID: string
   Dispositiu_ID: string
   Dispositiu_Nom: string
@@ -12,7 +13,6 @@ export interface Prestec {
   Material: string         // serialitzat: "MAT-001:2:Cable HDMI;MAT-003:1:Adaptador VGA"
   Estat: EstatPrestec
   Notes: string
-  _rowIndex: number
 }
 
-export type PrestecFormData = Omit<Prestec, 'ID' | 'Data_fi_real' | 'Estat' | '_rowIndex'>
+export type PrestecFormData = Omit<Prestec, 'id' | 'ID' | 'Data_fi_real' | 'Estat'>

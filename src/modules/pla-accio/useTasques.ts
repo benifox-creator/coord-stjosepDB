@@ -1,31 +1,44 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getRows, appendRow, updateRow, deleteRow } from '../../services/sheets'
-import {
-  SHEET_TASQUES, HEADERS_TASQUES, ensureHeadersTasques,
-  generateTascaId, formatDateTimeISO,
-} from './pla-accio.utils'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
+import { formatDateTimeISO } from './pla-accio.utils'
 import type { Tasca, TascaFormData, EstatTasca } from './types'
 
-function rowToTasca(row: Record<string, string>, index: number): Tasca {
+const TABLE = 'tasques'
+
+interface TascaRow {
+  id: string
+  codi: string
+  projecte_codi: string
+  titol: string
+  descripcio: string
+  estat: string
+  prioritat: string
+  responsable: string
+  data_limit: string
+  creat_el: string
+}
+
+function rowToTasca(row: TascaRow): Tasca {
   return {
-    ID: row['ID'] ?? '',
-    Projecte_ID: row['Projecte_ID'] ?? '',
-    Titol: row['Titol'] ?? '',
-    Descripcio: row['Descripcio'] ?? '',
-    Estat: (row['Estat'] as EstatTasca) || 'Pendent',
-    Prioritat: (row['Prioritat'] as Tasca['Prioritat']) || 'Mitjana',
-    Responsable: row['Responsable'] ?? '',
-    Data_limit: row['Data_limit'] ?? '',
-    Creat_el: row['Creat_el'] ?? '',
-    _rowIndex: index,
+    id: row.id,
+    ID: row.codi,
+    Projecte_ID: row.projecte_codi,
+    Titol: row.titol,
+    Descripcio: row.descripcio,
+    Estat: (row.estat as EstatTasca) || 'Pendent',
+    Prioritat: (row.prioritat as Tasca['Prioritat']) || 'Mitjana',
+    Responsable: row.responsable,
+    Data_limit: row.data_limit,
+    Creat_el: row.creat_el,
   }
 }
 
-function tascaToRow(t: Tasca): Record<string, string> {
-  return [...HEADERS_TASQUES].reduce((acc, h) => {
-    acc[h] = t[h as keyof Omit<Tasca, '_rowIndex'>] ?? ''
-    return acc
-  }, {} as Record<string, string>)
+function formToInsert(data: TascaFormData): Record<string, unknown> {
+  return {
+    projecte_codi: data.Projecte_ID, titol: data.Titol, descripcio: data.Descripcio,
+    estat: data.Estat, prioritat: data.Prioritat, responsable: data.Responsable,
+    data_limit: data.Data_limit,
+  }
 }
 
 export function useTasques() {
@@ -37,9 +50,8 @@ export function useTasques() {
     setLoading(true)
     setError(null)
     try {
-      await ensureHeadersTasques()
-      const rows = await getRows(SHEET_TASQUES)
-      setTasques(rows.flatMap((r, i) => r['Eliminat'] === 'true' ? [] : [rowToTasca(r, i)]))
+      const rows = await getAll<TascaRow>(TABLE, 'creat_el')
+      setTasques(rows.map(rowToTasca))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
@@ -50,28 +62,22 @@ export function useTasques() {
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: TascaFormData): Promise<void> {
-    const nova: Tasca = {
-      ID: generateTascaId(tasques.map((t) => t.ID)),
-      ...data,
-      Creat_el: formatDateTimeISO(new Date()),
-      _rowIndex: -1,
-    }
-    await appendRow(SHEET_TASQUES, tascaToRow(nova))
+    await insertRow(TABLE, { ...formToInsert(data), creat_el: formatDateTimeISO(new Date()) })
     await fetchData()
   }
 
   async function editar(tasca: Tasca, data: TascaFormData): Promise<void> {
-    await updateRow(SHEET_TASQUES, tasca._rowIndex, tascaToRow({ ...tasca, ...data }))
+    await updateRowById(TABLE, tasca.id, formToInsert(data))
     await fetchData()
   }
 
   async function canviarEstat(tasca: Tasca, estat: EstatTasca): Promise<void> {
-    await updateRow(SHEET_TASQUES, tasca._rowIndex, tascaToRow({ ...tasca, Estat: estat }))
+    await updateRowById(TABLE, tasca.id, { estat })
     await fetchData()
   }
 
   async function eliminar(tasca: Tasca): Promise<void> {
-    await deleteRow(SHEET_TASQUES, tasca._rowIndex)
+    await deleteRowById(TABLE, tasca.id)
     await fetchData()
   }
 

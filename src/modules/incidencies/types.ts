@@ -9,7 +9,7 @@ export type TipusProblema =
   | 'Altre'
 
 export interface Incidencia {
-  // Camps del Google Sheet — ordre idèntic a les columnes
+  id: string
   Ticket: string                 // INC-001, INC-002...
   'Marca de temps': string       // ISO datetime de creació
   Estat: EstatIncidencia
@@ -24,9 +24,6 @@ export interface Incidencia {
   'Dies Tasca Oberta': string    // calculat
   Comentaris: string
   Notificat: string              // 'false' | 'pending' | 'true'
-
-  // Camp intern, no persistit al Sheet
-  _rowIndex: number
 }
 
 // Dades que introdueix l'usuari al formulari

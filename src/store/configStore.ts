@@ -1,8 +1,7 @@
 import { create } from 'zustand'
-import { getRows, appendRow, updateRow, ensureSheetHeaders } from '../services/sheets'
+import { supabase } from '../services/db'
 
-const SHEET = 'Config'
-const HEADERS = ['Clau', 'Valors']
+const TABLE = 'config'
 
 export const MODULS_VISIBILITAT = [
   { key: 'incidencies',  label: 'Incidències' },
@@ -119,16 +118,15 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     if (get().loading) return
     set({ loading: true, error: null })
     try {
-      const rows = await getRows(SHEET)
+      const { data, error } = await supabase.from(TABLE).select('clau, valors')
+      if (error) throw error
       const config: Record<string, string[]> = {}
-      for (const row of rows) {
-        if (row['Clau'] && row['Valors']) {
-          config[row['Clau']] = row['Valors'].split(';').filter(Boolean)
-        }
+      for (const row of (data ?? []) as { clau: string; valors: string[] }[]) {
+        if (row.clau && row.valors?.length > 0) config[row.clau] = row.valors
       }
       set({ config, loaded: true })
     } catch {
-      // Full no existeix o sense accés — usem defaults silenciosament
+      // Taula no existeix o sense accés — usem defaults silenciosament
       set({ loaded: true })
     } finally {
       set({ loading: false })
@@ -137,14 +135,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   async update(clau, valors) {
     set((s) => ({ config: { ...s.config, [clau]: valors } }))
-    await ensureSheetHeaders(SHEET, HEADERS)
-    const rows = await getRows(SHEET)
-    const idx = rows.findIndex((r) => r['Clau'] === clau)
-    const rowData = { Clau: clau, Valors: valors.join(';') }
-    if (idx !== -1) {
-      await updateRow(SHEET, idx, rowData)
-    } else {
-      await appendRow(SHEET, rowData)
-    }
+    const { error } = await supabase.from(TABLE).upsert({ clau, valors })
+    if (error) throw new Error(`Error desant configuració: ${error.message}`)
   },
 }))

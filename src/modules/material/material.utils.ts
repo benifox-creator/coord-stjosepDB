@@ -1,78 +1,38 @@
-import { getRows, ensureSheetHeaders, updateRow } from '../../services/sheets'
-import type { CategoriaMaterial, ItemMaterial, MaterialPrestat } from './types'
+import { supabase } from '../../services/db'
+import type { MaterialPrestat } from './types'
 
-export const SHEET = 'Material'
-
-export const HEADERS = [
-  'ID',
-  'Nom',
-  'Categoria',
-  'Descripció',
-  'Quantitat_total',
-  'Quantitat_disponible',
-  'Ubicació',
-  'Notes',
-] as const
-
-export async function ensureHeaders(): Promise<void> {
-  await ensureSheetHeaders(SHEET, [...HEADERS])
+// Resol codis humans (MAT-001...) a uuid real, per als punts on cal creuar
+// amb prestec_items (que referencia material per id, no per codi).
+export async function getMaterialIdsByCodi(codis: string[]): Promise<Record<string, string>> {
+  if (codis.length === 0) return {}
+  const { data, error } = await supabase.from('material').select('id, codi').in('codi', codis)
+  if (error) throw new Error(`Error cercant material: ${error.message}`)
+  const map: Record<string, string> = {}
+  for (const row of (data ?? []) as { id: string; codi: string }[]) map[row.codi] = row.id
+  return map
 }
 
-export function generateId(existingIds: string[]): string {
-  const nums = existingIds
-    .map((id) => parseInt(id.replace('MAT-', ''), 10))
-    .filter((n) => !isNaN(n))
-  const next = nums.length > 0 ? Math.max(...nums) + 1 : 1
-  return `MAT-${String(next).padStart(3, '0')}`
-}
-
-export function rowToItem(row: Record<string, string>, index: number): ItemMaterial {
-  return {
-    ID: row['ID'] ?? '',
-    Nom: row['Nom'] ?? '',
-    Categoria: (row['Categoria'] as CategoriaMaterial) || 'Altre',
-    Descripció: row['Descripció'] ?? '',
-    Quantitat_total: parseInt(row['Quantitat_total'] ?? '0', 10) || 0,
-    Quantitat_disponible: parseInt(row['Quantitat_disponible'] ?? '0', 10) || 0,
-    Ubicació: row['Ubicació'] ?? '',
-    Notes: row['Notes'] ?? '',
-    _rowIndex: index,
-  }
-}
-
-export function itemToRow(item: ItemMaterial): Record<string, string> {
-  return {
-    ID: item.ID,
-    Nom: item.Nom,
-    Categoria: item.Categoria,
-    Descripció: item.Descripció,
-    Quantitat_total: String(item.Quantitat_total),
-    Quantitat_disponible: String(item.Quantitat_disponible),
-    Ubicació: item.Ubicació,
-    Notes: item.Notes,
-  }
-}
-
-// Ajusta el stock disponible. delta negatiu = préstec; delta positiu = retorn.
+// Ajusta el stock disponible de forma atòmica via la funció Postgres
+// adjust_material_stock (substitueix el patró lectura+escriptura sense lock d'abans).
+// delta negatiu = préstec; delta positiu = retorn.
 export async function adjustStock(adjustments: { ID: string; delta: number }[]): Promise<void> {
   if (adjustments.length === 0) return
-  const rows = await getRows(SHEET)
+  const idMap = await getMaterialIdsByCodi(adjustments.map((a) => a.ID))
   for (const { ID, delta } of adjustments) {
-    const idx = rows.findIndex((r) => r['ID'] === ID)
-    if (idx === -1) continue
-    const current = parseInt(rows[idx]['Quantitat_disponible'] ?? '0', 10)
-    const newVal = Math.max(0, current + delta)
-    await updateRow(SHEET, idx, { ...rows[idx], Quantitat_disponible: String(newVal) })
+    const materialId = idMap[ID]
+    if (!materialId) continue
+    const { error } = await supabase.rpc('adjust_material_stock', { p_material_id: materialId, p_delta: delta })
+    if (error) throw new Error(`Error ajustant estoc de ${ID}: ${error.message}`)
   }
 }
 
-// Serialitza una llista de material prestat a string per desar al Sheet.
+// Serialitza una llista de material prestat a string per mostrar/desar.
 // Format: "MAT-001:2:Cable HDMI;MAT-003:1:Adaptador VGA"
 export function serializeMaterial(items: MaterialPrestat[]): string {
   return items.filter((m) => m.Quantitat > 0).map((m) => `${m.ID}:${m.Quantitat}:${m.Nom}`).join(';')
 }
 
-// Parseja el string del Sheet a llista d'ítems.
+// Parseja el string a llista d'ítems.
 export function parseMaterial(str: string): MaterialPrestat[] {
   if (!str || !str.trim()) return []
   return str.split(';').flatMap((part) => {

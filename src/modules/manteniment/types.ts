@@ -10,6 +10,7 @@ export type CategoriaManteniment =
 export type PrioritatManteniment = 'Urgent' | 'Normal' | 'Baixa'
 
 export interface Manteniment {
+  id: string
   ID: string
   Titol: string
   Categoria: CategoriaManteniment
@@ -22,7 +23,6 @@ export interface Manteniment {
   Data_resolucio: string
   Notes: string
   Creat_el: string
-  _rowIndex: number
 }
 
 export interface MantenimentFormData {

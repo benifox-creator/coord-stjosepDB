@@ -1,36 +1,3 @@
-import { ensureSheetHeaders } from '../../services/sheets'
-
-export const SHEET = 'Incidències'
-
-export const HEADERS = [
-  'Ticket',
-  'Marca de temps',
-  'Estat',
-  'Prioritat',
-  'Reporter',
-  'Tipus de problema',
-  'Localització',
-  'Dispositiu',
-  'Descripció detallada',
-  'Assignat a',
-  'Data Resolució',
-  'Dies Tasca Oberta',
-  'Comentaris',
-  'Notificat',
-] as const
-
-export async function ensureHeaders(): Promise<void> {
-  await ensureSheetHeaders(SHEET, [...HEADERS])
-}
-
-export function generateTicket(existingTickets: string[]): string {
-  const nums = existingTickets
-    .map((t) => parseInt(t.replace('INC-', ''), 10))
-    .filter((n) => !isNaN(n))
-  const next = nums.length > 0 ? Math.max(...nums) + 1 : 1
-  return `INC-${String(next).padStart(3, '0')}`
-}
-
 export function formatTimestamp(date: Date = new Date()): string {
   return date.toISOString()
 }

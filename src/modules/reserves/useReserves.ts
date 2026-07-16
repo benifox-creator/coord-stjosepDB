@@ -1,10 +1,42 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getRows, appendRow, updateRow, deleteRow } from '../../services/sheets'
-import { SHEET, HEADERS, ensureHeaders, generateId, formatDateTimeISO, formatDate } from './reserves.utils'
+import { getAll, insertRow, updateRowById, deleteRowById, supabase } from '../../services/db'
+import { formatDateTimeISO, formatDate } from './reserves.utils'
 import { sendEmail } from '../../services/gmail'
 import { useUsuarisStore, potEliminar } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
 import type { Reserva, EstatReserva, ReservaFormData } from './types'
+
+const TABLE = 'reserves'
+
+interface ReservaRow {
+  id: string
+  codi: string
+  espai: string
+  usuari: string
+  email: string
+  data: string
+  hora_inici: string
+  hora_fi: string
+  motiu: string
+  estat: string
+  creat_el: string
+}
+
+function rowToReserva(row: ReservaRow): Reserva {
+  return {
+    id: row.id,
+    ID: row.codi,
+    Espai: row.espai,
+    Usuari: row.usuari,
+    Email: row.email,
+    Data: row.data,
+    Hora_inici: row.hora_inici,
+    Hora_fi: row.hora_fi,
+    Motiu: row.motiu,
+    Estat: (row.estat as EstatReserva) || 'Pendent',
+    Creat_el: row.creat_el,
+  }
+}
 
 async function getCoordinadorEmails(): Promise<string[]> {
   const { usuaris } = useUsuarisStore.getState()
@@ -12,8 +44,9 @@ async function getCoordinadorEmails(): Promise<string[]> {
     return usuaris.filter((u) => u.Rol === 'coordinador').map((u) => u.Email).filter(Boolean)
   }
   try {
-    const rows = await getRows('Usuaris')
-    return rows.filter((r) => r['Rol'] === 'coordinador').map((r) => r['Email']).filter(Boolean)
+    const { data, error } = await supabase.from('usuaris').select('email').eq('rol', 'coordinador')
+    if (error) throw error
+    return (data ?? []).map((r) => r.email).filter(Boolean)
   } catch {
     return []
   }
@@ -39,29 +72,6 @@ async function notificarNovaReserva(reserva: Reserva): Promise<void> {
   await Promise.allSettled(coordinadors.map((to) => sendEmail({ to, subject, body })))
 }
 
-function rowToReserva(row: Record<string, string>, index: number): Reserva {
-  return {
-    ID: row['ID'] ?? '',
-    Espai: row['Espai'] ?? '',
-    Usuari: row['Usuari'] ?? '',
-    Email: row['Email'] ?? '',
-    Data: row['Data'] ?? '',
-    Hora_inici: row['Hora_inici'] ?? '',
-    Hora_fi: row['Hora_fi'] ?? '',
-    Motiu: row['Motiu'] ?? '',
-    Estat: (row['Estat'] as EstatReserva) || 'Pendent',
-    Creat_el: row['Creat_el'] ?? '',
-    _rowIndex: index,
-  }
-}
-
-function reservaToRow(r: Reserva): Record<string, string> {
-  return HEADERS.reduce((acc, h) => {
-    acc[h] = r[h as keyof Omit<Reserva, '_rowIndex'>] ?? ''
-    return acc
-  }, {} as Record<string, string>)
-}
-
 export function useReserves() {
   const [reserves, setReserves] = useState<Reserva[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,11 +83,8 @@ export function useReserves() {
     setLoading(true)
     setError(null)
     try {
-      await ensureHeaders()
-      const rows = await getRows(SHEET)
-      setReserves(
-        rows.flatMap((r, i) => r['Eliminat'] === 'true' ? [] : [rowToReserva(r, i)])
-      )
+      const rows = await getAll<ReservaRow>(TABLE, 'data')
+      setReserves(rows.map(rowToReserva))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
@@ -88,45 +95,38 @@ export function useReserves() {
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: ReservaFormData): Promise<void> {
-    const existingIds = reserves.map((r) => r.ID)
     const esCoordinador = potEliminar(rol)
     // Coordinator reservations are auto-confirmed; others need approval
     const estat = esCoordinador ? 'Confirmada' : 'Pendent'
-    const nova: Reserva = {
-      ID: generateId(existingIds),
-      Espai: data.Espai,
-      Usuari: data.Usuari || user?.displayName || '',
-      Email: data.Email || user?.email || '',
-      Data: data.Data,
-      Hora_inici: data.Hora_inici,
-      Hora_fi: data.Hora_fi,
-      Motiu: data.Motiu,
-      Estat: estat,
-      Creat_el: formatDateTimeISO(new Date()),
-      _rowIndex: -1,
-    }
-    await appendRow(SHEET, reservaToRow(nova))
+    const usuari = data.Usuari || user?.displayName || ''
+    const email = data.Email || user?.email || ''
+    const row = await insertRow<ReservaRow>(TABLE, {
+      espai: data.Espai, usuari, email, data: data.Data,
+      hora_inici: data.Hora_inici, hora_fi: data.Hora_fi, motiu: data.Motiu,
+      estat, creat_el: formatDateTimeISO(new Date()),
+    })
     if (!esCoordinador) {
       // Fire-and-forget: don't block the UI if email fails
-      notificarNovaReserva(nova).catch(console.error)
+      notificarNovaReserva(rowToReserva(row)).catch(console.error)
     }
     await fetchData()
   }
 
   async function editar(reserva: Reserva, data: ReservaFormData): Promise<void> {
-    const updated: Reserva = { ...reserva, ...data }
-    await updateRow(SHEET, reserva._rowIndex, reservaToRow(updated))
+    await updateRowById(TABLE, reserva.id, {
+      espai: data.Espai, usuari: data.Usuari, email: data.Email, data: data.Data,
+      hora_inici: data.Hora_inici, hora_fi: data.Hora_fi, motiu: data.Motiu,
+    })
     await fetchData()
   }
 
   async function canviarEstat(reserva: Reserva, estat: EstatReserva): Promise<void> {
-    const updated: Reserva = { ...reserva, Estat: estat }
-    await updateRow(SHEET, reserva._rowIndex, reservaToRow(updated))
+    await updateRowById(TABLE, reserva.id, { estat })
     await fetchData()
   }
 
   async function eliminar(reserva: Reserva): Promise<void> {
-    await deleteRow(SHEET, reserva._rowIndex)
+    await deleteRowById(TABLE, reserva.id)
     await fetchData()
   }
 

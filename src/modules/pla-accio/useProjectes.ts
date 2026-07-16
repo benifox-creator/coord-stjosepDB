@@ -1,31 +1,43 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getRows, appendRow, updateRow, deleteRow } from '../../services/sheets'
-import {
-  SHEET_PROJECTES, HEADERS_PROJECTES, ensureHeadersProjectes,
-  generateProjecteId, formatDateTimeISO,
-} from './pla-accio.utils'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
+import { formatDateTimeISO } from './pla-accio.utils'
 import type { Projecte, ProjecteFormData, EstatProjecte } from './types'
 
-function rowToProjecte(row: Record<string, string>, index: number): Projecte {
+const TABLE = 'projectes'
+
+interface ProjecteRow {
+  id: string
+  codi: string
+  nom: string
+  descripcio: string
+  categoria: string
+  estat: string
+  responsable: string
+  data_inici: string
+  data_fi_prevista: string
+  creat_el: string
+}
+
+function rowToProjecte(row: ProjecteRow): Projecte {
   return {
-    ID: row['ID'] ?? '',
-    Nom: row['Nom'] ?? '',
-    Descripcio: row['Descripcio'] ?? '',
-    Categoria: row['Categoria'] ?? '',
-    Estat: (row['Estat'] as EstatProjecte) || 'Actiu',
-    Responsable: row['Responsable'] ?? '',
-    Data_inici: row['Data_inici'] ?? '',
-    Data_fi_prevista: row['Data_fi_prevista'] ?? '',
-    Creat_el: row['Creat_el'] ?? '',
-    _rowIndex: index,
+    id: row.id,
+    ID: row.codi,
+    Nom: row.nom,
+    Descripcio: row.descripcio,
+    Categoria: row.categoria,
+    Estat: (row.estat as EstatProjecte) || 'Actiu',
+    Responsable: row.responsable,
+    Data_inici: row.data_inici,
+    Data_fi_prevista: row.data_fi_prevista,
+    Creat_el: row.creat_el,
   }
 }
 
-function projecteToRow(p: Projecte): Record<string, string> {
-  return [...HEADERS_PROJECTES].reduce((acc, h) => {
-    acc[h] = p[h as keyof Omit<Projecte, '_rowIndex'>] ?? ''
-    return acc
-  }, {} as Record<string, string>)
+function formToInsert(data: ProjecteFormData): Record<string, unknown> {
+  return {
+    nom: data.Nom, descripcio: data.Descripcio, categoria: data.Categoria, estat: data.Estat,
+    responsable: data.Responsable, data_inici: data.Data_inici, data_fi_prevista: data.Data_fi_prevista,
+  }
 }
 
 export function useProjectes() {
@@ -37,9 +49,8 @@ export function useProjectes() {
     setLoading(true)
     setError(null)
     try {
-      await ensureHeadersProjectes()
-      const rows = await getRows(SHEET_PROJECTES)
-      setProjectes(rows.flatMap((r, i) => r['Eliminat'] === 'true' ? [] : [rowToProjecte(r, i)]))
+      const rows = await getAll<ProjecteRow>(TABLE, 'creat_el')
+      setProjectes(rows.map(rowToProjecte))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
@@ -50,28 +61,22 @@ export function useProjectes() {
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: ProjecteFormData): Promise<void> {
-    const nou: Projecte = {
-      ID: generateProjecteId(projectes.map((p) => p.ID)),
-      ...data,
-      Creat_el: formatDateTimeISO(new Date()),
-      _rowIndex: -1,
-    }
-    await appendRow(SHEET_PROJECTES, projecteToRow(nou))
+    await insertRow(TABLE, { ...formToInsert(data), creat_el: formatDateTimeISO(new Date()) })
     await fetchData()
   }
 
   async function editar(projecte: Projecte, data: ProjecteFormData): Promise<void> {
-    await updateRow(SHEET_PROJECTES, projecte._rowIndex, projecteToRow({ ...projecte, ...data }))
+    await updateRowById(TABLE, projecte.id, formToInsert(data))
     await fetchData()
   }
 
   async function canviarEstat(projecte: Projecte, estat: EstatProjecte): Promise<void> {
-    await updateRow(SHEET_PROJECTES, projecte._rowIndex, projecteToRow({ ...projecte, Estat: estat }))
+    await updateRowById(TABLE, projecte.id, { estat })
     await fetchData()
   }
 
   async function eliminar(projecte: Projecte): Promise<void> {
-    await deleteRow(SHEET_PROJECTES, projecte._rowIndex)
+    await deleteRowById(TABLE, projecte.id)
     await fetchData()
   }
 

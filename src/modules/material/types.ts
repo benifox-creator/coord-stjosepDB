@@ -9,6 +9,7 @@ export type CategoriaMaterial =
   | 'Altre'
 
 export interface ItemMaterial {
+  id: string
   ID: string                  // MAT-001, MAT-002...
   Nom: string
   Categoria: CategoriaMaterial
@@ -17,10 +18,9 @@ export interface ItemMaterial {
   Quantitat_disponible: number
   Ubicació: string
   Notes: string
-  _rowIndex: number
 }
 
-export type MaterialFormData = Omit<ItemMaterial, 'ID' | 'Quantitat_disponible' | '_rowIndex'>
+export type MaterialFormData = Omit<ItemMaterial, 'id' | 'ID' | 'Quantitat_disponible'>
 
 export interface MaterialPrestat {
   ID: string

@@ -1,37 +1,57 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getRows, appendRow, updateRow, deleteRow } from '../../services/sheets'
-
-import {
-  SHEET, HEADERS, ensureHeaders, generateId,
-} from './inventari.utils'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import type { ItemInventari, EstatInventari, ItemInventariFormData, CategoriaInventari } from './types'
 
-function rowToItem(row: Record<string, string>, index: number): ItemInventari {
+const TABLE = 'inventari'
+
+interface InventariRow {
+  id: string
+  codi: string
+  nom: string
+  categoria: string
+  marca: string
+  model: string
+  num_serie: string
+  ubicacio: string
+  estat: string
+  data_compra: string
+  garantia_fins: string
+  mac_lan: string
+  mac_wan: string
+  ip_lan: string
+  ip_wan: string
+  notes: string
+}
+
+function rowToItem(row: InventariRow): ItemInventari {
   return {
-    ID: row['ID'] ?? '',
-    Nom: row['Nom'] ?? '',
-    Categoria: (row['Categoria'] as CategoriaInventari) || 'Altre',
-    Marca: row['Marca'] ?? '',
-    Model: row['Model'] ?? '',
-    'Núm_sèrie': row['Núm_sèrie'] ?? '',
-    Ubicació: row['Ubicació'] ?? '',
-    Estat: (row['Estat'] as EstatInventari) || 'Actiu',
-    Data_compra: row['Data_compra'] ?? '',
-    Garantia_fins: row['Garantia_fins'] ?? '',
-    MAC_LAN: row['MAC_LAN'] ?? '',
-    MAC_WAN: row['MAC_WAN'] ?? '',
-    IP_LAN: row['IP_LAN'] ?? '',
-    IP_WAN: row['IP_WAN'] ?? '',
-    Notes: row['Notes'] ?? '',
-    _rowIndex: index,
+    id: row.id,
+    ID: row.codi,
+    Nom: row.nom,
+    Categoria: (row.categoria as CategoriaInventari) || 'Altre',
+    Marca: row.marca,
+    Model: row.model,
+    'Núm_sèrie': row.num_serie,
+    Ubicació: row.ubicacio,
+    Estat: (row.estat as EstatInventari) || 'Actiu',
+    Data_compra: row.data_compra,
+    Garantia_fins: row.garantia_fins,
+    MAC_LAN: row.mac_lan,
+    MAC_WAN: row.mac_wan,
+    IP_LAN: row.ip_lan,
+    IP_WAN: row.ip_wan,
+    Notes: row.notes,
   }
 }
 
-function itemToRow(item: ItemInventari): Record<string, string> {
-  return HEADERS.reduce((acc, h) => {
-    acc[h] = item[h as keyof Omit<ItemInventari, '_rowIndex'>] ?? ''
-    return acc
-  }, {} as Record<string, string>)
+function formToInsert(data: ItemInventariFormData): Record<string, unknown> {
+  return {
+    nom: data.Nom, categoria: data.Categoria, marca: data.Marca, model: data.Model,
+    num_serie: data['Núm_sèrie'], ubicacio: data.Ubicació, estat: data.Estat,
+    data_compra: data.Data_compra, garantia_fins: data.Garantia_fins,
+    mac_lan: data.MAC_LAN, mac_wan: data.MAC_WAN, ip_lan: data.IP_LAN, ip_wan: data.IP_WAN,
+    notes: data.Notes,
+  }
 }
 
 export function useInventari() {
@@ -43,11 +63,8 @@ export function useInventari() {
     setLoading(true)
     setError(null)
     try {
-      await ensureHeaders()
-      const rows = await getRows(SHEET)
-      setItems(
-        rows.flatMap((r, i) => r['Eliminat'] === 'true' ? [] : [rowToItem(r, i)])
-      )
+      const rows = await getAll<InventariRow>(TABLE, 'codi')
+      setItems(rows.map(rowToItem))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
@@ -58,47 +75,37 @@ export function useInventari() {
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: ItemInventariFormData): Promise<void> {
-    const existingIds = items.map((i) => i.ID)
-    const nouItem: ItemInventari = {
-      ID: generateId(existingIds),
-      ...data,
-      _rowIndex: -1,
-    }
-    await appendRow(SHEET, itemToRow(nouItem))
+    await insertRow(TABLE, formToInsert(data))
     await fetchData()
   }
 
   async function editar(item: ItemInventari, data: ItemInventariFormData): Promise<void> {
-    const updated: ItemInventari = { ...item, ...data }
-    await updateRow(SHEET, item._rowIndex, itemToRow(updated))
+    await updateRowById(TABLE, item.id, formToInsert(data))
     await fetchData()
   }
 
   async function canviarEstat(item: ItemInventari, estat: EstatInventari): Promise<void> {
-    const updated: ItemInventari = { ...item, Estat: estat }
-    await updateRow(SHEET, item._rowIndex, itemToRow(updated))
+    await updateRowById(TABLE, item.id, { estat })
     await fetchData()
   }
 
   async function editarUbicacio(item: ItemInventari, ubicacio: string): Promise<void> {
-    const updated: ItemInventari = { ...item, Ubicació: ubicacio }
-    await updateRow(SHEET, item._rowIndex, itemToRow(updated))
+    await updateRowById(TABLE, item.id, { ubicacio })
     await fetchData()
   }
 
   async function editarNotes(item: ItemInventari, notes: string): Promise<void> {
-    const updated: ItemInventari = { ...item, Notes: notes }
-    await updateRow(SHEET, item._rowIndex, itemToRow(updated))
+    await updateRowById(TABLE, item.id, { notes })
     await fetchData()
   }
 
   async function donarDeBaixa(item: ItemInventari): Promise<void> {
-    await deleteRow(SHEET, item._rowIndex)
+    await deleteRowById(TABLE, item.id)
     await fetchData()
   }
 
   async function eliminar(item: ItemInventari): Promise<void> {
-    await deleteRow(SHEET, item._rowIndex)
+    await deleteRowById(TABLE, item.id)
     await fetchData()
   }
 
@@ -116,4 +123,3 @@ export function useInventari() {
     refetch: fetchData,
   }
 }
-

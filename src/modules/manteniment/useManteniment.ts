@@ -1,36 +1,43 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getRows, appendRow, updateRow, deleteRow } from '../../services/sheets'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
 import { useConfigStore } from '../../store/configStore'
-import {
-  SHEET_MANTENIMENT, HEADERS_MANTENIMENT, ensureHeadersManteniment,
-  generateMantenimentId, formatDateTimeISO,
-} from './manteniment.utils'
 import type { Manteniment, MantenimentFormData, EstatManteniment } from './types'
 
-function rowToManteniment(row: Record<string, string>, index: number): Manteniment {
-  return {
-    ID: row['ID'] ?? '',
-    Titol: row['Titol'] ?? '',
-    Categoria: (row['Categoria'] as Manteniment['Categoria']) || 'Altres',
-    Localitzacio: row['Localitzacio'] ?? '',
-    Descripcio: row['Descripcio'] ?? '',
-    Prioritat: (row['Prioritat'] as Manteniment['Prioritat']) || 'Normal',
-    Estat: (row['Estat'] as EstatManteniment) || 'Pendent',
-    Reporter: row['Reporter'] ?? '',
-    Data_report: row['Data_report'] ?? '',
-    Data_resolucio: row['Data_resolucio'] ?? '',
-    Notes: row['Notes'] ?? '',
-    Creat_el: row['Creat_el'] ?? '',
-    _rowIndex: index,
-  }
+const TABLE = 'manteniment'
+
+interface MantenimentRow {
+  id: string
+  codi: string
+  titol: string
+  categoria: string
+  localitzacio: string
+  descripcio: string
+  prioritat: string
+  estat: string
+  reporter: string
+  data_report: string
+  data_resolucio: string
+  notes: string
+  creat_el: string
 }
 
-function mantenimentToRow(m: Manteniment): Record<string, string> {
-  return [...HEADERS_MANTENIMENT].reduce((acc, h) => {
-    acc[h] = m[h as keyof Omit<Manteniment, '_rowIndex'>] ?? ''
-    return acc
-  }, {} as Record<string, string>)
+function rowToManteniment(row: MantenimentRow): Manteniment {
+  return {
+    id: row.id,
+    ID: row.codi,
+    Titol: row.titol,
+    Categoria: (row.categoria as Manteniment['Categoria']) || 'Altres',
+    Localitzacio: row.localitzacio,
+    Descripcio: row.descripcio,
+    Prioritat: (row.prioritat as Manteniment['Prioritat']) || 'Normal',
+    Estat: (row.estat as EstatManteniment) || 'Pendent',
+    Reporter: row.reporter,
+    Data_report: row.data_report,
+    Data_resolucio: row.data_resolucio,
+    Notes: row.notes,
+    Creat_el: row.creat_el,
+  }
 }
 
 async function enviarEmailDesperfecte(m: Manteniment, emailResponsable: string): Promise<void> {
@@ -67,9 +74,8 @@ export function useManteniment() {
     setLoading(true)
     setError(null)
     try {
-      await ensureHeadersManteniment()
-      const rows = await getRows(SHEET_MANTENIMENT)
-      setManteniments(rows.flatMap((r, i) => r['Eliminat'] === 'true' ? [] : [rowToManteniment(r, i)]))
+      const rows = await getAll<MantenimentRow>(TABLE, 'creat_el')
+      setManteniments(rows.map(rowToManteniment))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
@@ -82,44 +88,38 @@ export function useManteniment() {
   async function crear(data: MantenimentFormData): Promise<void> {
     const reporter = useAuthStore.getState().user?.email ?? ''
     const avui = new Date().toISOString().slice(0, 10)
-    const nou: Manteniment = {
-      ID: generateMantenimentId(manteniments.map((m) => m.ID)),
-      ...data,
-      Estat: 'Pendent',
-      Reporter: reporter,
-      Data_report: avui,
-      Data_resolucio: '',
-      Creat_el: formatDateTimeISO(new Date()),
-      _rowIndex: -1,
-    }
-    await appendRow(SHEET_MANTENIMENT, mantenimentToRow(nou))
+    const row = await insertRow<MantenimentRow>(TABLE, {
+      titol: data.Titol, categoria: data.Categoria, localitzacio: data.Localitzacio,
+      descripcio: data.Descripcio, prioritat: data.Prioritat,
+      estat: 'Pendent', reporter, data_report: avui,
+      notes: data.Notes,
+    })
     await fetchData()
 
     const emailResponsable = useConfigStore.getState().getValues('manteniment.email')[0]
     if (emailResponsable) {
-      await enviarEmailDesperfecte(nou, emailResponsable).catch(() => undefined)
+      await enviarEmailDesperfecte(rowToManteniment(row), emailResponsable).catch(() => undefined)
     }
   }
 
   async function editar(m: Manteniment, data: MantenimentFormData): Promise<void> {
-    await updateRow(SHEET_MANTENIMENT, m._rowIndex, mantenimentToRow({ ...m, ...data }))
+    await updateRowById(TABLE, m.id, {
+      titol: data.Titol, categoria: data.Categoria, localitzacio: data.Localitzacio,
+      descripcio: data.Descripcio, prioritat: data.Prioritat, notes: data.Notes,
+    })
     await fetchData()
   }
 
   async function canviarEstat(m: Manteniment, estat: EstatManteniment): Promise<void> {
-    const updated = {
-      ...m,
-      Estat: estat,
-      Data_resolucio: estat === 'Resolt' && !m.Data_resolucio
-        ? new Date().toISOString().slice(0, 10)
-        : m.Data_resolucio,
-    }
-    await updateRow(SHEET_MANTENIMENT, m._rowIndex, mantenimentToRow(updated))
+    const dataResolucio = estat === 'Resolt' && !m.Data_resolucio
+      ? new Date().toISOString().slice(0, 10)
+      : m.Data_resolucio
+    await updateRowById(TABLE, m.id, { estat, data_resolucio: dataResolucio })
     await fetchData()
   }
 
   async function eliminar(m: Manteniment): Promise<void> {
-    await deleteRow(SHEET_MANTENIMENT, m._rowIndex)
+    await deleteRowById(TABLE, m.id)
     await fetchData()
   }
 

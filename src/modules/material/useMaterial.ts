@@ -1,9 +1,34 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getRows, appendRow, updateRow, deleteRow } from '../../services/sheets'
-import {
-  SHEET, HEADERS, ensureHeaders, generateId, rowToItem, itemToRow,
-} from './material.utils'
-import type { ItemMaterial, MaterialFormData } from './types'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
+import type { ItemMaterial, MaterialFormData, CategoriaMaterial } from './types'
+
+const TABLE = 'material'
+
+interface MaterialRow {
+  id: string
+  codi: string
+  nom: string
+  categoria: string
+  descripcio: string
+  quantitat_total: number
+  quantitat_disponible: number
+  ubicacio: string
+  notes: string
+}
+
+function rowToItem(row: MaterialRow): ItemMaterial {
+  return {
+    id: row.id,
+    ID: row.codi,
+    Nom: row.nom,
+    Categoria: (row.categoria as CategoriaMaterial) || 'Altre',
+    Descripció: row.descripcio,
+    Quantitat_total: row.quantitat_total,
+    Quantitat_disponible: row.quantitat_disponible,
+    Ubicació: row.ubicacio,
+    Notes: row.notes,
+  }
+}
 
 export function useMaterial() {
   const [items, setItems] = useState<ItemMaterial[]>([])
@@ -14,11 +39,8 @@ export function useMaterial() {
     setLoading(true)
     setError(null)
     try {
-      await ensureHeaders()
-      const rows = await getRows(SHEET)
-      setItems(
-        rows.flatMap((r, i) => r['Eliminat'] === 'true' ? [] : [rowToItem(r, i)])
-      )
+      const rows = await getAll<MaterialRow>(TABLE, 'codi')
+      setItems(rows.map(rowToItem))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
@@ -29,39 +51,32 @@ export function useMaterial() {
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: MaterialFormData): Promise<void> {
-    const existingIds = items.map((i) => i.ID)
-    const nou: ItemMaterial = {
-      ID: generateId(existingIds),
-      ...data,
-      Quantitat_disponible: data.Quantitat_total,
-      _rowIndex: -1,
-    }
-    const row = HEADERS.reduce((acc, h) => {
-      if (h === 'Quantitat_total') acc[h] = String(nou.Quantitat_total)
-      else if (h === 'Quantitat_disponible') acc[h] = String(nou.Quantitat_disponible)
-      else acc[h] = nou[h as keyof Omit<ItemMaterial, 'Quantitat_total' | 'Quantitat_disponible' | '_rowIndex'>] ?? ''
-      return acc
-    }, {} as Record<string, string>)
-    await appendRow(SHEET, row)
+    await insertRow(TABLE, {
+      nom: data.Nom, categoria: data.Categoria, descripcio: data.Descripció,
+      quantitat_total: data.Quantitat_total, quantitat_disponible: data.Quantitat_total,
+      ubicacio: data.Ubicació, notes: data.Notes,
+    })
     await fetchData()
   }
 
   async function editar(item: ItemMaterial, data: MaterialFormData): Promise<void> {
     const deltaTotal = data.Quantitat_total - item.Quantitat_total
     const nouDisponible = Math.max(0, item.Quantitat_disponible + deltaTotal)
-    const updated: ItemMaterial = { ...item, ...data, Quantitat_disponible: nouDisponible }
-    await updateRow(SHEET, item._rowIndex, itemToRow(updated))
+    await updateRowById(TABLE, item.id, {
+      nom: data.Nom, categoria: data.Categoria, descripcio: data.Descripció,
+      quantitat_total: data.Quantitat_total, quantitat_disponible: nouDisponible,
+      ubicacio: data.Ubicació, notes: data.Notes,
+    })
     await fetchData()
   }
 
   async function editarNotes(item: ItemMaterial, notes: string): Promise<void> {
-    const updated: ItemMaterial = { ...item, Notes: notes }
-    await updateRow(SHEET, item._rowIndex, itemToRow(updated))
+    await updateRowById(TABLE, item.id, { notes })
     await fetchData()
   }
 
   async function donarDeBaixa(item: ItemMaterial): Promise<void> {
-    await deleteRow(SHEET, item._rowIndex)
+    await deleteRowById(TABLE, item.id)
     await fetchData()
   }
 

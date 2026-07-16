@@ -1,40 +1,43 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getRows, appendRow, updateRow, deleteRow } from '../../services/sheets'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
-import {
-  SHEET, HEADERS, ensureHeaders, generateId, formatDateISO,
-  serializeLinks,
-} from './coneixement.utils'
-import type { Article, ArticleFormData } from './types'
+import { formatDateISO, serializeLinks } from './coneixement.utils'
+import type { Article, ArticleFormData, ArticleLink } from './types'
 
-// Google Sheets amb USER_ENTERED pot convertir "true" a booleà TRUE,
-// que torna com "TRUE" en llegir-lo. Normalitzem a minúscules per comparar.
-function normalitzaPublicat(v: string | undefined): string {
-  const s = (v ?? '').toLowerCase().trim()
-  return s === 'true' ? 'true' : 'false'
+const TABLE = 'coneixement'
+
+interface ConeixementRow {
+  id: string
+  codi: string
+  titol: string
+  categoria: string
+  contingut: string
+  tags: string[]
+  links: ArticleLink[]
+  autor: string
+  creat_el: string
+  actualitzat_el: string
+  publicat: boolean
 }
 
-function rowToArticle(row: Record<string, string>, index: number): Article {
+function rowToArticle(row: ConeixementRow): Article {
   return {
-    ID: row['ID'] ?? '',
-    Titol: row['Titol'] ?? '',
-    Categoria: row['Categoria'] ?? '',
-    Contingut: row['Contingut'] ?? '',
-    Tags: row['Tags'] ?? '',
-    Links: row['Links'] ?? '',
-    Autor: row['Autor'] ?? '',
-    Creat_el: row['Creat_el'] ?? '',
-    Actualitzat_el: row['Actualitzat_el'] ?? '',
-    Publicat: normalitzaPublicat(row['Publicat']),
-    _rowIndex: index,
+    id: row.id,
+    ID: row.codi,
+    Titol: row.titol,
+    Categoria: row.categoria,
+    Contingut: row.contingut,
+    Tags: (row.tags ?? []).join(', '),
+    Links: JSON.stringify(row.links ?? []),
+    Autor: row.autor,
+    Creat_el: row.creat_el,
+    Actualitzat_el: row.actualitzat_el,
+    Publicat: row.publicat ? 'true' : 'false',
   }
 }
 
-function articleToRow(a: Article): Record<string, string> {
-  return HEADERS.reduce((acc, h) => {
-    acc[h] = a[h as keyof Omit<Article, '_rowIndex'>] ?? ''
-    return acc
-  }, {} as Record<string, string>)
+function tagsToArray(tags: string): string[] {
+  return tags.split(',').map((t) => t.trim()).filter(Boolean)
 }
 
 export function useConeixement(esCoordinador: boolean) {
@@ -47,9 +50,8 @@ export function useConeixement(esCoordinador: boolean) {
     setLoading(true)
     setError(null)
     try {
-      await ensureHeaders()
-      const rows = await getRows(SHEET)
-      const tots = rows.map((r, i) => rowToArticle(r, i))
+      const rows = await getAll<ConeixementRow>(TABLE, 'titol')
+      const tots = rows.map(rowToArticle)
       // Coordinador veu tots; la resta només els publicats
       setArticles(esCoordinador ? tots : tots.filter((a) => a.Publicat === 'true'))
     } catch (err) {
@@ -62,52 +64,44 @@ export function useConeixement(esCoordinador: boolean) {
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: ArticleFormData): Promise<void> {
-    const existingIds = articles.map((a) => a.ID)
     const avui = formatDateISO(new Date())
-    const nou: Article = {
-      ID: generateId(existingIds),
-      Titol: data.Titol,
-      Categoria: data.Categoria,
-      Contingut: data.Contingut,
-      Tags: data.Tags,
-      Links: serializeLinks(data.Links),
-      Autor: user?.email ?? '',
-      Creat_el: avui,
-      Actualitzat_el: avui,
-      Publicat: data.Publicat ? 'true' : 'false',
-      _rowIndex: -1,
-    }
-    await appendRow(SHEET, articleToRow(nou))
+    await insertRow(TABLE, {
+      titol: data.Titol,
+      categoria: data.Categoria,
+      contingut: data.Contingut,
+      tags: tagsToArray(data.Tags),
+      links: JSON.parse(serializeLinks(data.Links) || '[]'),
+      autor: user?.email ?? '',
+      creat_el: avui,
+      actualitzat_el: avui,
+      publicat: data.Publicat,
+    })
     await fetchData()
   }
 
   async function editar(article: Article, data: ArticleFormData): Promise<void> {
-    const updated: Article = {
-      ...article,
-      Titol: data.Titol,
-      Categoria: data.Categoria,
-      Contingut: data.Contingut,
-      Tags: data.Tags,
-      Links: serializeLinks(data.Links),
-      Publicat: data.Publicat ? 'true' : 'false',
-      Actualitzat_el: formatDateISO(new Date()),
-    }
-    await updateRow(SHEET, article._rowIndex, articleToRow(updated))
+    await updateRowById(TABLE, article.id, {
+      titol: data.Titol,
+      categoria: data.Categoria,
+      contingut: data.Contingut,
+      tags: tagsToArray(data.Tags),
+      links: JSON.parse(serializeLinks(data.Links) || '[]'),
+      publicat: data.Publicat,
+      actualitzat_el: formatDateISO(new Date()),
+    })
     await fetchData()
   }
 
   async function togglePublicat(article: Article): Promise<void> {
-    const updated: Article = {
-      ...article,
-      Publicat: article.Publicat === 'true' ? 'false' : 'true',
-      Actualitzat_el: formatDateISO(new Date()),
-    }
-    await updateRow(SHEET, article._rowIndex, articleToRow(updated))
+    await updateRowById(TABLE, article.id, {
+      publicat: article.Publicat !== 'true',
+      actualitzat_el: formatDateISO(new Date()),
+    })
     await fetchData()
   }
 
   async function eliminar(article: Article): Promise<void> {
-    await deleteRow(SHEET, article._rowIndex)
+    await deleteRowById(TABLE, article.id)
     await fetchData()
   }
 

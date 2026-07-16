@@ -4,6 +4,7 @@ export interface ArticleLink {
 }
 
 export interface Article {
+  id: string
   ID: string
   Titol: string
   Categoria: string
@@ -14,7 +15,6 @@ export interface Article {
   Creat_el: string      // ISO date YYYY-MM-DD
   Actualitzat_el: string
   Publicat: string      // 'true' | 'false'
-  _rowIndex: number
 }
 
 export type ArticleFormData = {
