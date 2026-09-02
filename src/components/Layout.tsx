@@ -25,7 +25,6 @@ import { useConfigStore, canAccessModul } from '../store/configStore'
 
 const NAV_ITEMS = [
   { to: '/',              label: 'Dashboard',          icon: LayoutDashboard, end: true,  visKey: null },
-  { to: '/ajuda',         label: 'Ajuda',              icon: HelpCircle,                  visKey: null },
   { to: '/incidencies',   label: 'Incidències',        icon: AlertTriangle,               visKey: 'incidencies' },
   { to: '/inventari',     label: 'Inventari',          icon: Package,                     visKey: 'inventari' },
   { to: '/material',      label: 'Material i Stock',   icon: Archive,                     visKey: 'material' },
@@ -128,33 +127,34 @@ export function Layout({ children }: Props) {
           ))}
         </nav>
 
-        {/* Configuració — només coordinador */}
-        {esCoordinador && (
-          <div className="border-t border-gray-100 py-2">
-            {NAV_SETTINGS.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={closeSidebar}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors ${
-                    isActive
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-gray-500 hover:bg-gray-100'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon size={17} className={isActive ? 'text-primary' : 'text-gray-400'} />
-                    <span className="flex-1">{label}</span>
-                    {isActive && <ChevronRight size={14} className="text-primary" />}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </div>
-        )}
+        {/* Ajuda (sempre) + Configuració — només coordinador */}
+        <div className="border-t border-gray-100 py-2">
+          {[
+            { to: '/ajuda', label: 'Ajuda', icon: HelpCircle },
+            ...(esCoordinador ? NAV_SETTINGS : []),
+          ].map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={closeSidebar}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-gray-500 hover:bg-gray-100'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon size={17} className={isActive ? 'text-primary' : 'text-gray-400'} />
+                  <span className="flex-1">{label}</span>
+                  {isActive && <ChevronRight size={14} className="text-primary" />}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
 
         {/* Usuari + logout */}
         <div className="border-t border-gray-200 p-4">
