@@ -6,6 +6,7 @@ import { auth } from './services/firebase'
 import { useAuthStore } from './store/authStore'
 import { LoginPage } from './pages/LoginPage'
 import { NoAutoritzatPage } from './pages/NoAutoritzatPage'
+import { AjudaPage } from './pages/AjudaPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { useState } from 'react'
@@ -621,6 +622,7 @@ function AppRoutes() {
             <Layout>
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/ajuda" element={<AjudaPage />} />
                 <Route path="/incidencies" element={<VisibilitatGuard visKey="incidencies"><IncidenciesWrapper /></VisibilitatGuard>} />
                 <Route path="/inventari" element={<VisibilitatGuard visKey="inventari"><InventariWrapper /></VisibilitatGuard>} />
                 <Route path="/material" element={<VisibilitatGuard visKey="material"><MaterialWrapper /></VisibilitatGuard>} />

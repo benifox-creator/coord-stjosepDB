@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  HelpCircle,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { logout } from '../services/auth'
@@ -24,6 +25,7 @@ import { useConfigStore, canAccessModul } from '../store/configStore'
 
 const NAV_ITEMS = [
   { to: '/',              label: 'Dashboard',          icon: LayoutDashboard, end: true,  visKey: null },
+  { to: '/ajuda',         label: 'Ajuda',              icon: HelpCircle,                  visKey: null },
   { to: '/incidencies',   label: 'Incidències',        icon: AlertTriangle,               visKey: 'incidencies' },
   { to: '/inventari',     label: 'Inventari',          icon: Package,                     visKey: 'inventari' },
   { to: '/material',      label: 'Material i Stock',   icon: Archive,                     visKey: 'material' },
