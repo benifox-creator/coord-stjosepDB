@@ -70,7 +70,7 @@ export function LoginPage() {
             {/* Títols */}
             <div className="text-center -mt-1">
               <h1 className="text-lg font-bold text-text-main tracking-tight">
-                Coordinació Digital
+                SJO Hub
               </h1>
               <p className="text-xs text-gray-400 mt-1 font-medium uppercase tracking-widest">
                 Plataforma de gestió TIC

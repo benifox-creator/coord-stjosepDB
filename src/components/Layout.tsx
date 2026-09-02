@@ -91,7 +91,7 @@ export function Layout({ children }: Props) {
           </div>
           <div className="overflow-hidden">
             <p className="text-white font-semibold text-sm leading-tight truncate">Sant Josep Obrer</p>
-            <p className="text-white/70 text-xs truncate">Coordinació Digital</p>
+            <p className="text-white/70 text-xs truncate">SJO Hub</p>
           </div>
           <button
             onClick={closeSidebar}
@@ -191,7 +191,7 @@ export function Layout({ children }: Props) {
           >
             <Menu size={22} />
           </button>
-          <span className="font-semibold text-text-main text-sm">Coordinació Digital</span>
+          <span className="font-semibold text-text-main text-sm">SJO Hub</span>
         </header>
 
         {/* Àrea de contingut */}

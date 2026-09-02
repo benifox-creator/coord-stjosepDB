@@ -33,7 +33,7 @@ export function NoAutoritzatPage() {
           <div>
             <h1 className="text-lg font-semibold text-text-main mb-2">Sense accés</h1>
             <p className="text-sm text-gray-500">
-              El compte <strong>{user?.email}</strong> no té accés a Coordinació Digital.
+              El compte <strong>{user?.email}</strong> no té accés a SJO Hub.
             </p>
             <p className="text-sm text-gray-400 mt-2">
               Contacta amb el coordinador TIC per obtenir accés.

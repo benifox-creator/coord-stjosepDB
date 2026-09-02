@@ -157,7 +157,7 @@ export function AjudaPage() {
             Guia per a un usuari nou
           </p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-text-main">Benvinguda a Coordinació Digital</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-text-main">Benvinguda a SJO Hub</h1>
         <p className="text-gray-500 mt-2 max-w-2xl">
           Aquesta guia explica, pas a pas, tot el que pots fer avui dins l'aplicació interna de
           coordinació TIC del Col·legi Sant Josep Obrer: des d'iniciar sessió fins a fer servir
@@ -631,7 +631,7 @@ export function AjudaPage() {
       <footer className="pt-8 border-t border-gray-200 text-xs text-gray-400 flex items-start gap-2">
         <Info size={14} className="shrink-0 mt-0.5" />
         <p>
-          Guia d'ús de Coordinació Digital (Col·legi Sant Josep Obrer) — reflecteix les
+          Guia d'ús de SJO Hub (Col·legi Sant Josep Obrer) — reflecteix les
           funcionalitats disponibles a data d'avui. El coordinador TIC pot ampliar-la a mesura que
           s'afegeixin mòduls nous.
         </p>

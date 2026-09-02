@@ -66,7 +66,7 @@ async function notificarNovaReserva(reserva: Reserva): Promise<void> {
     `Sol·licitant: ${reserva.Usuari}${reserva.Email ? ` (${reserva.Email})` : ''}`,
     `Motiu:        ${reserva.Motiu}`,
     '',
-    `Accedeix a Coordinació Digital per confirmar o cancel·lar la reserva.`,
+    `Accedeix a SJO Hub per confirmar o cancel·lar la reserva.`,
   ].join('\n')
 
   await Promise.allSettled(coordinadors.map((to) => sendEmail({ to, subject, body })))
