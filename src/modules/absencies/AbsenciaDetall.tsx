@@ -34,15 +34,21 @@ export function AbsenciaDetall({
 
   async function handleAprovar() {
     setWorking(true)
-    await onAprovar(absencia)
-    setWorking(false)
+    try {
+      await onAprovar(absencia)
+    } finally {
+      setWorking(false)
+    }
   }
 
   async function handleRebutjar() {
     setWorking(true)
-    await onRebutjar(absencia, motiuRebuig.trim())
-    setWorking(false)
-    setRebutjant(false)
+    try {
+      await onRebutjar(absencia, motiuRebuig.trim())
+    } finally {
+      setWorking(false)
+      setRebutjant(false)
+    }
   }
 
   return (
