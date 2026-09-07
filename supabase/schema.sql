@@ -53,6 +53,30 @@ create table public.substitucions (
   creat_per             text not null default ''
 );
 
+-- ---------- absencies ----------
+
+create sequence public.absencies_codi_seq;
+
+create table public.absencies (
+  id            uuid primary key default gen_random_uuid(),
+  codi          text not null unique
+                default ('ABS-' || lpad(nextval('public.absencies_codi_seq')::text, 3, '0')),
+  professor     text not null default '',
+  data          date not null,
+  hora_inici    text not null default '',
+  hora_fi       text not null default '',
+  hores         numeric(4,2) not null default 0,
+  motiu         text not null default '',
+  notes         text not null default '',
+  estat         text not null default 'Pendent revisió'
+                check (estat in ('Pendent revisió', 'Aprovada', 'Rebutjada')),
+  motiu_rebuig  text not null default '',
+  creat_el      text not null default to_char(now(), 'YYYY-MM-DD HH24:MI'),
+  creat_per     text not null default '',
+  revisat_per   text not null default '',
+  revisat_el    text not null default ''
+);
+
 -- ---------- inventari ----------
 create sequence public.inventari_codi_seq;
 create table public.inventari (
@@ -272,6 +296,13 @@ alter table public.config enable row level security;
 
 create policy "anon_full_access" on public.usuaris for all using (true) with check (true);
 create policy "anon_full_access" on public.substitucions for all using (true) with check (true);
+
+alter table public.absencies enable row level security;
+create policy "anon_full_access" on public.absencies for all using (true) with check (true);
+
+alter table public.substitucions
+  add column absencia_id uuid references public.absencies(id);
+
 create policy "anon_full_access" on public.inventari for all using (true) with check (true);
 create policy "anon_full_access" on public.incidencies for all using (true) with check (true);
 create policy "anon_full_access" on public.manteniment for all using (true) with check (true);
