@@ -50,11 +50,11 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/30" onClick={onCancel} />
+      <div className="absolute inset-0 bg-black/30" onClick={() => { if (!saving) onCancel() }} />
       <div className="relative z-10 w-full max-w-md bg-white shadow-2xl flex flex-col h-full">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
           <h2 className="text-sm font-semibold text-text-main">Nova absència</h2>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+          <button onClick={() => { if (!saving) onCancel() }} disabled={saving} className="text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
             <X size={18} />
           </button>
         </div>
@@ -137,7 +137,8 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+            disabled={saving}
+            className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel·la
           </button>
