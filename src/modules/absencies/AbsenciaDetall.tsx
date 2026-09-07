@@ -47,11 +47,11 @@ export function AbsenciaDetall({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30" onClick={() => { if (!working) onClose() }} />
       <div className="relative z-10 w-full max-w-md bg-white shadow-2xl flex flex-col h-full">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
           <h2 className="text-sm font-semibold text-text-main">Absència — {absencia.ID}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={() => { if (!working) onClose() }} disabled={working} className="text-gray-400 hover:text-gray-600 disabled:opacity-60">
             <X size={18} />
           </button>
         </div>
