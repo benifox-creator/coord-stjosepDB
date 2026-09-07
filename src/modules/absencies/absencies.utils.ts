@@ -8,7 +8,7 @@ export const TABLE_ABSENCIES = 'absencies'
 export function calcularHores(horaInici: string, horaFi: string): number {
   const [hIni, mIni] = horaInici.split(':').map(Number)
   const [hFi, mFi] = horaFi.split(':').map(Number)
-  if ([hIni, mIni, hFi, mFi].some((n) => Number.isNaN(n))) return 0
+  if ([hIni, mIni, hFi, mFi].some((n) => n === undefined || Number.isNaN(n))) return 0
   const minuts = (hFi * 60 + mFi) - (hIni * 60 + mIni)
   if (minuts <= 0) return 0
   return Math.round((minuts / 60) * 100) / 100
