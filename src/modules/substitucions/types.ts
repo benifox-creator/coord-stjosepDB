@@ -28,6 +28,7 @@ export interface Substitucio {
   Notes: string
   Creat_el: string
   Creat_per: string
+  Absencia_ID?: string
 }
 
 export interface SubstitucioFormData {
@@ -40,4 +41,5 @@ export interface SubstitucioFormData {
   Grup: string
   Materia: string
   Notes: string
+  Absencia_ID?: string
 }

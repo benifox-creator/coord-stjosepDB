@@ -68,6 +68,7 @@ export interface SubstitucioRow {
   notes: string
   creat_el: string
   creat_per: string
+  absencia_id: string | null
 }
 
 export function rowToSubstitucio(row: SubstitucioRow): Substitucio {
@@ -86,6 +87,7 @@ export function rowToSubstitucio(row: SubstitucioRow): Substitucio {
     Notes: row.notes,
     Creat_el: row.creat_el,
     Creat_per: row.creat_per,
+    Absencia_ID: row.absencia_id ?? undefined,
   }
 }
 
@@ -95,6 +97,7 @@ export function substitucioToInsert(s: Omit<Substitucio, 'id' | 'ID' | 'Creat_el
     professor_absent: s.ProfessorAbsent, professor_substitut: s.ProfessorSubstitut,
     grup: s.Grup, materia: s.Materia, estat: s.Estat,
     notes: s.Notes, creat_per: s.Creat_per,
+    absencia_id: s.Absencia_ID ?? null,
   }
 }
 
