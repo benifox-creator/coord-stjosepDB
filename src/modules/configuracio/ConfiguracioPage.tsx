@@ -55,6 +55,13 @@ const GRUPS: GrupConfig[] = [
       { clau: 'coneixement.categories', label: 'Categories d\'articles', descripcio: 'Temàtiques que apareixen al desplegable del formulari de nou article.' },
     ],
   },
+  {
+    modul: 'Absències',
+    color: '#b45309',
+    llistes: [
+      { clau: 'absencies.motius', label: "Motius d'absència", descripcio: "Motius disponibles al formulari de reportar una absència. \"Altre\" sempre és disponible." },
+    ],
+  },
 ]
 
 function LlistaEditor({ llista }: { llista: LlistaConfig }) {
