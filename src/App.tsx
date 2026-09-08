@@ -1,5 +1,5 @@
 import { HashRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Component, useEffect } from 'react'
+import { Component, useEffect, useMemo } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './services/firebase'
@@ -565,10 +565,16 @@ function SubstitucionsWrapper() {
   const [professorAbsentInicial, setProfessorAbsentInicial] = useState<string | undefined>()
   const [franjaInicial, setFranjaInicial] = useState<string | undefined>()
   const [absenciaIdInicial, setAbsenciaIdInicial] = useState<string | undefined>()
+  const [notesInicial, setNotesInicial] = useState<string | undefined>()
   const [seleccionada, setSeleccionada] = useState<Substitucio | null>(null)
 
   const [formAbsenciaObert, setFormAbsenciaObert] = useState(false)
   const [absenciaSeleccionada, setAbsenciaSeleccionada] = useState<Absencia | null>(null)
+
+  const substitucionsDeLAbsencia = useMemo(
+    () => absenciaSeleccionada ? substitucions.filter((s) => s.Absencia_ID === absenciaSeleccionada.id) : [],
+    [substitucions, absenciaSeleccionada]
+  )
 
   async function handleCanviarEstat(s: Substitucio, estat: Parameters<typeof canviarEstat>[1]) {
     await canviarEstat(s, estat)
@@ -580,15 +586,16 @@ function SubstitucionsWrapper() {
     setProfessorAbsentInicial(undefined)
     setFranjaInicial(undefined)
     setAbsenciaIdInicial(undefined)
+    setNotesInicial(undefined)
     setFormObert(true)
   }
 
   function handleCrearSubstitucioDesDAbsencia(a: Absencia) {
-    setAbsenciaSeleccionada(null)
     setDataInicial(a.Data)
     setProfessorAbsentInicial(a.Professor)
     setFranjaInicial(`${a.HoraInici}-${a.HoraFi}`)
     setAbsenciaIdInicial(a.id)
+    setNotesInicial(a.Notes)
     setFormObert(true)
   }
 
@@ -614,6 +621,7 @@ function SubstitucionsWrapper() {
           professorAbsentInicial={professorAbsentInicial}
           franjaInicial={franjaInicial}
           absenciaIdInicial={absenciaIdInicial}
+          notesInicial={notesInicial}
           onDesar={async (data) => { await crear(data); setFormObert(false) }}
           onCancel={() => setFormObert(false)}
         />
@@ -633,9 +641,10 @@ function SubstitucionsWrapper() {
           onCancel={() => setFormAbsenciaObert(false)}
         />
       )}
-      {absenciaSeleccionada && (
+      {absenciaSeleccionada && !formObert && (
         <AbsenciaDetall
           absencia={absenciaSeleccionada}
+          substitucionsVinculades={substitucionsDeLAbsencia}
           potAprovar={canAprovar}
           potGestionar={canGestionar}
           potEliminar={canEliminar}
