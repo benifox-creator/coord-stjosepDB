@@ -31,6 +31,8 @@ export function AbsenciaDetall({
   const [rebutjant, setRebutjant] = useState(false)
   const [motiuRebuig, setMotiuRebuig] = useState('')
   const [working, setWorking] = useState(false)
+  const [confirmEliminar, setConfirmEliminar] = useState(false)
+  const [eliminant, setEliminant] = useState(false)
 
   async function handleAprovar() {
     setWorking(true)
@@ -48,6 +50,17 @@ export function AbsenciaDetall({
     } finally {
       setWorking(false)
       setRebutjant(false)
+    }
+  }
+
+  async function handleEliminarClick() {
+    setEliminant(true)
+    try {
+      await onEliminar(absencia)
+      onClose()
+    } catch {
+      setEliminant(false)
+      setConfirmEliminar(false)
     }
   }
 
@@ -146,12 +159,32 @@ export function AbsenciaDetall({
           )}
 
           {potEliminar && (
-            <button
-              onClick={() => onEliminar(absencia)}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium text-gray-500 hover:text-red-600"
-            >
-              <Trash2 size={13} /> Elimina
-            </button>
+            confirmEliminar ? (
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-xs text-red-600 font-medium">Eliminar aquesta absència?</span>
+                <button
+                  onClick={handleEliminarClick}
+                  disabled={eliminant}
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-60"
+                >
+                  Sí, elimina
+                </button>
+                <button
+                  onClick={() => setConfirmEliminar(false)}
+                  disabled={eliminant}
+                  className="px-3 py-1.5 text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-60"
+                >
+                  Cancel·la
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmEliminar(true)}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-medium text-gray-500 hover:text-red-600"
+              >
+                <Trash2 size={13} /> Elimina
+              </button>
+            )
           )}
         </div>
       </div>
