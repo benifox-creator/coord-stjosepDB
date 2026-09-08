@@ -380,7 +380,7 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
         </div>
       </div>
 
-      {error && tab !== 'absencies' && (
+      {error && (
         <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
 
