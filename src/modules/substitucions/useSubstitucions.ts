@@ -53,6 +53,7 @@ export const useSubstitucions = create<SubstitucionsState>((set, get) => ({
       Estat: 'Pendent',
       Notes: data.Notes,
       Creat_per: emailCreador,
+      Absencia_ID: data.Absencia_ID,
     }
 
     const row = await insertRow<SubstitucioRow>(TABLE_SUBSTITUCIONS, substitucioToInsert(nova))
