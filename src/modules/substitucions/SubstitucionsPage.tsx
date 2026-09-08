@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, RefreshCw, ChevronLeft, ChevronRight, BarChart2, CalendarDays, CalendarOff } from 'lucide-react'
+import { Plus, RefreshCw, ChevronLeft, ChevronRight, BarChart2, CalendarDays, CalendarOff, List } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuthStore } from '../../store/authStore'
 import type { Substitucio, EstatSubstitucio } from './types'
@@ -9,8 +9,9 @@ import {
 import { useUsuarisStore, potGestionar } from '../../store/usuarisStore'
 import type { Absencia } from '../absencies/types'
 import { AbsenciesTab } from '../absencies/AbsenciesTab'
+import { SubstitucionsTotesTab } from './SubstitucionsTotesTab'
 
-type Tab = 'setmana' | 'estadistiques' | 'absencies'
+type Tab = 'setmana' | 'totes' | 'estadistiques' | 'absencies'
 
 const ESTAT_COLORS: Record<EstatSubstitucio, string> = {
   Pendent:      'text-amber-700 bg-amber-100 border-amber-200',
@@ -365,7 +366,7 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
 
         {/* Tabs */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-          {([['setmana', 'Vista setmanal', CalendarDays], ['estadistiques', 'Estadístiques', BarChart2], ['absencies', 'Absències', CalendarOff]] as const).map(([key, label, Icon]) => (
+          {([['setmana', 'Vista setmanal', CalendarDays], ['totes', 'Totes', List], ['estadistiques', 'Estadístiques', BarChart2], ['absencies', 'Absències', CalendarOff]] as const).map(([key, label, Icon]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -488,6 +489,15 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Totes ── */}
+      {tab === 'totes' && (
+        <SubstitucionsTotesTab
+          substitucions={substitucions}
+          loading={loading}
+          onVeure={onVeure}
+        />
       )}
 
       {/* ── Estadístiques ── */}
