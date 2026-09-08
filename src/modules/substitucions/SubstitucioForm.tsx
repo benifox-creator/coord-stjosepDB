@@ -10,6 +10,7 @@ interface Props {
   professorAbsentInicial?: string
   franjaInicial?: string
   absenciaIdInicial?: string
+  notesInicial?: string
   onDesar: (data: SubstitucioFormData) => Promise<void>
   onCancel: () => void
 }
@@ -17,7 +18,7 @@ interface Props {
 const TIPUS: TipusSubstitucio[] = ['Classe', 'Pati']
 
 export function SubstitucioForm({
-  dataInicial, professorAbsentInicial, franjaInicial, absenciaIdInicial, onDesar, onCancel,
+  dataInicial, professorAbsentInicial, franjaInicial, absenciaIdInicial, notesInicial, onDesar, onCancel,
 }: Props) {
   const avui = formatDateISO(new Date())
   const usuaris = useUsuarisStore((s) => s.usuaris)
@@ -32,7 +33,7 @@ export function SubstitucioForm({
     ProfessorSubstitut: '',
     Grup: '',
     Materia: '',
-    Notes: '',
+    Notes: notesInicial ?? '',
     Absencia_ID: absenciaIdInicial,
   })
   const [saving, setSaving] = useState(false)

@@ -121,11 +121,12 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Notes (opcional)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Tasques a realitzar (opcional)</label>
             <textarea
               value={data.Notes}
               onChange={(e) => set('Notes', e.target.value)}
               rows={3}
+              placeholder="Indica els exercicis o tasques que ha de fer cada classe durant la teva absència. Si afecta diverses classes, pots separar-ho per grups."
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>

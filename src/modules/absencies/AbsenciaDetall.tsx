@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Check, XCircle, Trash2, ClipboardPlus } from 'lucide-react'
 import type { Absencia } from './types'
+import type { Substitucio, EstatSubstitucio } from '../substitucions/types'
 import { formatDate } from '../substitucions/substitucions.utils'
 import { useUsuarisStore } from '../../store/usuarisStore'
 
@@ -10,8 +11,15 @@ const ESTAT_COLORS: Record<Absencia['Estat'], string> = {
   'Rebutjada': 'text-red-700 bg-red-100 border-red-200',
 }
 
+const ESTAT_SUBST_COLORS: Record<EstatSubstitucio, string> = {
+  Pendent:      'text-amber-700 bg-amber-100 border-amber-200',
+  Realitzada:   'text-green-700 bg-green-100 border-green-200',
+  'Cancel·lada':'text-gray-500 bg-gray-100 border-gray-200',
+}
+
 interface Props {
   absencia: Absencia
+  substitucionsVinculades: Substitucio[]
   potAprovar: boolean
   potGestionar: boolean
   potEliminar: boolean
@@ -23,7 +31,7 @@ interface Props {
 }
 
 export function AbsenciaDetall({
-  absencia, potAprovar, potGestionar, potEliminar,
+  absencia, substitucionsVinculades, potAprovar, potGestionar, potEliminar,
   onClose, onAprovar, onRebutjar, onEliminar, onCrearSubstitucio,
 }: Props) {
   const usuaris = useUsuarisStore((s) => s.usuaris)
@@ -89,7 +97,29 @@ export function AbsenciaDetall({
           </div>
 
           {absencia.Notes && (
-            <div><p className="text-xs text-gray-400 mb-1">Notes</p><p className="text-text-main">{absencia.Notes}</p></div>
+            <div><p className="text-xs text-gray-400 mb-1">Tasques a realitzar</p><p className="text-text-main whitespace-pre-wrap">{absencia.Notes}</p></div>
+          )}
+
+          {substitucionsVinculades.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5">Substitucions creades ({substitucionsVinculades.length})</p>
+              <div className="space-y-1.5">
+                {substitucionsVinculades.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between gap-2 px-2.5 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="min-w-0">
+                      <p className="font-medium text-text-main truncate">
+                        {s.Tipus === 'Pati' ? 'Pati' : (s.Grup || 'Sense grup')}
+                        {s.Materia && <span className="text-gray-400"> · {s.Materia}</span>}
+                      </p>
+                      <p className="text-gray-400">{s.Franja}</p>
+                    </div>
+                    <span className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-medium border ${ESTAT_SUBST_COLORS[s.Estat]}`}>
+                      {s.Estat}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {absencia.Estat === 'Rebutjada' && absencia.MotiuRebuig && (
