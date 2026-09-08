@@ -40,7 +40,7 @@ export const useAbsencies = create<AbsenciesState>((set, get) => ({
   },
 
   async crear(data) {
-    const email = useAuthStore.getState().user?.email ?? ''
+    const email = (useAuthStore.getState().user?.email ?? '').toLowerCase()
     const hores = calcularHores(data.HoraInici, data.HoraFi)
 
     const row = await insertRow<AbsenciaRow>(TABLE_ABSENCIES, absenciaToInsert({
