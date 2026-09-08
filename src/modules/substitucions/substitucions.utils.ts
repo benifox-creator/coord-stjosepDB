@@ -18,8 +18,11 @@ export function formatDateTimeISO(d: Date): string {
   return `${formatDateISO(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-const DIES_CA_LLARG = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte']
-const MESOS_CA_LLARG = ['gener', 'febrer', 'març', 'abril', 'maig', 'juny', 'juliol', 'agost', 'setembre', 'octubre', 'novembre', 'desembre']
+// curs escolar: setembre–juny (jul/ago queden fora)
+export const cursInici = (m: number, y: number): number => m >= 8 ? y : m <= 5 ? y - 1 : -1
+
+export const DIES_CA_LLARG = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte']
+export const MESOS_CA_LLARG = ['gener', 'febrer', 'març', 'abril', 'maig', 'juny', 'juliol', 'agost', 'setembre', 'octubre', 'novembre', 'desembre']
 const MESOS_CA_CURT = ['gen', 'feb', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'des']
 
 export function formatDiaLlarg(d: Date): string {
@@ -68,6 +71,7 @@ export interface SubstitucioRow {
   notes: string
   creat_el: string
   creat_per: string
+  absencia_id: string | null
 }
 
 export function rowToSubstitucio(row: SubstitucioRow): Substitucio {
@@ -86,6 +90,7 @@ export function rowToSubstitucio(row: SubstitucioRow): Substitucio {
     Notes: row.notes,
     Creat_el: row.creat_el,
     Creat_per: row.creat_per,
+    Absencia_ID: row.absencia_id ?? undefined,
   }
 }
 
@@ -95,6 +100,7 @@ export function substitucioToInsert(s: Omit<Substitucio, 'id' | 'ID' | 'Creat_el
     professor_absent: s.ProfessorAbsent, professor_substitut: s.ProfessorSubstitut,
     grup: s.Grup, materia: s.Materia, estat: s.Estat,
     notes: s.Notes, creat_per: s.Creat_per,
+    absencia_id: s.Absencia_ID ?? null,
   }
 }
 

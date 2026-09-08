@@ -7,13 +7,18 @@ import { useUsuarisStore } from '../../store/usuarisStore'
 
 interface Props {
   dataInicial?: string
+  professorAbsentInicial?: string
+  franjaInicial?: string
+  absenciaIdInicial?: string
   onDesar: (data: SubstitucioFormData) => Promise<void>
   onCancel: () => void
 }
 
 const TIPUS: TipusSubstitucio[] = ['Classe', 'Pati']
 
-export function SubstitucioForm({ dataInicial, onDesar, onCancel }: Props) {
+export function SubstitucioForm({
+  dataInicial, professorAbsentInicial, franjaInicial, absenciaIdInicial, onDesar, onCancel,
+}: Props) {
   const avui = formatDateISO(new Date())
   const usuaris = useUsuarisStore((s) => s.usuaris)
 
@@ -21,13 +26,14 @@ export function SubstitucioForm({ dataInicial, onDesar, onCancel }: Props) {
   const [data, setData] = useState<SubstitucioFormData>({
     Data: dataInicial ?? avui,
     Etapa: 'ESO 1r-2n',
-    Franja: '',
+    Franja: franjaInicial ?? '',
     Tipus: 'Classe',
-    ProfessorAbsent: '',
+    ProfessorAbsent: professorAbsentInicial ?? '',
     ProfessorSubstitut: '',
     Grup: '',
     Materia: '',
     Notes: '',
+    Absencia_ID: absenciaIdInicial,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')

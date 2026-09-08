@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, RefreshCw, ChevronLeft, ChevronRight, BarChart2, CalendarDays } from 'lucide-react'
+import { Plus, RefreshCw, ChevronLeft, ChevronRight, BarChart2, CalendarDays, CalendarOff } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuthStore } from '../../store/authStore'
 import type { Substitucio, EstatSubstitucio } from './types'
@@ -7,8 +7,10 @@ import {
   formatDateISO, formatDiaLlarg, formatWeekRange, getWeekDates,
 } from './substitucions.utils'
 import { useUsuarisStore, potGestionar } from '../../store/usuarisStore'
+import type { Absencia } from '../absencies/types'
+import { AbsenciesTab } from '../absencies/AbsenciesTab'
 
-type Tab = 'setmana' | 'estadistiques'
+type Tab = 'setmana' | 'estadistiques' | 'absencies'
 
 const ESTAT_COLORS: Record<EstatSubstitucio, string> = {
   Pendent:      'text-amber-700 bg-amber-100 border-amber-200',
@@ -25,6 +27,12 @@ interface Props {
   onRefresh: () => void
   onNova: (dataInicial?: string) => void
   onVeure: (s: Substitucio) => void
+  absencies: Absencia[]
+  loadingAbsencies: boolean
+  errorAbsencies: string | null
+  onRefreshAbsencies: () => void
+  onNovaAbsencia: () => void
+  onVeureAbsencia: (a: Absencia) => void
 }
 
 function SubstitucioCard({
@@ -214,7 +222,7 @@ function FilaEstadistiques({
   )
 }
 
-export function SubstitucionsPage({ substitucions, loading, error, onRefresh, onNova, onVeure }: Props) {
+export function SubstitucionsPage({ substitucions, loading, error, onRefresh, onNova, onVeure, absencies, loadingAbsencies, errorAbsencies, onRefreshAbsencies, onNovaAbsencia, onVeureAbsencia }: Props) {
   const [tab, setTab] = useState<Tab>('setmana')
   const [weekOffset, setWeekOffset] = useState(0)
   const [filtreEstadistiques, setFiltreEstadistiques] = useState<'mes' | 'trimestre' | 'curs'>('mes')
@@ -351,7 +359,7 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
 
         {/* Tabs */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-          {([['setmana', 'Vista setmanal', CalendarDays], ['estadistiques', 'Estadístiques', BarChart2]] as const).map(([key, label, Icon]) => (
+          {([['setmana', 'Vista setmanal', CalendarDays], ['estadistiques', 'Estadístiques', BarChart2], ['absencies', 'Absències', CalendarOff]] as const).map(([key, label, Icon]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -545,6 +553,17 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
             Les substitucions cancel·lades no compten. Les de pati es compten per separat.
           </p>
         </div>
+      )}
+
+      {tab === 'absencies' && (
+        <AbsenciesTab
+          absencies={absencies}
+          loading={loadingAbsencies}
+          error={errorAbsencies}
+          onRefresh={onRefreshAbsencies}
+          onNova={onNovaAbsencia}
+          onVeure={onVeureAbsencia}
+        />
       )}
     </div>
   )

@@ -41,6 +41,10 @@ import { SubstitucioForm } from './modules/substitucions/SubstitucioForm'
 import { SubstitucioDetall } from './modules/substitucions/SubstitucioDetall'
 import { useSubstitucions } from './modules/substitucions/useSubstitucions'
 import type { Substitucio } from './modules/substitucions/types'
+import { useAbsencies } from './modules/absencies/useAbsencies'
+import { AbsenciaForm } from './modules/absencies/AbsenciaForm'
+import { AbsenciaDetall } from './modules/absencies/AbsenciaDetall'
+import type { Absencia } from './modules/absencies/types'
 import { ConeixementPage } from './modules/coneixement/ConeixementPage'
 import { ConeixementForm } from './modules/coneixement/ConeixementForm'
 import { ConeixementDetall } from './modules/coneixement/ConeixementDetall'
@@ -62,7 +66,7 @@ import type { Manteniment } from './modules/manteniment/types'
 
 import { ConfiguracioPage } from './modules/configuracio/ConfiguracioPage'
 import { useConfigStore, canAccessModul } from './store/configStore'
-import { useUsuarisStore, potGestionar, potEliminar } from './store/usuarisStore'
+import { useUsuarisStore, potGestionar, potEliminar, potAprovarAbsencies } from './store/usuarisStore'
 import './index.css'
 
 function AuthSync() {
@@ -545,14 +549,26 @@ function MantenimentWrapper() {
 
 function SubstitucionsWrapper() {
   const { substitucions, loading, error, load, crear, canviarEstat, eliminar } = useSubstitucions()
+  const {
+    absencies, loading: loadingAbsencies, error: errorAbsencies, load: loadAbsencies,
+    crear: crearAbsencia, aprovar, rebutjar, eliminar: eliminarAbsencia,
+  } = useAbsencies()
   const rol = useUsuarisStore((s) => s.rol)
   const canGestionar = potGestionar(rol)
+  const canAprovar = potAprovarAbsencies(rol)
+  const canEliminar = potEliminar(rol)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(); loadAbsencies() }, [])
 
   const [formObert, setFormObert] = useState(false)
   const [dataInicial, setDataInicial] = useState<string | undefined>()
+  const [professorAbsentInicial, setProfessorAbsentInicial] = useState<string | undefined>()
+  const [franjaInicial, setFranjaInicial] = useState<string | undefined>()
+  const [absenciaIdInicial, setAbsenciaIdInicial] = useState<string | undefined>()
   const [seleccionada, setSeleccionada] = useState<Substitucio | null>(null)
+
+  const [formAbsenciaObert, setFormAbsenciaObert] = useState(false)
+  const [absenciaSeleccionada, setAbsenciaSeleccionada] = useState<Absencia | null>(null)
 
   async function handleCanviarEstat(s: Substitucio, estat: Parameters<typeof canviarEstat>[1]) {
     await canviarEstat(s, estat)
@@ -561,6 +577,18 @@ function SubstitucionsWrapper() {
 
   function handleNova(data?: string) {
     setDataInicial(data)
+    setProfessorAbsentInicial(undefined)
+    setFranjaInicial(undefined)
+    setAbsenciaIdInicial(undefined)
+    setFormObert(true)
+  }
+
+  function handleCrearSubstitucioDesDAbsencia(a: Absencia) {
+    setAbsenciaSeleccionada(null)
+    setDataInicial(a.Data)
+    setProfessorAbsentInicial(a.Professor)
+    setFranjaInicial(`${a.HoraInici}-${a.HoraFi}`)
+    setAbsenciaIdInicial(a.id)
     setFormObert(true)
   }
 
@@ -573,10 +601,19 @@ function SubstitucionsWrapper() {
         onRefresh={load}
         onNova={handleNova}
         onVeure={setSeleccionada}
+        absencies={absencies}
+        loadingAbsencies={loadingAbsencies}
+        errorAbsencies={errorAbsencies}
+        onRefreshAbsencies={loadAbsencies}
+        onNovaAbsencia={() => setFormAbsenciaObert(true)}
+        onVeureAbsencia={setAbsenciaSeleccionada}
       />
       {formObert && (
         <SubstitucioForm
           dataInicial={dataInicial}
+          professorAbsentInicial={professorAbsentInicial}
+          franjaInicial={franjaInicial}
+          absenciaIdInicial={absenciaIdInicial}
           onDesar={async (data) => { await crear(data); setFormObert(false) }}
           onCancel={() => setFormObert(false)}
         />
@@ -588,6 +625,25 @@ function SubstitucionsWrapper() {
           onClose={() => setSeleccionada(null)}
           onCanviarEstat={handleCanviarEstat}
           onEliminar={async (s) => { await eliminar(s); setSeleccionada(null) }}
+        />
+      )}
+      {formAbsenciaObert && (
+        <AbsenciaForm
+          onDesar={async (data) => { await crearAbsencia(data); setFormAbsenciaObert(false) }}
+          onCancel={() => setFormAbsenciaObert(false)}
+        />
+      )}
+      {absenciaSeleccionada && (
+        <AbsenciaDetall
+          absencia={absenciaSeleccionada}
+          potAprovar={canAprovar}
+          potGestionar={canGestionar}
+          potEliminar={canEliminar}
+          onClose={() => setAbsenciaSeleccionada(null)}
+          onAprovar={async (a) => { await aprovar(a); setAbsenciaSeleccionada(null) }}
+          onRebutjar={async (a, motiu) => { await rebutjar(a, motiu); setAbsenciaSeleccionada(null) }}
+          onEliminar={async (a) => { await eliminarAbsencia(a); setAbsenciaSeleccionada(null) }}
+          onCrearSubstitucio={handleCrearSubstitucioDesDAbsencia}
         />
       )}
     </>

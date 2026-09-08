@@ -65,6 +65,9 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Xarxa', 'Equipament', 'Programari', 'Seguretat', 'Formació', 'Infraestructura',
   ],
   'manteniment.email': [],
+  'absencies.motius': [
+    'Visita mèdica', 'Assumptes propis', 'Baixa/malaltia', 'Formació', 'Altre',
+  ],
   'reserves.espais-colors': [],
   'substitucions.grups': [
     'EI-3 A', 'EI-4 A', 'EI-5 A',

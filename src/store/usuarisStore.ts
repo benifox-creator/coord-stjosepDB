@@ -44,6 +44,10 @@ export function potCrear(rol: Rol | null): boolean {
   return rol !== null && rol !== 'convidat'
 }
 
+export function potAprovarAbsencies(rol: Rol | null): boolean {
+  return rol === 'coordinador' || rol === 'direccio'
+}
+
 // ---------- Store ----------
 
 interface UsuarisState {
