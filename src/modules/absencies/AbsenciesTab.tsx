@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { Plus, RefreshCw, CalendarOff, Timer } from 'lucide-react'
 import type { Absencia } from './types'
-import { formatDate } from '../substitucions/substitucions.utils'
-import { useUsuarisStore, potCrear, potAprovarAbsencies } from '../../store/usuarisStore'
+import { formatDate, cursInici } from '../substitucions/substitucions.utils'
+import { useUsuarisStore, potCrear, potAprovarAbsencies, potGestionar } from '../../store/usuarisStore'
+import { useAuthStore } from '../../store/authStore'
 
 const ESTAT_COLORS: Record<Absencia['Estat'], string> = {
   'Pendent revisió': 'text-amber-700 bg-amber-100 border-amber-200',
@@ -22,21 +23,31 @@ interface Props {
 export function AbsenciesTab({ absencies, loading, error, onRefresh, onNova, onVeure }: Props) {
   const rol = useUsuarisStore((s) => s.rol)
   const usuaris = useUsuarisStore((s) => s.usuaris)
+  const email = useAuthStore((s) => s.user?.email)
   const [vista, setVista] = useState<'llista' | 'recompte'>('llista')
   const potRecompte = potAprovarAbsencies(rol)
 
-  const pendents = absencies.filter((a) => a.Estat === 'Pendent revisió').length
+  const absenciesVisibles = useMemo(
+    () => (potGestionar(rol) ? absencies : absencies.filter((a) => a.Professor === email)),
+    [absencies, rol, email]
+  )
+
+  const pendents = absenciesVisibles.filter((a) => a.Estat === 'Pendent revisió').length
 
   const recompte = useMemo(() => {
+    const now = new Date()
+    const cursActual = cursInici(now.getMonth(), now.getFullYear())
     const totals = new Map<string, number>()
     for (const a of absencies) {
       if (a.Estat !== 'Aprovada') continue
+      const d = new Date(a.Data + 'T00:00:00')
+      if (cursInici(d.getMonth(), d.getFullYear()) !== cursActual) continue
       totals.set(a.Professor, (totals.get(a.Professor) ?? 0) + a.Hores)
     }
     return Array.from(totals.entries())
       .map(([email, hores]) => ({
         email,
-        hores,
+        hores: Math.round(hores * 100) / 100,
         nom: usuaris.find((u) => u.Email === email)?.Nom || email,
       }))
       .sort((a, b) => b.hores - a.hores)
@@ -89,10 +100,10 @@ export function AbsenciesTab({ absencies, loading, error, onRefresh, onNova, onV
 
       {vista === 'llista' ? (
         <div className="space-y-2">
-          {absencies.length === 0 && !loading && (
+          {absenciesVisibles.length === 0 && !loading && (
             <p className="text-sm text-gray-400 text-center py-8">Encara no hi ha cap absència reportada.</p>
           )}
-          {absencies.map((a) => {
+          {absenciesVisibles.map((a) => {
             const nom = usuaris.find((u) => u.Email === a.Professor)?.Nom || a.Professor
             return (
               <button

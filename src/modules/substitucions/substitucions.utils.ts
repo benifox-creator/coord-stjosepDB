@@ -18,6 +18,9 @@ export function formatDateTimeISO(d: Date): string {
   return `${formatDateISO(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+// curs escolar: setembre–juny (jul/ago queden fora)
+export const cursInici = (m: number, y: number): number => m >= 8 ? y : m <= 5 ? y - 1 : -1
+
 export const DIES_CA_LLARG = ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte']
 export const MESOS_CA_LLARG = ['gener', 'febrer', 'març', 'abril', 'maig', 'juny', 'juliol', 'agost', 'setembre', 'octubre', 'novembre', 'desembre']
 const MESOS_CA_CURT = ['gen', 'feb', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'des']
