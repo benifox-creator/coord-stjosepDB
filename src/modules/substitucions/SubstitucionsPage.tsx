@@ -319,43 +319,49 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
       <div className="bg-white border-b border-gray-200 px-6 py-5 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <CalendarDays size={20} className="text-primary" />
+            {tab === 'absencies' ? <CalendarOff size={20} className="text-primary" /> : <CalendarDays size={20} className="text-primary" />}
             <div>
-              <h1 className="text-lg font-semibold text-text-main">Substitucions</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {loading ? 'Carregant...' : `${substitucions.length} substitucions registrades`}
-              </p>
+              <h1 className="text-lg font-semibold text-text-main">{tab === 'absencies' ? 'Absències' : 'Substitucions'}</h1>
+              {tab !== 'absencies' && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {loading ? 'Carregant...' : `${substitucions.length} substitucions registrades`}
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onRefresh} title="Actualitzar" className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors">
-              <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
-            </button>
-            {canGestionar && (
-              <button
-                onClick={() => onNova()}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg shadow-sm transition-opacity hover:opacity-90"
-                style={{ backgroundColor: '#861414' }}
-              >
-                <Plus size={16} /> Nova substitució
+          {tab !== 'absencies' && (
+            <div className="flex items-center gap-2">
+              <button onClick={onRefresh} title="Actualitzar" className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors">
+                <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
               </button>
-            )}
-          </div>
+              {canGestionar && (
+                <button
+                  onClick={() => onNova()}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg shadow-sm transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: '#861414' }}
+                >
+                  <Plus size={16} /> Nova substitució
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* KPIs */}
-        <div className="flex gap-5 mb-4">
-          {[
-            { label: 'Aquesta setmana', val: kpis.setmana, color: '#861414' },
-            { label: 'Pendents',        val: kpis.pendents, color: '#d97706' },
-            { label: 'Realitzades',     val: kpis.realitzades, color: '#15803d' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className="text-xl font-bold" style={{ color }}>{val}</span>
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
+        {tab !== 'absencies' && (
+          <div className="flex gap-5 mb-4">
+            {[
+              { label: 'Aquesta setmana', val: kpis.setmana, color: '#861414' },
+              { label: 'Pendents',        val: kpis.pendents, color: '#d97706' },
+              { label: 'Realitzades',     val: kpis.realitzades, color: '#15803d' },
+            ].map(({ label, val, color }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <span className="text-xl font-bold" style={{ color }}>{val}</span>
+                <span className="text-xs text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
@@ -373,7 +379,7 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
         </div>
       </div>
 
-      {error && (
+      {error && tab !== 'absencies' && (
         <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
 
