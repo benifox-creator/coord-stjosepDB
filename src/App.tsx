@@ -636,7 +636,6 @@ function SubstitucionsWrapper() {
       {absenciaSeleccionada && (
         <AbsenciaDetall
           absencia={absenciaSeleccionada}
-          substitucionsVinculades={substitucions.filter((s) => s.Absencia_ID === absenciaSeleccionada.id)}
           potAprovar={canAprovar}
           potGestionar={canGestionar}
           potEliminar={canEliminar}
