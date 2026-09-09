@@ -6,7 +6,7 @@ import { useUsuarisStore } from '../../store/usuarisStore'
 import type { Absencia, AbsenciaFormData } from './types'
 import {
   TABLE_ABSENCIES, rowToAbsencia, absenciaToInsert, absenciaToUpdate,
-  calcularHores, buildEmailNovaAbsencia, buildEmailRevisioAbsencia, getDireccioICoordinadorEmails,
+  calcularHores, buildEmailNovaAbsencia, buildEmailRevisioAbsencia, getAprovadorsAbsenciesEmails,
   type AbsenciaRow,
 } from './absencies.utils'
 
@@ -49,6 +49,7 @@ export const useAbsencies = create<AbsenciesState>((set, get) => ({
       HoraInici: data.HoraInici,
       HoraFi: data.HoraFi,
       Hores: hores,
+      HoresNoLectives: data.HoresNoLectives,
       Motiu: data.Motiu,
       Notes: data.Notes,
       Estat: 'Pendent revisió',
@@ -61,7 +62,7 @@ export const useAbsencies = create<AbsenciesState>((set, get) => ({
       const usuaris = useUsuarisStore.getState().usuaris
       const nom = usuaris.find((u) => u.Email === email)?.Nom || email
       const { subject, body } = buildEmailNovaAbsencia(creada, nom)
-      const destinataris = await getDireccioICoordinadorEmails()
+      const destinataris = await getAprovadorsAbsenciesEmails()
       await Promise.allSettled(destinataris.map((to) => sendEmail({ to, subject, body })))
     } catch {
       // error d'email és no bloquejant

@@ -1,10 +1,12 @@
 import { create } from 'zustand'
 import { supabase, getAll, insertRow, updateRowById } from '../services/db'
-import type { Rol, Usuari } from '../modules/usuaris/types'
+import type { Rol, Usuari, EtapaSubstitucio } from '../modules/usuaris/types'
+import { ETAPES_USUARI, ROLS } from '../modules/usuaris/types'
 
 const TABLE = 'usuaris'
 
-const ROLS_VALIDS = new Set<string>(['coordinador', 'direccio', 'cap_estudis', 'professorat', 'convidat'])
+const ROLS_VALIDS = new Set<string>(ROLS)
+const ETAPES_VALIDES = new Set<string>(ETAPES_USUARI)
 
 function parseRol(value: string | null | undefined): Rol {
   const v = value?.trim()
@@ -12,11 +14,18 @@ function parseRol(value: string | null | undefined): Rol {
   return 'convidat'
 }
 
+function parseEtapa(value: string | null | undefined): EtapaSubstitucio | null {
+  const v = value?.trim()
+  if (v && ETAPES_VALIDES.has(v)) return v as EtapaSubstitucio
+  return null
+}
+
 interface UsuariRow {
   id: string
   email: string
   nom: string
   rol: string
+  etapa: string | null
   data_alta: string
 }
 
@@ -26,6 +35,7 @@ function rowToUsuari(row: UsuariRow): Usuari {
     Email: row.email,
     Nom: row.nom,
     Rol: parseRol(row.rol),
+    Etapa: parseEtapa(row.etapa),
     Data_alta: row.data_alta,
   }
 }
@@ -33,7 +43,7 @@ function rowToUsuari(row: UsuariRow): Usuari {
 // ---------- Permisos ----------
 
 export function potGestionar(rol: Rol | null): boolean {
-  return rol === 'coordinador' || rol === 'direccio' || rol === 'cap_estudis'
+  return rol === 'coordinador' || rol === 'direccio' || rol === 'titular' || rol === 'cap_estudis'
 }
 
 export function potEliminar(rol: Rol | null): boolean {
@@ -45,7 +55,7 @@ export function potCrear(rol: Rol | null): boolean {
 }
 
 export function potAprovarAbsencies(rol: Rol | null): boolean {
-  return rol === 'coordinador' || rol === 'direccio'
+  return rol === 'coordinador' || rol === 'direccio' || rol === 'titular'
 }
 
 // ---------- Store ----------
@@ -59,8 +69,9 @@ interface UsuarisState {
 
   loadRol: (email: string, displayName?: string | null) => Promise<void>
   loadAll: () => Promise<void>
-  crear: (email: string, nom: string, rol: Rol) => Promise<void>
+  crear: (email: string, nom: string, rol: Rol, etapa?: EtapaSubstitucio | null) => Promise<void>
   updateRol: (usuari: Usuari, nouRol: Rol) => Promise<void>
+  updateEtapa: (usuari: Usuari, novaEtapa: EtapaSubstitucio | null) => Promise<void>
   reset: () => void
 }
 
@@ -128,11 +139,11 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     }
   },
 
-  async crear(email, nom, rol) {
+  async crear(email, nom, rol, etapa = null) {
     const emailNorm = email.trim().toLowerCase()
     let row: UsuariRow
     try {
-      row = await insertRow<UsuariRow>(TABLE, { email: emailNorm, nom: nom.trim(), rol })
+      row = await insertRow<UsuariRow>(TABLE, { email: emailNorm, nom: nom.trim(), rol, etapa })
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
       if (msg.includes('duplicate key') || msg.includes('unique')) {
@@ -147,6 +158,13 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     await updateRowById(TABLE, usuari.id, { rol: nouRol })
     set((s) => ({
       usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, Rol: nouRol } : u)),
+    }))
+  },
+
+  async updateEtapa(usuari, novaEtapa) {
+    await updateRowById(TABLE, usuari.id, { etapa: novaEtapa })
+    set((s) => ({
+      usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, Etapa: novaEtapa } : u)),
     }))
   },
 

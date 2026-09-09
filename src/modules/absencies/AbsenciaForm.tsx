@@ -18,9 +18,11 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
     Data: avui,
     HoraInici: '',
     HoraFi: '',
+    HoresNoLectives: 0,
     Motiu: '',
     Notes: '',
   })
+  const [teHoresNoLectives, setTeHoresNoLectives] = useState(false)
   const [motiuAltre, setMotiuAltre] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -36,12 +38,16 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
     if (!data.Data) { setError('Cal indicar la data.'); return }
     if (!data.HoraInici || !data.HoraFi) { setError("Cal indicar l'hora d'inici i de fi."); return }
     if (hores <= 0) { setError("L'hora de fi ha de ser posterior a la d'inici."); return }
+    if (teHoresNoLectives && (data.HoresNoLectives < 0 || data.HoresNoLectives > hores)) {
+      setError("Les hores no lectives no poden ser negatives ni superar el total d'hores.")
+      return
+    }
     const motiuFinal = data.Motiu === 'Altre' ? motiuAltre.trim() : data.Motiu
     if (!motiuFinal) { setError('Cal indicar el motiu.'); return }
     setError('')
     setSaving(true)
     try {
-      await onDesar({ ...data, Motiu: motiuFinal })
+      await onDesar({ ...data, HoresNoLectives: teHoresNoLectives ? data.HoresNoLectives : 0, Motiu: motiuFinal })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desant l'absència")
       setSaving(false)
@@ -92,9 +98,38 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
           </div>
 
           {hores > 0 && (
-            <p className="text-xs text-gray-500">
-              Total: <span className="font-semibold text-text-main">{hores.toString().replace('.', ',')} hores</span>
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500">
+                Total: <span className="font-semibold text-text-main">{hores.toString().replace('.', ',')} hores</span>
+              </p>
+              <label className="flex items-center gap-2 text-xs text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={teHoresNoLectives}
+                  onChange={(e) => {
+                    setTeHoresNoLectives(e.target.checked)
+                    if (!e.target.checked) set('HoresNoLectives', 0)
+                  }}
+                  className="rounded border-gray-300 text-primary focus:ring-primary/30"
+                />
+                Alguna d'aquestes hores no és lectiva (no necessita substitut)
+              </label>
+              {teHoresNoLectives && (
+                <div className="flex items-center gap-2 pl-6">
+                  <input
+                    type="number"
+                    min={0}
+                    max={hores}
+                    step={0.5}
+                    value={data.HoresNoLectives || ''}
+                    onChange={(e) => set('HoresNoLectives', Number(e.target.value))}
+                    placeholder="0"
+                    className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <span className="text-xs text-gray-500">hores no lectives (de {hores.toString().replace('.', ',')} totals)</span>
+                </div>
+              )}
+            </div>
           )}
 
           <div>

@@ -599,6 +599,16 @@ function SubstitucionsWrapper() {
     setFormObert(true)
   }
 
+  async function handleAprovarAbsencia(a: Absencia) {
+    await aprovar(a)
+    setAbsenciaSeleccionada((prev) => (prev ? { ...prev, Estat: 'Aprovada' } : null))
+  }
+
+  async function handleRebutjarAbsencia(a: Absencia, motiu: string) {
+    await rebutjar(a, motiu)
+    setAbsenciaSeleccionada((prev) => (prev ? { ...prev, Estat: 'Rebutjada', MotiuRebuig: motiu } : null))
+  }
+
   return (
     <>
       <SubstitucionsPage
@@ -649,8 +659,8 @@ function SubstitucionsWrapper() {
           potGestionar={canGestionar}
           potEliminar={canEliminar}
           onClose={() => setAbsenciaSeleccionada(null)}
-          onAprovar={async (a) => { await aprovar(a); setAbsenciaSeleccionada(null) }}
-          onRebutjar={async (a, motiu) => { await rebutjar(a, motiu); setAbsenciaSeleccionada(null) }}
+          onAprovar={handleAprovarAbsencia}
+          onRebutjar={handleRebutjarAbsencia}
           onEliminar={async (a) => { await eliminarAbsencia(a); setAbsenciaSeleccionada(null) }}
           onCrearSubstitucio={handleCrearSubstitucioDesDAbsencia}
         />

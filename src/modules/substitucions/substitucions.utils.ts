@@ -1,3 +1,4 @@
+import { getFirmaEmail } from '../../store/configStore'
 import type { Substitucio } from './types'
 
 export const TABLE_SUBSTITUCIONS = 'substitucions'
@@ -146,7 +147,7 @@ export function buildEmailSubstitucio(
     '',
     `Accedeix a la plataforma per veure els detalls i marcar-la com a realitzada quan acabis.`,
     '',
-    '— Coordinació Digital · Col·legi Sant Josep Obrer',
+    `— ${getFirmaEmail()} · Col·legi Sant Josep Obrer`,
   ]
   return { subject, body: lines.join('\n') }
 }

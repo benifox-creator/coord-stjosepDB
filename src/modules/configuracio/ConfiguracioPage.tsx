@@ -3,8 +3,8 @@ import { Settings, Plus, X, Loader2, AlertCircle, RotateCcw, Users, ChevronDown,
 import { useConfigStore, CONFIG_DEFAULTS, MODULS_VISIBILITAT, ROLS_VISIBILITAT, ROL_VIS_LABELS } from '../../store/configStore'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
-import { ROLS, ROL_LABELS, ROL_COLORS, ROL_DESCRIPCIONS } from '../usuaris/types'
-import type { Usuari, Rol } from '../usuaris/types'
+import { ROLS, ROL_LABELS, ROL_COLORS, ROL_DESCRIPCIONS, ETAPES_USUARI } from '../usuaris/types'
+import type { Usuari, Rol, EtapaSubstitucio } from '../usuaris/types'
 
 interface LlistaConfig {
   clau: string
@@ -215,8 +215,10 @@ function RolBadge({ rol }: { rol: Rol }) {
 
 function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean }) {
   const updateRol = useUsuarisStore((s) => s.updateRol)
+  const updateEtapa = useUsuarisStore((s) => s.updateEtapa)
   const [obert, setObert] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [savingEtapa, setSavingEtapa] = useState(false)
   useEffect(() => {
     if (!obert) return
     function handler(e: MouseEvent) {
@@ -238,6 +240,16 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
     }
   }
 
+  async function handleCanviarEtapa(e: React.ChangeEvent<HTMLSelectElement>) {
+    const v = e.target.value as EtapaSubstitucio | ''
+    setSavingEtapa(true)
+    try {
+      await updateEtapa(usuari, v === '' ? null : v)
+    } finally {
+      setSavingEtapa(false)
+    }
+  }
+
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0">
       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-semibold text-gray-600">
@@ -250,6 +262,18 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
         </p>
         <p className="text-xs text-gray-400 truncate">{usuari.Email}</p>
       </div>
+      <select
+        value={usuari.Etapa ?? ''}
+        onChange={handleCanviarEtapa}
+        disabled={savingEtapa}
+        title="Etapa"
+        className="shrink-0 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 disabled:opacity-60"
+      >
+        <option value="">Sense etapa</option>
+        {ETAPES_USUARI.map((e) => (
+          <option key={e} value={e}>{e}</option>
+        ))}
+      </select>
       <div id={`rol-dropdown-${usuari.Email}`} className="relative shrink-0">
         <button
           onClick={() => setObert((o) => !o)}
@@ -284,6 +308,7 @@ function AfegirUsuariForm() {
   const [email, setEmail] = useState('')
   const [nom, setNom] = useState('')
   const [rol, setRol] = useState<Rol>('convidat')
+  const [etapa, setEtapa] = useState<EtapaSubstitucio | ''>('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -292,6 +317,7 @@ function AfegirUsuariForm() {
     setEmail('')
     setNom('')
     setRol('convidat')
+    setEtapa('')
     setError(null)
   }
 
@@ -301,7 +327,7 @@ function AfegirUsuariForm() {
     setSaving(true)
     setError(null)
     try {
-      await crear(trimmed, nom.trim(), rol)
+      await crear(trimmed, nom.trim(), rol, etapa === '' ? null : etapa)
       tancar()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error en desar.')
@@ -350,6 +376,16 @@ function AfegirUsuariForm() {
       >
         {ROLS.map((r) => (
           <option key={r} value={r}>{ROL_LABELS[r]}</option>
+        ))}
+      </select>
+      <select
+        value={etapa}
+        onChange={(e) => setEtapa(e.target.value as EtapaSubstitucio | '')}
+        className="input text-sm w-full"
+      >
+        <option value="">Sense etapa</option>
+        {ETAPES_USUARI.map((e) => (
+          <option key={e} value={e}>{e}</option>
         ))}
       </select>
       <div className="flex items-center gap-2 pt-1">
@@ -442,6 +478,59 @@ function MantenimentEmailEditor() {
           value={valor}
           onChange={(e) => { setValor(e.target.value); setSaved(false) }}
           placeholder="manteniment@stjosep.org"
+          onKeyDown={(e) => e.key === 'Enter' && handleDesar()}
+        />
+        <button
+          onClick={handleDesar}
+          disabled={saving || !valor.trim()}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-opacity hover:opacity-90"
+          style={{ backgroundColor: '#861414' }}
+        >
+          {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? '✓' : 'Desar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function FirmaEmailEditor() {
+  const savedValues = useConfigStore((s) => s.config['emails.firma'])
+  const update = useConfigStore((s) => s.update)
+  const firma = savedValues?.[0] ?? 'Administració'
+  const [valor, setValor] = useState(firma)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function handleDesar() {
+    if (!valor.trim()) return
+    setSaving(true)
+    try {
+      await update('emails.firma', [valor.trim()])
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex items-start gap-2 mb-3">
+        <Mail size={14} className="text-gray-400 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-text-main">Firma dels correus automàtics</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Nom que apareix al peu dels correus d'absències, substitucions i incidències (ex: "Administració", "Direcció").
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          className="input text-sm flex-1"
+          value={valor}
+          onChange={(e) => { setValor(e.target.value); setSaved(false) }}
+          placeholder="Administració"
           onKeyDown={(e) => e.key === 'Enter' && handleDesar()}
         />
         <button
@@ -595,6 +684,16 @@ export function ConfiguracioPage() {
               Activa o desactiva quins mòduls pot veure cada perfil. Les caselles marcades indiquen que el mòdul és visible per aquell perfil.
             </p>
             <VisibilitatModuls />
+          </section>
+        )}
+
+        {esCoordinador && (
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <Mail size={14} className="text-gray-500" />
+              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Correus automàtics</h2>
+            </div>
+            <FirmaEmailEditor />
           </section>
         )}
 

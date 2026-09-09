@@ -1,5 +1,6 @@
 import { supabase } from '../../services/db'
 import { useUsuarisStore } from '../../store/usuarisStore'
+import { getFirmaEmail } from '../../store/configStore'
 import { DIES_CA_LLARG, MESOS_CA_LLARG } from '../substitucions/substitucions.utils'
 import type { Absencia, EstatAbsencia } from './types'
 
@@ -22,6 +23,7 @@ export interface AbsenciaRow {
   hora_inici: string
   hora_fi: string
   hores: number
+  hores_no_lectives: number
   motiu: string
   notes: string
   estat: string
@@ -41,6 +43,7 @@ export function rowToAbsencia(row: AbsenciaRow): Absencia {
     HoraInici: row.hora_inici,
     HoraFi: row.hora_fi,
     Hores: row.hores,
+    HoresNoLectives: row.hores_no_lectives ?? 0,
     Motiu: row.motiu,
     Notes: row.notes,
     Estat: (row.estat as EstatAbsencia) ?? 'Pendent revisió',
@@ -58,6 +61,7 @@ export function absenciaToInsert(a: {
   HoraInici: string
   HoraFi: string
   Hores: number
+  HoresNoLectives: number
   Motiu: string
   Notes: string
   Estat: EstatAbsencia
@@ -69,6 +73,7 @@ export function absenciaToInsert(a: {
     hora_inici: a.HoraInici,
     hora_fi: a.HoraFi,
     hores: a.Hores,
+    hores_no_lectives: a.HoresNoLectives,
     motiu: a.Motiu,
     notes: a.Notes,
     estat: a.Estat,
@@ -105,12 +110,13 @@ export function buildEmailNovaAbsencia(
     '',
     `  Data:    ${diaStr}`,
     `  Horari:  ${a.HoraInici}–${a.HoraFi} (${a.Hores.toString().replace('.', ',')} hores)`,
+    ...(a.HoresNoLectives > 0 ? [`  (${a.HoresNoLectives.toString().replace('.', ',')} hores no lectives, no necessiten substitut)`] : []),
     `  Motiu:   ${a.Motiu}`,
     ...(a.Notes ? ['', `  Notes: ${a.Notes}`] : []),
     '',
     `Accedeix a SJO Hub per aprovar-la o rebutjar-la.`,
     '',
-    '— SJO Hub · Col·legi Sant Josep Obrer',
+    `— ${getFirmaEmail()} · Col·legi Sant Josep Obrer`,
   ]
   return { subject, body: lines.join('\n') }
 }
@@ -125,21 +131,21 @@ export function buildEmailRevisioAbsencia(a: Absencia): { subject: string; body:
     `La teva absència del ${diaStr} (${a.HoraInici}–${a.HoraFi}) ha estat ${aprovada ? 'aprovada' : 'rebutjada'}.`,
     ...(!aprovada && a.MotiuRebuig ? ['', `Motiu: ${a.MotiuRebuig}`] : []),
     '',
-    '— SJO Hub · Col·legi Sant Josep Obrer',
+    `— ${getFirmaEmail()} · Col·legi Sant Josep Obrer`,
   ]
   return { subject, body: lines.join('\n') }
 }
 
-export async function getDireccioICoordinadorEmails(): Promise<string[]> {
+export async function getAprovadorsAbsenciesEmails(): Promise<string[]> {
   const { usuaris } = useUsuarisStore.getState()
   if (usuaris.length > 0) {
     return usuaris
-      .filter((u) => u.Rol === 'coordinador' || u.Rol === 'direccio')
+      .filter((u) => u.Rol === 'coordinador' || u.Rol === 'direccio' || u.Rol === 'titular')
       .map((u) => u.Email)
       .filter(Boolean)
   }
   try {
-    const { data, error } = await supabase.from('usuaris').select('email').in('rol', ['coordinador', 'direccio'])
+    const { data, error } = await supabase.from('usuaris').select('email').in('rol', ['coordinador', 'direccio', 'titular'])
     if (error) throw error
     return (data ?? []).map((r) => r.email).filter(Boolean)
   } catch {

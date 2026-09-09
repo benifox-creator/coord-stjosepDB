@@ -303,6 +303,20 @@ create policy "anon_full_access" on public.absencies for all using (true) with c
 alter table public.substitucions
   add column absencia_id uuid references public.absencies(id);
 
+alter table public.absencies
+  add column hores_no_lectives numeric(4,2) not null default 0;
+alter table public.absencies
+  add constraint absencies_hores_no_lectives_check
+  check (hores_no_lectives >= 0 and hores_no_lectives <= hores);
+
+alter table public.usuaris
+  add column etapa text
+  check (etapa in ('EI', 'EP', 'ESO 1r-2n', 'ESO 3r-4t', 'BATX', 'GM'));
+
+alter table public.usuaris drop constraint usuaris_rol_check;
+alter table public.usuaris add constraint usuaris_rol_check
+  check (rol in ('coordinador', 'direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'));
+
 create policy "anon_full_access" on public.inventari for all using (true) with check (true);
 create policy "anon_full_access" on public.incidencies for all using (true) with check (true);
 create policy "anon_full_access" on public.manteniment for all using (true) with check (true);

@@ -92,7 +92,15 @@ export function AbsenciaDetall({
             <div><p className="text-gray-400">Professor</p><p className="text-text-main font-medium">{nomProfessor}</p></div>
             <div><p className="text-gray-400">Data</p><p className="text-text-main font-medium">{formatDate(absencia.Data)}</p></div>
             <div><p className="text-gray-400">Horari</p><p className="text-text-main font-medium">{absencia.HoraInici}–{absencia.HoraFi}</p></div>
-            <div><p className="text-gray-400">Hores</p><p className="text-text-main font-medium">{absencia.Hores.toString().replace('.', ',')}</p></div>
+            <div>
+              <p className="text-gray-400">Hores</p>
+              <p className="text-text-main font-medium">{absencia.Hores.toString().replace('.', ',')}</p>
+              {absencia.HoresNoLectives > 0 && (
+                <p className="text-amber-700 text-[11px] mt-0.5">
+                  {absencia.HoresNoLectives.toString().replace('.', ',')}h no lectives — no necessiten substitut
+                </p>
+              )}
+            </div>
             <div className="col-span-2"><p className="text-gray-400">Motiu</p><p className="text-text-main font-medium">{absencia.Motiu}</p></div>
           </div>
 
@@ -104,20 +112,26 @@ export function AbsenciaDetall({
             <div>
               <p className="text-xs text-gray-400 mb-1.5">Substitucions creades ({substitucionsVinculades.length})</p>
               <div className="space-y-1.5">
-                {substitucionsVinculades.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between gap-2 px-2.5 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div className="min-w-0">
-                      <p className="font-medium text-text-main truncate">
-                        {s.Tipus === 'Pati' ? 'Pati' : (s.Grup || 'Sense grup')}
-                        {s.Materia && <span className="text-gray-400"> · {s.Materia}</span>}
-                      </p>
-                      <p className="text-gray-400">{s.Franja}</p>
+                {substitucionsVinculades.map((s) => {
+                  const nomSubstitut = usuaris.find((u) => u.Email === s.ProfessorSubstitut)?.Nom || s.ProfessorSubstitut
+                  return (
+                    <div key={s.id} className="flex items-center justify-between gap-2 px-2.5 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="min-w-0">
+                        <p className="font-medium text-text-main truncate">
+                          {s.Tipus === 'Pati' ? 'Pati' : (s.Grup || 'Sense grup')}
+                          {s.Materia && <span className="text-gray-400"> · {s.Materia}</span>}
+                        </p>
+                        <p className="text-gray-400">{s.Franja}</p>
+                        <p className="text-green-700 truncate">
+                          {nomSubstitut || 'Sense substitut assignat'}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-medium border ${ESTAT_SUBST_COLORS[s.Estat]}`}>
+                        {s.Estat}
+                      </span>
                     </div>
-                    <span className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-medium border ${ESTAT_SUBST_COLORS[s.Estat]}`}>
-                      {s.Estat}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

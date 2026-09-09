@@ -15,9 +15,10 @@ export const MODULS_VISIBILITAT = [
   { key: 'manteniment',  label: 'Manteniment' },
 ] as const
 
-export const ROLS_VISIBILITAT = ['direccio', 'cap_estudis', 'professorat', 'convidat'] as const
+export const ROLS_VISIBILITAT = ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'] as const
 export const ROL_VIS_LABELS: Record<string, string> = {
   direccio: 'Direcció',
+  titular: 'Titular',
   cap_estudis: "Cap d'Estudis",
   professorat: 'Professorat',
   convidat: 'Convidat',
@@ -65,6 +66,7 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Xarxa', 'Equipament', 'Programari', 'Seguretat', 'Formació', 'Infraestructura',
   ],
   'manteniment.email': [],
+  'emails.firma': ['Administració'],
   'absencies.motius': [
     'Visita mèdica', 'Assumptes propis', 'Baixa/malaltia', 'Formació', 'Altre',
   ],
@@ -85,15 +87,15 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'substitucions.franges.BATX':  ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
   'substitucions.franges.GM':    ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24'],
   // Visibilitat per defecte: tots els rols veuen tots els mòduls
-  'visibilitat.incidencies':  ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.inventari':    ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.material':     ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.prestecs':     ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.reserves':     ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.substitucions': ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.coneixement':  ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.pla-accio':    ['direccio', 'cap_estudis', 'professorat', 'convidat'],
-  'visibilitat.manteniment':  ['direccio', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.incidencies':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.inventari':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.material':     ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.prestecs':     ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.reserves':     ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.substitucions': ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.coneixement':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.pla-accio':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.manteniment':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
 }
 
 interface ConfigState {
@@ -142,3 +144,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     if (error) throw new Error(`Error desant configuració: ${error.message}`)
   },
 }))
+
+// Firma que apareix al peu dels correus automàtics (absències, substitucions, incidències...).
+// Funció standalone perquè la criden builders d'email que no són components React.
+export function getFirmaEmail(): string {
+  return useConfigStore.getState().getValues('emails.firma')[0] || 'Administració'
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
+import { getFirmaEmail } from '../../store/configStore'
 import { sendEmail } from '../../services/gmail'
 import { formatTimestamp, calcularDiesOberts, formatDate, formatDatetime } from './incidencies.utils'
 import type { Incidencia, EstatIncidencia, IncidenciaFormData } from './types'
@@ -75,10 +76,10 @@ function buildEmailTancament(inc: Incidencia, dataResolucio: string, dies: strin
   }
   lines.push(
     '',
-    'Si necessites més informació, posa\'t en contacte amb la Coordinació Digital.',
+    `Si necessites més informació, contacta amb ${getFirmaEmail()}.`,
     '',
     'Gràcies,',
-    'Coordinació Digital',
+    getFirmaEmail(),
     'Col·legi Sant Josep Obrer',
   )
   return lines.join('\n')

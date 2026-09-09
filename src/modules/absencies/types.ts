@@ -8,6 +8,7 @@ export interface Absencia {
   HoraInici: string
   HoraFi: string
   Hores: number
+  HoresNoLectives: number
   Motiu: string
   Notes: string
   Estat: EstatAbsencia
@@ -22,6 +23,7 @@ export interface AbsenciaFormData {
   Data: string
   HoraInici: string
   HoraFi: string
+  HoresNoLectives: number
   Motiu: string
   Notes: string
 }
