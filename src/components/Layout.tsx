@@ -17,6 +17,7 @@ import {
   X,
   ChevronRight,
   HelpCircle,
+  Boxes,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { logout } from '../services/auth'
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { to: '/coneixement',   label: 'Base Coneixement',   icon: BookOpen,                    visKey: 'coneixement' },
   { to: '/pla-accio',     label: "Pla d'Acció",        icon: Target,                      visKey: 'pla-accio' },
   { to: '/manteniment',   label: 'Manteniment',        icon: Wrench,                      visKey: 'manteniment' },
+  { to: '/material-infantil', label: 'Material Infantil', icon: Boxes, visKey: 'material-infantil' },
 ]
 
 const NAV_SETTINGS = [
@@ -49,13 +51,17 @@ export function Layout({ children }: Props) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const rol = useUsuarisStore((s) => s.rol)
+  const usuaris = useUsuarisStore((s) => s.usuaris)
+  const usuariActual = usuaris.find((u) => u.Email.toLowerCase() === (user?.email ?? '').toLowerCase()) ?? null
   const esCoordinador = rol === 'coordinador'
   const config = useConfigStore((s) => s.config)
 
   // Mentre el rol carrega (null), mostrem tots els ítems optimistament
-  const itemsVisibles = NAV_ITEMS.filter(({ visKey }) =>
-    visKey === null || rol === null || canAccessModul(config, visKey, rol)
-  )
+  const itemsVisibles = NAV_ITEMS.filter(({ visKey }) => {
+    if (visKey === null || rol === null) return true
+    if (visKey === 'material-infantil' && usuariActual?.PotGestionarMaterial) return true
+    return canAccessModul(config, visKey, rol)
+  })
 
   async function handleLogout() {
     await logout()
