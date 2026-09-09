@@ -317,6 +317,64 @@ alter table public.usuaris drop constraint usuaris_rol_check;
 alter table public.usuaris add constraint usuaris_rol_check
   check (rol in ('coordinador', 'direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'));
 
+create table public.proveidors_infantil (
+  id uuid primary key default gen_random_uuid(),
+  nom text not null default '',
+  contacte text not null default '',
+  email text not null default '',
+  telefon text not null default '',
+  web text not null default '',
+  termini_lliurament text not null default '',
+  notes text not null default ''
+);
+
+create sequence public.materials_infantil_codi_seq;
+
+create table public.materials_infantil (
+  id uuid primary key default gen_random_uuid(),
+  codi text not null unique
+        default ('MINF-' || lpad(nextval('public.materials_infantil_codi_seq')::text, 3, '0')),
+  nom text not null default '',
+  categoria text not null default 'Altres'
+             check (categoria in ('Plàstica','Papereria','Psicomotricitat','Higiene','Aula','Llibres/quaderns','Altres')),
+  unitat text not null default 'unitat'
+             check (unitat in ('unitat','pack','capsa','rotlle','litre','paquet','joc')),
+  proveidor_id uuid references public.proveidors_infantil(id),
+  preu_unitari numeric(8,2) not null default 0,
+  unitats_per_alumne numeric(6,2) not null default 1,
+  comanda_habitual text not null default 'Sí'
+             check (comanda_habitual in ('Sí','Revisar','No')),
+  recompte_manual numeric not null default 0,
+  entrades_rebudes numeric not null default 0,
+  consum_manual numeric not null default 0,
+  notes text not null default '',
+  creat_el text not null default to_char(now(), 'YYYY-MM-DD HH24:MI'),
+  creat_per text not null default ''
+);
+
+create table public.comandes_infantil (
+  id uuid primary key default gen_random_uuid(),
+  curs_escolar text not null default '',
+  etapa text not null check (etapa in ('I3','I4','I5')),
+  material_id uuid not null references public.materials_infantil(id),
+  estoc_aplicat numeric not null default 0,
+  marge_seguretat numeric not null default 0,
+  estat text not null default 'Pendent'
+             check (estat in ('Pendent','Revisar','Demanat','Rebut','Cancel·lat')),
+  notes text not null default '',
+  creat_el text not null default to_char(now(), 'YYYY-MM-DD HH24:MI'),
+  creat_per text not null default ''
+);
+
+alter table public.usuaris add column pot_gestionar_material boolean not null default false;
+
+alter table public.proveidors_infantil enable row level security;
+create policy "anon_full_access" on public.proveidors_infantil for all using (true) with check (true);
+alter table public.materials_infantil enable row level security;
+create policy "anon_full_access" on public.materials_infantil for all using (true) with check (true);
+alter table public.comandes_infantil enable row level security;
+create policy "anon_full_access" on public.comandes_infantil for all using (true) with check (true);
+
 create policy "anon_full_access" on public.inventari for all using (true) with check (true);
 create policy "anon_full_access" on public.incidencies for all using (true) with check (true);
 create policy "anon_full_access" on public.manteniment for all using (true) with check (true);
