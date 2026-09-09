@@ -26,3 +26,6 @@ dist-ssr
 # Credencials Google Cloud — mai pujar al repo
 client_secret_*.json
 service-account-*.json
+
+# Worktrees temporals de desenvolupament assistit
+.claude/worktrees/
