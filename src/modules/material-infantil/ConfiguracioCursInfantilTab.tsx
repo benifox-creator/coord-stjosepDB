@@ -18,10 +18,10 @@ interface Props {
 }
 
 export function ConfiguracioCursInfantilTab({ potGestionar }: Props) {
-  const config = useConfigStore((s) => s.config)
   const update = useConfigStore((s) => s.update)
+  const getValues = useConfigStore((s) => s.getValues)
   const [valors, setValors] = useState<Record<string, string>>(() =>
-    Object.fromEntries(CAMPS.map((c) => [c.clau, config[c.clau]?.[0] ?? ''])),
+    Object.fromEntries(CAMPS.map((c) => [c.clau, getValues(c.clau)[0]])),
   )
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
