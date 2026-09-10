@@ -10,6 +10,7 @@ export interface Usuari {
   Nom: string
   Rol: Rol
   Etapa: EtapaSubstitucio | null
+  PotGestionarMaterial: boolean
   Data_alta: string
 }
 

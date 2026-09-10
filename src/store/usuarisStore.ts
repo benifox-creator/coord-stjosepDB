@@ -26,6 +26,7 @@ interface UsuariRow {
   nom: string
   rol: string
   etapa: string | null
+  pot_gestionar_material: boolean
   data_alta: string
 }
 
@@ -36,6 +37,7 @@ function rowToUsuari(row: UsuariRow): Usuari {
     Nom: row.nom,
     Rol: parseRol(row.rol),
     Etapa: parseEtapa(row.etapa),
+    PotGestionarMaterial: row.pot_gestionar_material ?? false,
     Data_alta: row.data_alta,
   }
 }
@@ -69,9 +71,10 @@ interface UsuarisState {
 
   loadRol: (email: string, displayName?: string | null) => Promise<void>
   loadAll: () => Promise<void>
-  crear: (email: string, nom: string, rol: Rol, etapa?: EtapaSubstitucio | null) => Promise<void>
+  crear: (email: string, nom: string, rol: Rol, etapa?: EtapaSubstitucio | null, potGestionarMaterial?: boolean) => Promise<void>
   updateRol: (usuari: Usuari, nouRol: Rol) => Promise<void>
   updateEtapa: (usuari: Usuari, novaEtapa: EtapaSubstitucio | null) => Promise<void>
+  updatePotGestionarMaterial: (usuari: Usuari, valor: boolean) => Promise<void>
   reset: () => void
 }
 
@@ -139,11 +142,13 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     }
   },
 
-  async crear(email, nom, rol, etapa = null) {
+  async crear(email, nom, rol, etapa = null, potGestionarMaterial = false) {
     const emailNorm = email.trim().toLowerCase()
     let row: UsuariRow
     try {
-      row = await insertRow<UsuariRow>(TABLE, { email: emailNorm, nom: nom.trim(), rol, etapa })
+      row = await insertRow<UsuariRow>(TABLE, {
+        email: emailNorm, nom: nom.trim(), rol, etapa, pot_gestionar_material: potGestionarMaterial,
+      })
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
       if (msg.includes('duplicate key') || msg.includes('unique')) {
@@ -165,6 +170,13 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     await updateRowById(TABLE, usuari.id, { etapa: novaEtapa })
     set((s) => ({
       usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, Etapa: novaEtapa } : u)),
+    }))
+  },
+
+  async updatePotGestionarMaterial(usuari, valor) {
+    await updateRowById(TABLE, usuari.id, { pot_gestionar_material: valor })
+    set((s) => ({
+      usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, PotGestionarMaterial: valor } : u)),
     }))
   },
 

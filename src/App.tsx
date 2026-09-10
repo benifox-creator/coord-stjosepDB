@@ -65,6 +65,8 @@ import { useManteniment } from './modules/manteniment/useManteniment'
 import type { Manteniment } from './modules/manteniment/types'
 
 import { ConfiguracioPage } from './modules/configuracio/ConfiguracioPage'
+import { MaterialInfantilPage } from './modules/material-infantil/MaterialInfantilPage'
+import { potVeureMaterialInfantil } from './modules/material-infantil/permisos'
 import { useConfigStore, canAccessModul } from './store/configStore'
 import { useUsuarisStore, potGestionar, potEliminar, potAprovarAbsencies } from './store/usuarisStore'
 import './index.css'
@@ -685,6 +687,17 @@ function CoordinadorGuard({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function MaterialInfantilGuard({ children }: { children: ReactNode }) {
+  const rol = useUsuarisStore((s) => s.rol)
+  const config = useConfigStore((s) => s.config)
+  const email = useAuthStore((s) => s.user?.email)
+  const usuaris = useUsuarisStore((s) => s.usuaris)
+  if (rol === null || usuaris.length === 0) return <>{children}</>
+  const usuariActual = usuaris.find((u) => u.Email.toLowerCase() === (email ?? '').toLowerCase()) ?? null
+  if (!potVeureMaterialInfantil(usuariActual, rol, config)) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -707,6 +720,10 @@ function AppRoutes() {
                 <Route path="/coneixement" element={<VisibilitatGuard visKey="coneixement"><ConeixementWrapper /></VisibilitatGuard>} />
                 <Route path="/pla-accio" element={<VisibilitatGuard visKey="pla-accio"><PlaAccioWrapper /></VisibilitatGuard>} />
                 <Route path="/manteniment" element={<VisibilitatGuard visKey="manteniment"><MantenimentWrapper /></VisibilitatGuard>} />
+                <Route
+                  path="/material-infantil"
+                  element={<MaterialInfantilGuard><MaterialInfantilPage /></MaterialInfantilGuard>}
+                />
                 <Route
                   path="/configuracio"
                   element={<CoordinadorGuard><ConfiguracioPage /></CoordinadorGuard>}

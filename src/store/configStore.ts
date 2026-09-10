@@ -13,6 +13,7 @@ export const MODULS_VISIBILITAT = [
   { key: 'coneixement',  label: 'Base de Coneixement' },
   { key: 'pla-accio',    label: "Pla d'Acció" },
   { key: 'manteniment',  label: 'Manteniment' },
+  { key: 'material-infantil', label: 'Material Infantil' },
 ] as const
 
 export const ROLS_VISIBILITAT = ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'] as const
@@ -86,6 +87,12 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'substitucions.franges.ESO34': ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
   'substitucions.franges.BATX':  ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
   'substitucions.franges.GM':    ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24'],
+  'material-infantil.curs-actiu': ['2026-2027'],
+  'material-infantil.alumnes-i3': ['0'],
+  'material-infantil.alumnes-i4': ['0'],
+  'material-infantil.alumnes-i5': ['0'],
+  'material-infantil.marge-seguretat-pct': ['0'],
+  'material-infantil.pressupost-objectiu': ['0'],
   // Visibilitat per defecte: tots els rols veuen tots els mòduls
   'visibilitat.incidencies':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.inventari':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
@@ -96,6 +103,7 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'visibilitat.coneixement':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.pla-accio':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.manteniment':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
+  'visibilitat.material-infantil': ['direccio', 'titular', 'cap_estudis'],
 }
 
 interface ConfigState {

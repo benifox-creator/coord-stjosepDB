@@ -216,6 +216,8 @@ function RolBadge({ rol }: { rol: Rol }) {
 function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean }) {
   const updateRol = useUsuarisStore((s) => s.updateRol)
   const updateEtapa = useUsuarisStore((s) => s.updateEtapa)
+  const updatePotGestionarMaterial = useUsuarisStore((s) => s.updatePotGestionarMaterial)
+  const [savingPotGestionar, setSavingPotGestionar] = useState(false)
   const [obert, setObert] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savingEtapa, setSavingEtapa] = useState(false)
@@ -250,6 +252,15 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
     }
   }
 
+  async function handleTogglePotGestionarMaterial() {
+    setSavingPotGestionar(true)
+    try {
+      await updatePotGestionarMaterial(usuari, !usuari.PotGestionarMaterial)
+    } finally {
+      setSavingPotGestionar(false)
+    }
+  }
+
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0">
       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-semibold text-gray-600">
@@ -262,6 +273,19 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
         </p>
         <p className="text-xs text-gray-400 truncate">{usuari.Email}</p>
       </div>
+      <label
+        className="shrink-0 flex items-center gap-1 text-[11px] text-gray-500"
+        title="Pot gestionar el mòdul Material Infantil"
+      >
+        <input
+          type="checkbox"
+          checked={usuari.PotGestionarMaterial}
+          onChange={handleTogglePotGestionarMaterial}
+          disabled={savingPotGestionar}
+          className="rounded border-gray-300 text-primary focus:ring-primary/30"
+        />
+        Material
+      </label>
       <select
         value={usuari.Etapa ?? ''}
         onChange={handleCanviarEtapa}
@@ -309,6 +333,7 @@ function AfegirUsuariForm() {
   const [nom, setNom] = useState('')
   const [rol, setRol] = useState<Rol>('convidat')
   const [etapa, setEtapa] = useState<EtapaSubstitucio | ''>('')
+  const [potGestionarMaterial, setPotGestionarMaterial] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -318,6 +343,7 @@ function AfegirUsuariForm() {
     setNom('')
     setRol('convidat')
     setEtapa('')
+    setPotGestionarMaterial(false)
     setError(null)
   }
 
@@ -327,7 +353,7 @@ function AfegirUsuariForm() {
     setSaving(true)
     setError(null)
     try {
-      await crear(trimmed, nom.trim(), rol, etapa === '' ? null : etapa)
+      await crear(trimmed, nom.trim(), rol, etapa === '' ? null : etapa, potGestionarMaterial)
       tancar()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error en desar.')
@@ -388,6 +414,15 @@ function AfegirUsuariForm() {
           <option key={e} value={e}>{e}</option>
         ))}
       </select>
+      <label className="flex items-center gap-1.5 text-xs text-gray-600">
+        <input
+          type="checkbox"
+          checked={potGestionarMaterial}
+          onChange={(e) => setPotGestionarMaterial(e.target.checked)}
+          className="rounded border-gray-300 text-primary focus:ring-primary/30"
+        />
+        Pot gestionar Material Infantil
+      </label>
       <div className="flex items-center gap-2 pt-1">
         <button
           onClick={handleAfegir}
