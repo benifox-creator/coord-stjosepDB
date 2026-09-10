@@ -32,6 +32,7 @@ export function MaterialInfantilPage() {
   const usuariActual = usuaris.find((u) => u.Email.toLowerCase() === (email ?? '').toLowerCase()) ?? null
   const potVeure = potVeureMaterialInfantil(usuariActual, rol, config)
   const potGestionar = potGestionarMaterialInfantil(rol, usuariActual?.PotGestionarMaterial ?? false)
+  const tabsVisibles = TABS.filter(([key]) => key !== 'configuracio' || potGestionar)
 
   if (!potVeure) {
     return (
@@ -46,7 +47,7 @@ export function MaterialInfantilPage() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <h1 className="text-lg font-semibold text-text-main mb-3">Material Infantil</h1>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit flex-wrap">
-          {TABS.map(([key, label, Icon]) => (
+          {tabsVisibles.map(([key, label, Icon]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -66,7 +67,7 @@ export function MaterialInfantilPage() {
         {tab === 'consolidat' && <ConsolidatInfantilTab />}
         {tab === 'proveidors' && <ProveidorsInfantilTab potGestionar={potGestionar} />}
         {tab === 'dashboard' && <DashboardInfantilTab />}
-        {tab === 'configuracio' && <ConfiguracioCursInfantilTab potGestionar={potGestionar} />}
+        {tab === 'configuracio' && potGestionar && <ConfiguracioCursInfantilTab potGestionar={potGestionar} />}
       </div>
     </div>
   )

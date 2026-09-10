@@ -11,8 +11,9 @@ export function DashboardInfantilTab() {
   const { comandes, load } = useComandesInfantil()
   const { materials, load: loadMaterials } = useMaterialsInfantil()
   const config = useConfigStore((s) => s.config)
-  const cursActiu = config['material-infantil.curs-actiu']?.[0] ?? '2026-2027'
-  const pressupost = Number(config['material-infantil.pressupost-objectiu']?.[0] ?? '0') || 0
+  const getValues = useConfigStore((s) => s.getValues)
+  const cursActiu = getValues('material-infantil.curs-actiu')[0]
+  const pressupost = Number(getValues('material-infantil.pressupost-objectiu')[0]) || 0
 
   useEffect(() => { load(); loadMaterials() }, [load, loadMaterials])
 

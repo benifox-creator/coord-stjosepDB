@@ -83,7 +83,7 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
           <tbody className="divide-y divide-gray-100">
             {!loading && filtrats.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={potGestionar ? 6 : 5} className="px-3 py-8 text-center text-gray-400">
                   {materials.length === 0 ? 'Encara no hi ha materials registrats.' : 'Cap material coincideix amb la cerca.'}
                 </td>
               </tr>

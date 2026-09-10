@@ -39,6 +39,9 @@ export function MaterialInfantilForm({ proveidors, onClose, onGuardar, inicial }
     if (!form.Nom.trim()) e.Nom = 'El nom és obligatori.'
     if (form.PreuUnitari < 0) e.PreuUnitari = 'El preu no pot ser negatiu.'
     if (form.UnitatsPerAlumne < 0) e.UnitatsPerAlumne = 'No pot ser negatiu.'
+    if (form.RecompteManual < 0 || form.EntradesRebudes < 0 || form.ConsumManual < 0) {
+      e.RecompteManual = 'Els camps d\'estoc no poden ser negatius.'
+    }
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -188,6 +191,9 @@ export function MaterialInfantilForm({ proveidors, onClose, onGuardar, inicial }
                 />
               </div>
             </div>
+            {errors.RecompteManual && (
+              <p className="flex items-center gap-1 text-xs text-red-600 mt-1.5"><AlertCircle size={12} /> {errors.RecompteManual}</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">

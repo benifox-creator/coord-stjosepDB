@@ -20,8 +20,9 @@ export function ProveidorsInfantilTab({ potGestionar }: Props) {
 
   const filtrats = useMemo(() => {
     const q = cerca.toLowerCase()
-    if (!q) return proveidors
-    return proveidors.filter((p) => `${p.Nom} ${p.Contacte} ${p.Email}`.toLowerCase().includes(q))
+    return proveidors
+      .filter((p) => !q || `${p.Nom} ${p.Contacte} ${p.Email}`.toLowerCase().includes(q))
+      .sort((a, b) => a.Nom.localeCompare(b.Nom))
   }, [proveidors, cerca])
 
   async function handleEliminar(p: ProveidorInfantil) {

@@ -175,7 +175,7 @@ export function necessitatBase(unitatsPerAlumne: number, nreAlumnes: number): nu
 }
 
 export function quantitatADemanar(necessitatBaseVal: number, margeSeguretat: number, estocAplicat: number): number {
-  return Math.max(0, necessitatBaseVal + margeSeguretat - estocAplicat)
+  return Math.ceil(Math.max(0, necessitatBaseVal + margeSeguretat - estocAplicat))
 }
 
 export function costEstimat(quantitat: number, preuUnitari: number): number {

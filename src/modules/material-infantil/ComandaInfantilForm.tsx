@@ -3,7 +3,7 @@ import { X, Loader2 } from 'lucide-react'
 import type {
   ComandaInfantilFormData, EtapaInfantil, EstatComandaInfantil, MaterialInfantil, ComandaInfantil,
 } from './types'
-import { ESTATS_COMANDA_INFANTIL } from './types'
+import { ESTATS_COMANDA_INFANTIL, COMANDA_HABITUAL_VALORS } from './types'
 import { estocDisponible, necessitatBase, suggeriEstocAplicat, nreAlumnesFromConfig } from './materialInfantil.utils'
 import { useConfigStore } from '../../store/configStore'
 
@@ -18,14 +18,20 @@ interface Props {
 
 export function ComandaInfantilForm({ etapa, cursEscolar, materials, comandesExistents, onDesar, onCancel }: Props) {
   const config = useConfigStore((s) => s.config)
+  const getValues = useConfigStore((s) => s.getValues)
   const nAlumnes = nreAlumnesFromConfig(config, etapa)
-  const margePct = Number(config['material-infantil.marge-seguretat-pct']?.[0] ?? '0') || 0
+  const margePct = Number(getValues('material-infantil.marge-seguretat-pct')[0]) || 0
 
   const materialsDisponibles = useMemo(() => {
     const jaUsats = new Set(
       comandesExistents.filter((c) => c.CursEscolar === cursEscolar && c.Etapa === etapa).map((c) => c.MaterialId),
     )
-    return materials.filter((m) => !jaUsats.has(m.id))
+    return materials
+      .filter((m) => !jaUsats.has(m.id))
+      .sort((a, b) =>
+        COMANDA_HABITUAL_VALORS.indexOf(a.ComandaHabitual) - COMANDA_HABITUAL_VALORS.indexOf(b.ComandaHabitual)
+        || a.Nom.localeCompare(b.Nom),
+      )
   }, [materials, comandesExistents, cursEscolar, etapa])
 
   const [materialId, setMaterialId] = useState(materialsDisponibles[0]?.id ?? '')

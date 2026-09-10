@@ -375,6 +375,10 @@ create policy "anon_full_access" on public.materials_infantil for all using (tru
 alter table public.comandes_infantil enable row level security;
 create policy "anon_full_access" on public.comandes_infantil for all using (true) with check (true);
 
+alter table public.comandes_infantil
+  add constraint comandes_infantil_curs_etapa_material_key
+  unique (curs_escolar, etapa, material_id);
+
 create policy "anon_full_access" on public.inventari for all using (true) with check (true);
 create policy "anon_full_access" on public.incidencies for all using (true) with check (true);
 create policy "anon_full_access" on public.manteniment for all using (true) with check (true);

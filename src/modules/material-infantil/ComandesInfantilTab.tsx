@@ -16,7 +16,8 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
   const { comandes, loading, error, load, crear, eliminar } = useComandesInfantil()
   const { materials, load: loadMaterials } = useMaterialsInfantil()
   const config = useConfigStore((s) => s.config)
-  const cursActiu = config['material-infantil.curs-actiu']?.[0] ?? '2026-2027'
+  const getValues = useConfigStore((s) => s.getValues)
+  const cursActiu = getValues('material-infantil.curs-actiu')[0]
   const [etapa, setEtapa] = useState<EtapaInfantil>('I3')
   const [formObert, setFormObert] = useState(false)
   const [confirmEliminar, setConfirmEliminar] = useState<string | null>(null)
@@ -104,7 +105,7 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
           <tbody className="divide-y divide-gray-100">
             {!loading && linies.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={potGestionar ? 8 : 7} className="px-3 py-8 text-center text-gray-400">
                   Encara no hi ha línies per {etapa} al curs {cursActiu}.
                 </td>
               </tr>
