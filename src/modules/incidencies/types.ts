@@ -1,12 +1,8 @@
 export type EstatIncidencia = 'Oberta' | 'En curs' | 'Tancada'
 export type PrioritatIncidencia = 'Alta' | 'Mitjana' | 'Baixa'
-export type TipusProblema =
-  | 'Maquinari'
-  | 'Programari'
-  | 'Xarxa'
-  | 'Projector/Pantalla'
-  | 'Impressora'
-  | 'Altre'
+// Llista editable des de Configuració (clau 'incidencies.tipus'), no un
+// conjunt fix — per això és `string` i no un union de literals.
+export type TipusProblema = string
 
 export interface Incidencia {
   id: string

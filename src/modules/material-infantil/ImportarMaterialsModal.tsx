@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Loader2, Download, Upload, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import type { MaterialInfantilFormData, ProveidorInfantil } from './types'
 import { generarPlantillaExcel, parsejaExcelMaterials, type FilaImportMaterial } from './excelImport.utils'
+import { useConfigStore } from '../../store/configStore'
 
 interface Props {
   proveidors: ProveidorInfantil[]
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function ImportarMaterialsModal({ proveidors, onImportar, onClose }: Props) {
+  const categories = useConfigStore((s) => s.getValues('material-infantil.categories'))
   const [resultat, setResultat] = useState<FilaImportMaterial[] | null>(null)
   const [parsing, setParsing] = useState(false)
   const [important, setImportant] = useState(false)
@@ -30,7 +32,7 @@ export function ImportarMaterialsModal({ proveidors, onImportar, onClose }: Prop
     setError('')
     setParsing(true)
     try {
-      const files = await parsejaExcelMaterials(file, proveidors)
+      const files = await parsejaExcelMaterials(file, proveidors, categories)
       setResultat(files)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error llegint el fitxer.')

@@ -1,12 +1,6 @@
-export type CategoriaMaterial =
-  | 'Cable'
-  | 'Adaptador'
-  | 'Àudio/Vídeo'
-  | 'Perifèric'
-  | 'Emmagatzematge'
-  | 'Bateria/Carregador'
-  | 'Projecció'
-  | 'Altre'
+// Llista editable des de Configuració (clau 'material.categories'), no un
+// conjunt fix — per això és `string` i no un union de literals.
+export type CategoriaMaterial = string
 
 export interface ItemMaterial {
   id: string

@@ -87,6 +87,9 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'substitucions.franges.ESO34': ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
   'substitucions.franges.BATX':  ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
   'substitucions.franges.GM':    ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24'],
+  'material-infantil.categories': [
+    'Plàstica', 'Papereria', 'Psicomotricitat', 'Higiene', 'Aula', 'Llibres/quaderns', 'Altres',
+  ],
   'material-infantil.curs-actiu': ['2026-2027'],
   'material-infantil.alumnes-i3': ['0'],
   'material-infantil.alumnes-i4': ['0'],

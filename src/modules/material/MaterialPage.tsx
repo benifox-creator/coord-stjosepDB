@@ -1,11 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Search, RefreshCw, Archive, AlertTriangle } from 'lucide-react'
+import { useConfigStore } from '../../store/configStore'
 import type { ItemMaterial, CategoriaMaterial } from './types'
-
-const CATEGORIES: CategoriaMaterial[] = [
-  'Cable', 'Adaptador', 'Àudio/Vídeo', 'Perifèric',
-  'Emmagatzematge', 'Bateria/Carregador', 'Projecció', 'Altre',
-]
 
 const MOCK: ItemMaterial[] = [
   { ID: 'MAT-001', Nom: 'Cable HDMI 2m', Categoria: 'Cable', Descripció: 'Cables HDMI estàndard per a projectors i monitors', Quantitat_total: 20, Quantitat_disponible: 15, Ubicació: 'Armari TIC', Notes: '', id: "mock-0" },
@@ -59,6 +55,7 @@ export function MaterialPage({
   error = null,
   onRefresh,
 }: Props) {
+  const categories = useConfigStore((s) => s.getValues('material.categories'))
   const [cerca, setCerca] = useState('')
   const [filtreCategoria, setFiltreCategoria] = useState<CategoriaMaterial | ''>('')
 
@@ -156,7 +153,7 @@ export function MaterialPage({
             className="input text-sm w-48"
           >
             <option value="">Totes les categories</option>
-            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            {categories.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { X, AlertCircle, Loader2 } from 'lucide-react'
 import type { MaterialInfantilFormData, ProveidorInfantil } from './types'
-import { CATEGORIES_MATERIAL_INFANTIL, UNITATS_MATERIAL_INFANTIL, COMANDA_HABITUAL_VALORS } from './types'
+import { UNITATS_MATERIAL_INFANTIL, COMANDA_HABITUAL_VALORS } from './types'
+import { useConfigStore } from '../../store/configStore'
 
 type Errors = Partial<Record<keyof MaterialInfantilFormData, string>>
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function MaterialInfantilForm({ proveidors, onClose, onGuardar, inicial }: Props) {
+  const categories = useConfigStore((s) => s.getValues('material-infantil.categories'))
   const [form, setForm] = useState<MaterialInfantilFormData>({
     Nom: inicial?.Nom ?? '',
     Categoria: inicial?.Categoria ?? 'Altres',
@@ -93,7 +95,7 @@ export function MaterialInfantilForm({ proveidors, onClose, onGuardar, inicial }
                 onChange={(e) => setField('Categoria', e.target.value as MaterialInfantilFormData['Categoria'])}
                 className="input"
               >
-                {CATEGORIES_MATERIAL_INFANTIL.map((c) => <option key={c} value={c}>{c}</option>)}
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">

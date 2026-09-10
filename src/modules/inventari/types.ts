@@ -1,15 +1,8 @@
 export type EstatInventari = 'Actiu' | 'En reparació' | 'De baixa' | 'En préstec'
 
-export type CategoriaInventari =
-  | 'Portàtil'
-  | 'Ordinador'
-  | 'Tauleta'
-  | 'Projector'
-  | 'Impressora'
-  | 'Switch/Router'
-  | 'Monitor'
-  | 'Servidor'
-  | 'Altre'
+// Llista editable des de Configuració (clau 'inventari.categories'), no un
+// conjunt fix — per això és `string` i no un union de literals.
+export type CategoriaInventari = string
 
 export interface ItemInventari {
   id: string

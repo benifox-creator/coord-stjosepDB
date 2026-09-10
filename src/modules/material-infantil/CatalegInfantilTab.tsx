@@ -5,7 +5,7 @@ import { useProveidorsInfantil } from './useProveidorsInfantil'
 import { MaterialInfantilForm } from './MaterialInfantilForm'
 import { ImportarMaterialsModal } from './ImportarMaterialsModal'
 import { estocDisponible } from './materialInfantil.utils'
-import { CATEGORIES_MATERIAL_INFANTIL } from './types'
+import { useConfigStore } from '../../store/configStore'
 import type { MaterialInfantil, CategoriaMaterialInfantil } from './types'
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
 export function CatalegInfantilTab({ potGestionar }: Props) {
   const { materials, loading, error, load, crear, editar, eliminar, importarMassiu } = useMaterialsInfantil()
   const { proveidors, load: loadProveidors } = useProveidorsInfantil()
+  const categories = useConfigStore((s) => s.getValues('material-infantil.categories'))
   const [cerca, setCerca] = useState('')
   const [filtreCategoria, setFiltreCategoria] = useState<CategoriaMaterialInfantil | ''>('')
   const [nomesEstocBaix, setNomesEstocBaix] = useState(false)
@@ -71,7 +72,7 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
             className="input text-sm w-44"
           >
             <option value="">Totes les categories</option>
-            {CATEGORIES_MATERIAL_INFANTIL.map((c) => <option key={c} value={c}>{c}</option>)}
+            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <label className="flex items-center gap-1.5 text-xs text-gray-600 whitespace-nowrap px-1">
             <input

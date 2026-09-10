@@ -62,6 +62,13 @@ const GRUPS: GrupConfig[] = [
       { clau: 'absencies.motius', label: "Motius d'absència", descripcio: "Motius disponibles al formulari de reportar una absència. \"Altre\" sempre és disponible." },
     ],
   },
+  {
+    modul: 'Material Infantil',
+    color: '#059669',
+    llistes: [
+      { clau: 'material-infantil.categories', label: 'Categories de material', descripcio: 'Categories del catàleg de material fungible d\'Infantil.' },
+    ],
+  },
 ]
 
 function LlistaEditor({ llista }: { llista: LlistaConfig }) {

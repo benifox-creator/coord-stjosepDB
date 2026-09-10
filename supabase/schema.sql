@@ -83,8 +83,7 @@ create table public.inventari (
   id           uuid primary key default gen_random_uuid(),
   codi         text not null unique default ('INV-' || lpad(nextval('public.inventari_codi_seq')::text, 3, '0')),
   nom          text not null default '',
-  categoria    text not null default 'Altre'
-               check (categoria in ('Portàtil','Ordinador','Tauleta','Projector','Impressora','Switch/Router','Monitor','Servidor','Altre')),
+  categoria    text not null default 'Altre',
   marca        text not null default '',
   model        text not null default '',
   num_serie    text not null default '',
@@ -109,8 +108,7 @@ create table public.incidencies (
   estat                 text not null default 'Oberta' check (estat in ('Oberta','En curs','Tancada')),
   prioritat             text not null default 'Mitjana' check (prioritat in ('Alta','Mitjana','Baixa')),
   reporter              text not null default '',
-  tipus_problema        text not null default 'Altre'
-                        check (tipus_problema in ('Maquinari','Programari','Xarxa','Projector/Pantalla','Impressora','Altre')),
+  tipus_problema        text not null default 'Altre',
   localitzacio          text not null default '',
   dispositiu            text not null default '',
   descripcio_detallada  text not null default '',
@@ -198,8 +196,7 @@ create table public.material (
   id                     uuid primary key default gen_random_uuid(),
   codi                   text not null unique default ('MAT-' || lpad(nextval('public.material_codi_seq')::text, 3, '0')),
   nom                    text not null default '',
-  categoria              text not null default 'Altre'
-                        check (categoria in ('Cable','Adaptador','Àudio/Vídeo','Perifèric','Emmagatzematge','Bateria/Carregador','Projecció','Altre')),
+  categoria              text not null default 'Altre',
   descripcio             text not null default '',
   quantitat_total        integer not null default 0,
   quantitat_disponible   integer not null default 0,
@@ -335,8 +332,7 @@ create table public.materials_infantil (
   codi text not null unique
         default ('MINF-' || lpad(nextval('public.materials_infantil_codi_seq')::text, 3, '0')),
   nom text not null default '',
-  categoria text not null default 'Altres'
-             check (categoria in ('Plàstica','Papereria','Psicomotricitat','Higiene','Aula','Llibres/quaderns','Altres')),
+  categoria text not null default 'Altres',
   unitat text not null default 'unitat'
              check (unitat in ('unitat','pack','capsa','rotlle','litre','paquet','joc')),
   proveidor_id uuid references public.proveidors_infantil(id),

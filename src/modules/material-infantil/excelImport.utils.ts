@@ -1,5 +1,5 @@
 import type { MaterialInfantilFormData, ProveidorInfantil } from './types'
-import { CATEGORIES_MATERIAL_INFANTIL, UNITATS_MATERIAL_INFANTIL, COMANDA_HABITUAL_VALORS } from './types'
+import { UNITATS_MATERIAL_INFANTIL, COMANDA_HABITUAL_VALORS } from './types'
 
 export const CAPÇALERES_IMPORT_MATERIALS = [
   'Nom', 'Categoria', 'Unitat', 'Proveïdor', 'Preu unitari', 'Unitats per alumne',
@@ -38,6 +38,7 @@ export async function generarPlantillaExcel(): Promise<void> {
 export async function parsejaExcelMaterials(
   file: File,
   proveidors: ProveidorInfantil[],
+  categories: string[],
 ): Promise<FilaImportMaterial[]> {
   const XLSX = await import('xlsx')
   const dades = new Uint8Array(await file.arrayBuffer())
@@ -81,7 +82,7 @@ export async function parsejaExcelMaterials(
     const fila = i + 1
 
     const categoriaRaw = get(idx.categoria)
-    const categoria = CATEGORIES_MATERIAL_INFANTIL.find((c) => c.toLowerCase() === categoriaRaw.toLowerCase())
+    const categoria = categories.find((c) => c.toLowerCase() === categoriaRaw.toLowerCase())
     if (!categoria) {
       resultats.push({ fila, nom, valid: false, error: `Categoria "${categoriaRaw}" no reconeguda.` })
       continue

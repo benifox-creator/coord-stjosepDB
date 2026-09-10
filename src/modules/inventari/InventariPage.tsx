@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Search, RefreshCw, Package } from 'lucide-react'
 import { Badge } from '../../components/Badge'
+import { useConfigStore } from '../../store/configStore'
 import type { ItemInventari, EstatInventari, CategoriaInventari } from './types'
 import { formatDate, garantiaEstat } from './inventari.utils'
 
@@ -51,10 +52,6 @@ const MOCK: ItemInventari[] = [
 ]
 
 const ESTATS: Array<EstatInventari | ''> = ['', 'Actiu', 'En reparació', 'En préstec', 'De baixa']
-const CATEGORIES: Array<CategoriaInventari | ''> = [
-  '', 'Portàtil', 'Ordinador', 'Tauleta', 'Projector', 'Impressora', 'Switch/Router', 'Monitor', 'Servidor', 'Altre',
-]
-
 function SkeletonRow() {
   return (
     <tr className="border-b border-gray-100">
@@ -84,6 +81,7 @@ export function InventariPage({
   error = null,
   onRefresh,
 }: Props) {
+  const categories = useConfigStore((s) => s.getValues('inventari.categories'))
   const [cerca, setCerca] = useState('')
   const [filtreEstat, setFiltreEstat] = useState<EstatInventari | ''>('')
   const [filtreCategoria, setFiltreCategoria] = useState<CategoriaInventari | ''>('')
@@ -188,7 +186,7 @@ export function InventariPage({
             className="input text-sm w-44"
           >
             <option value="">Totes les categories</option>
-            {CATEGORIES.slice(1).map((c) => <option key={c}>{c}</option>)}
+            {categories.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
       </div>

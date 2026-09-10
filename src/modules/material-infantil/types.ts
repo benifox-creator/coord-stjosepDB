@@ -1,9 +1,7 @@
-export type CategoriaMaterialInfantil =
-  | 'Plàstica' | 'Papereria' | 'Psicomotricitat' | 'Higiene' | 'Aula' | 'Llibres/quaderns' | 'Altres'
-
-export const CATEGORIES_MATERIAL_INFANTIL: CategoriaMaterialInfantil[] = [
-  'Plàstica', 'Papereria', 'Psicomotricitat', 'Higiene', 'Aula', 'Llibres/quaderns', 'Altres',
-]
+// La categoria és una llista editable des de Configuració (clau
+// 'material-infantil.categories'), no un conjunt fix — per això és `string`
+// i no un union de literals.
+export type CategoriaMaterialInfantil = string
 
 export type UnitatMaterialInfantil = 'unitat' | 'pack' | 'capsa' | 'rotlle' | 'litre' | 'paquet' | 'joc'
 

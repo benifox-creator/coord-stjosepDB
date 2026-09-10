@@ -665,7 +665,7 @@ export function AjudaPage() {
                 ['Visibilitat de mòduls', 'Taula de caselles per marcar quins mòduls veu cada rol (Direcció, Titular, Cap d’Estudis, Professorat, Convidat), Material Infantil inclòs. El Coordinador TIC sempre té accés a tots.'],
                 ['Correus automàtics', 'Text de la firma que apareix al peu dels correus que envia l’aplicació (absències, substitucions, incidències...). Es pot canviar sense tocar codi.'],
                 ['Manteniment', 'Correu del responsable de manteniment, on arriben els avisos de desperfectes.'],
-                ['Llistes editables', 'Espais de reserves, categories de material i inventari, tipus de problema i localitzacions d’incidències, categories d’articles, motius d’absència. Cada llista es pot restaurar als valors per defecte.'],
+                ['Llistes editables', 'Espais de reserves, categories de material i inventari, tipus de problema i localitzacions d’incidències, categories d’articles, motius d’absència, categories de Material Infantil. Cada llista es pot restaurar als valors per defecte.'],
               ].map(([title, desc]) => (
                 <tr key={title}>
                   <td className="px-4 py-3 font-medium text-text-main align-top whitespace-nowrap">{title}</td>

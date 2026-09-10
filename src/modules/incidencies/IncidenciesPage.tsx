@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Search, RefreshCw, AlertTriangle } from 'lucide-react'
 import { Badge } from '../../components/Badge'
+import { useConfigStore } from '../../store/configStore'
 import type { Incidencia, EstatIncidencia, PrioritatIncidencia, TipusProblema } from './types'
 import { formatDatetime, calcularDiesOberts } from './incidencies.utils'
 
@@ -50,10 +51,6 @@ const MOCK: Incidencia[] = [
 
 const ESTATS: Array<EstatIncidencia | ''> = ['', 'Oberta', 'En curs', 'Tancada']
 const PRIORITATS: Array<PrioritatIncidencia | ''> = ['', 'Alta', 'Mitjana', 'Baixa']
-const TIPUS: Array<TipusProblema | ''> = [
-  '', 'Maquinari', 'Programari', 'Xarxa', 'Projector/Pantalla', 'Impressora', 'Altre',
-]
-
 function SkeletonRow() {
   return (
     <tr className="border-b border-gray-100">
@@ -83,6 +80,7 @@ export function IncidenciesPage({
   error = null,
   onRefresh,
 }: Props) {
+  const tipus = useConfigStore((s) => s.getValues('incidencies.tipus'))
   const [cerca, setCerca] = useState('')
   const [filtreEstat, setFiltreEstat] = useState<EstatIncidencia | ''>('')
   const [filtrePrioritat, setFiltrePrioritat] = useState<PrioritatIncidencia | ''>('')
@@ -181,7 +179,7 @@ export function IncidenciesPage({
           </select>
           <select value={filtreTipus} onChange={(e) => setFiltreTipus(e.target.value as TipusProblema | '')} className="input text-sm w-48">
             <option value="">Tots els tipus</option>
-            {TIPUS.slice(1).map((t) => <option key={t}>{t}</option>)}
+            {tipus.map((t) => <option key={t}>{t}</option>)}
           </select>
         </div>
       </div>
