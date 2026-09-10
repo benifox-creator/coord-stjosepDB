@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Trash2, Loader2, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Trash2, Loader2, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import { useMaterialsInfantil } from './useMaterialsInfantil'
 import { useProveidorsInfantil } from './useProveidorsInfantil'
 import { MaterialInfantilForm } from './MaterialInfantilForm'
+import { ImportarMaterialsModal } from './ImportarMaterialsModal'
 import { estocDisponible } from './materialInfantil.utils'
 import type { MaterialInfantil } from './types'
 
@@ -11,10 +12,11 @@ interface Props {
 }
 
 export function CatalegInfantilTab({ potGestionar }: Props) {
-  const { materials, loading, error, load, crear, editar, eliminar } = useMaterialsInfantil()
+  const { materials, loading, error, load, crear, editar, eliminar, importarMassiu } = useMaterialsInfantil()
   const { proveidors, load: loadProveidors } = useProveidorsInfantil()
   const [cerca, setCerca] = useState('')
   const [formObert, setFormObert] = useState(false)
+  const [importObert, setImportObert] = useState(false)
   const [editant, setEditant] = useState<MaterialInfantil | null>(null)
   const [confirmEliminar, setConfirmEliminar] = useState<string | null>(null)
   const [eliminant, setEliminant] = useState(false)
@@ -54,13 +56,21 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
           />
         </div>
         {potGestionar && (
-          <button
-            onClick={() => setFormObert(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
-            style={{ backgroundColor: '#861414' }}
-          >
-            <Plus size={14} /> Nou material
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setImportObert(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5"
+            >
+              <FileSpreadsheet size={14} /> Importa des d'Excel
+            </button>
+            <button
+              onClick={() => setFormObert(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
+              style={{ backgroundColor: '#861414' }}
+            >
+              <Plus size={14} /> Nou material
+            </button>
+          </div>
         )}
       </div>
 
@@ -145,6 +155,13 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
         </table>
       </div>
 
+      {importObert && (
+        <ImportarMaterialsModal
+          proveidors={proveidors}
+          onImportar={importarMassiu}
+          onClose={() => setImportObert(false)}
+        />
+      )}
       {formObert && (
         <MaterialInfantilForm proveidors={proveidors} onClose={() => setFormObert(false)} onGuardar={crear} />
       )}

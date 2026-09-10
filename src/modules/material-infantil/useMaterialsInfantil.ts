@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
+import { supabase, getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
 import type { MaterialInfantil, MaterialInfantilFormData } from './types'
 import {
@@ -14,6 +14,7 @@ interface MaterialsInfantilState {
   crear: (data: MaterialInfantilFormData) => Promise<void>
   editar: (m: MaterialInfantil, data: MaterialInfantilFormData) => Promise<void>
   eliminar: (m: MaterialInfantil) => Promise<void>
+  importarMassiu: (dades: MaterialInfantilFormData[]) => Promise<void>
 }
 
 export const useMaterialsInfantil = create<MaterialsInfantilState>((set, get) => ({
@@ -49,5 +50,14 @@ export const useMaterialsInfantil = create<MaterialsInfantilState>((set, get) =>
   async eliminar(m) {
     await deleteRowById(TABLE_MATERIALS, m.id)
     set((s) => ({ materials: s.materials.filter((x) => x.id !== m.id) }))
+  },
+
+  async importarMassiu(dades) {
+    const email = (useAuthStore.getState().user?.email ?? '').toLowerCase()
+    const payload = dades.map((d) => materialToInsert({ ...d, Creat_per: email }))
+    const { data, error } = await supabase.from(TABLE_MATERIALS).insert(payload).select()
+    if (error) throw new Error(`Error important materials: ${error.message}`)
+    const nous = (data as MaterialInfantilRow[]).map(rowToMaterial)
+    set((s) => ({ materials: [...s.materials, ...nous] }))
   },
 }))

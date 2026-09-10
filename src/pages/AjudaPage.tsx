@@ -601,6 +601,12 @@ export function AjudaPage() {
           { term: 'Dashboard', desc: 'Cost total, % de pressupost utilitzat, línies pendents, gràfic per categoria i un resum per curs escolar.' },
           { term: 'Configuració', desc: "Nombre d'alumnes per etapa, marge de seguretat, pressupost objectiu i curs escolar actiu." },
         ]} />
+        <Callout title="Importar el catàleg des d'Excel">
+          A la pestanya Catàleg, el botó <Term>Importa des d'Excel</Term> permet donar d'alta molts
+          materials de cop. Des del mateix diàleg es pot descarregar una plantilla amb les columnes
+          correctes; abans d'importar es mostra una vista prèvia amb quines files són vàlides i quines
+          tenen algun error, perquè es puguin revisar sense perdre res.
+        </Callout>
         <SubHeading>Com es calcula la quantitat a demanar</SubHeading>
         <p className="text-sm text-gray-600">
           Per a cada material dins d'una etapa: <Term>necessitat = unitats/alumne × nre. alumnes</Term>,
