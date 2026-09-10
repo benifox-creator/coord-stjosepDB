@@ -168,17 +168,6 @@ export function comandaToInsert(data: ComandaInfantilFormData & { Creat_per: str
   }
 }
 
-export function comandaToUpdate(
-  data: Partial<Pick<ComandaInfantil, 'EstocAplicat' | 'MargeSeguretat' | 'Estat' | 'Notes'>>,
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {}
-  if (data.EstocAplicat !== undefined) out.estoc_aplicat = data.EstocAplicat
-  if (data.MargeSeguretat !== undefined) out.marge_seguretat = data.MargeSeguretat
-  if (data.Estat !== undefined) out.estat = data.Estat
-  if (data.Notes !== undefined) out.notes = data.Notes
-  return out
-}
-
 // ---- Fórmules ----
 
 export function necessitatBase(unitatsPerAlumne: number, nreAlumnes: number): number {

@@ -29,6 +29,8 @@ export function ProveidorsInfantilTab({ potGestionar }: Props) {
     try {
       await eliminar(p)
       setConfirmEliminar(null)
+    } catch (err) {
+      useProveidorsInfantil.setState({ error: err instanceof Error ? err.message : 'Error eliminant el proveïdor' })
     } finally {
       setEliminant(false)
     }

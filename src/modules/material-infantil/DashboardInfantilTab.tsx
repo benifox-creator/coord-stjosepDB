@@ -110,6 +110,9 @@ export function DashboardInfantilTab() {
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 pt-4">Resum per curs escolar</p>
+        <p className="text-[11px] text-gray-400 px-4 pt-0.5">
+          Cost recalculat amb els paràmetres actuals (alumnes i preus), no és un valor congelat de cada curs.
+        </p>
         <table className="w-full text-sm mt-2">
           <thead className="bg-gray-50 text-left text-xs text-gray-500">
             <tr>

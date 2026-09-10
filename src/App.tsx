@@ -692,7 +692,7 @@ function MaterialInfantilGuard({ children }: { children: ReactNode }) {
   const config = useConfigStore((s) => s.config)
   const email = useAuthStore((s) => s.user?.email)
   const usuaris = useUsuarisStore((s) => s.usuaris)
-  if (rol === null) return <>{children}</>
+  if (rol === null || usuaris.length === 0) return <>{children}</>
   const usuariActual = usuaris.find((u) => u.Email.toLowerCase() === (email ?? '').toLowerCase()) ?? null
   if (!potVeureMaterialInfantil(usuariActual, rol, config)) return <Navigate to="/" replace />
   return <>{children}</>

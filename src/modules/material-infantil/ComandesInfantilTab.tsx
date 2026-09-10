@@ -46,6 +46,8 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
     try {
       await eliminar(c)
       setConfirmEliminar(null)
+    } catch (err) {
+      useComandesInfantil.setState({ error: err instanceof Error ? err.message : 'Error eliminant la línia' })
     } finally {
       setEliminant(false)
     }

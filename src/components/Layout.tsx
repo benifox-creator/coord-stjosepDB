@@ -23,6 +23,7 @@ import { useAuth } from '../hooks/useAuth'
 import { logout } from '../services/auth'
 import { useUsuarisStore } from '../store/usuarisStore'
 import { useConfigStore, canAccessModul } from '../store/configStore'
+import { potVeureMaterialInfantil } from '../modules/material-infantil/permisos'
 
 const NAV_ITEMS = [
   { to: '/',              label: 'Dashboard',          icon: LayoutDashboard, end: true,  visKey: null },
@@ -59,7 +60,7 @@ export function Layout({ children }: Props) {
   // Mentre el rol carrega (null), mostrem tots els ítems optimistament
   const itemsVisibles = NAV_ITEMS.filter(({ visKey }) => {
     if (visKey === null || rol === null) return true
-    if (visKey === 'material-infantil' && usuariActual?.PotGestionarMaterial) return true
+    if (visKey === 'material-infantil') return potVeureMaterialInfantil(usuariActual, rol, config)
     return canAccessModul(config, visKey, rol)
   })
 

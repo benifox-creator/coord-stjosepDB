@@ -33,6 +33,8 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
     try {
       await eliminar(m)
       setConfirmEliminar(null)
+    } catch (err) {
+      useMaterialsInfantil.setState({ error: err instanceof Error ? err.message : 'Error eliminant el material' })
     } finally {
       setEliminant(false)
     }
