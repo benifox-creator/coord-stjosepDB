@@ -29,3 +29,8 @@ service-account-*.json
 
 # Worktrees temporals de desenvolupament assistit
 .claude/worktrees/
+
+# Skills d'agent instal·lats localment (ex: Strix) — eina personal, no del projecte
+.agents/skills/
+.claude/skills/
+skills-lock.json
