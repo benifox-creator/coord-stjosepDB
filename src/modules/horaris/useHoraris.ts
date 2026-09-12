@@ -1,0 +1,62 @@
+import { create } from 'zustand'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
+import { useAuthStore } from '../../store/authStore'
+import type { Horari, HorariFormData } from './types'
+import { TABLE_HORARIS, rowToHorari, horariToInsert, horariToUpdate, type HorariRow } from './horaris.utils'
+
+interface HorarisState {
+  horaris: Horari[]
+  loading: boolean
+  error: string | null
+  load: () => Promise<void>
+  crear: (data: HorariFormData) => Promise<void>
+  editar: (h: Horari, data: HorariFormData) => Promise<void>
+  eliminar: (h: Horari) => Promise<void>
+}
+
+export const useHoraris = create<HorarisState>((set, get) => ({
+  horaris: [],
+  loading: false,
+  error: null,
+
+  async load() {
+    if (get().loading) return
+    set({ loading: true, error: null })
+    try {
+      const rows = await getAll<HorariRow>(TABLE_HORARIS)
+      set({ horaris: rows.map(rowToHorari) })
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Error carregant horaris' })
+    } finally {
+      set({ loading: false })
+    }
+  },
+
+  async crear(data) {
+    const email = (useAuthStore.getState().user?.email ?? '').toLowerCase()
+    const row = await insertRow<HorariRow>(TABLE_HORARIS, horariToInsert({
+      Professor: email,
+      DiaSetmana: data.DiaSetmana,
+      Etapa: data.Etapa,
+      Franja: data.Franja,
+      Tipus: data.Tipus,
+      Grup: data.Grup,
+      Materia: data.Materia,
+      Creat_per: email,
+    }))
+    set((s) => ({ horaris: [...s.horaris, rowToHorari(row)] }))
+  },
+
+  async editar(h, data) {
+    const row = await updateRowById<HorariRow>(TABLE_HORARIS, h.id, horariToUpdate({
+      Tipus: data.Tipus, Grup: data.Grup, Materia: data.Materia,
+    }))
+    const updated = rowToHorari(row)
+    set((s) => ({ horaris: s.horaris.map((x) => (x.id === h.id ? updated : x)) }))
+  },
+
+  async eliminar(h) {
+    await deleteRowById(TABLE_HORARIS, h.id)
+    set((s) => ({ horaris: s.horaris.filter((x) => x.id !== h.id) }))
+  },
+}))
