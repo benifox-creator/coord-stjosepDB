@@ -14,6 +14,7 @@ export const MODULS_VISIBILITAT = [
   { key: 'pla-accio',    label: "Pla d'Acció" },
   { key: 'manteniment',  label: 'Manteniment' },
   { key: 'material-infantil', label: 'Material Infantil' },
+  { key: 'horaris', label: 'Horaris' },
 ] as const
 
 export const ROLS_VISIBILITAT = ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'] as const
@@ -96,6 +97,7 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'material-infantil.alumnes-i5': ['0'],
   'material-infantil.marge-seguretat-pct': ['0'],
   'material-infantil.pressupost-objectiu': ['0'],
+  'horaris.tipus-no-lectiva': ['Guàrdia', 'Pati', 'Tutoria', 'Coordinació', 'Reunió', 'Hora lliure'],
   // Visibilitat per defecte: tots els rols veuen tots els mòduls
   'visibilitat.incidencies':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.inventari':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
@@ -107,6 +109,7 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'visibilitat.pla-accio':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.manteniment':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.material-infantil': ['direccio', 'titular', 'cap_estudis'],
+  'visibilitat.horaris': ['direccio', 'titular', 'cap_estudis', 'professorat'],
 }
 
 interface ConfigState {

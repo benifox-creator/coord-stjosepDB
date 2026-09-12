@@ -69,6 +69,13 @@ const GRUPS: GrupConfig[] = [
       { clau: 'material-infantil.categories', label: 'Categories de material', descripcio: 'Categories del catàleg de material fungible d\'Infantil.' },
     ],
   },
+  {
+    modul: 'Horaris',
+    color: '#861414',
+    llistes: [
+      { clau: 'horaris.tipus-no-lectiva', label: 'Tipus de no lectiva', descripcio: 'Opcions disponibles en marcar un període de l\'horari com a no lectiu (guàrdies, pati, tutoria...).' },
+    ],
+  },
 ]
 
 function LlistaEditor({ llista }: { llista: LlistaConfig }) {
