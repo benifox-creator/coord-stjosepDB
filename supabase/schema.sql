@@ -386,3 +386,37 @@ create policy "anon_full_access" on public.prestecs for all using (true) with ch
 create policy "anon_full_access" on public.prestec_items for all using (true) with check (true);
 create policy "anon_full_access" on public.reserves for all using (true) with check (true);
 create policy "anon_full_access" on public.config for all using (true) with check (true);
+
+-- ---------- horaris i absencia_periodes ----------
+
+create table public.horaris (
+  id uuid primary key default gen_random_uuid(),
+  professor text not null default '',
+  dia_setmana text not null check (dia_setmana in ('Dilluns','Dimarts','Dimecres','Dijous','Divendres')),
+  etapa text not null check (etapa in ('EI','EP','ESO 1r-2n','ESO 3r-4t','BATX','GM')),
+  franja text not null default '',
+  tipus text not null default 'Lectiva' check (tipus in ('Lectiva','No lectiva')),
+  grup text not null default '',
+  materia text not null default '',
+  creat_el text not null default to_char(now(), 'YYYY-MM-DD HH24:MI'),
+  creat_per text not null default ''
+);
+
+alter table public.horaris
+  add constraint horaris_professor_dia_etapa_franja_key
+  unique (professor, dia_setmana, etapa, franja);
+
+create table public.absencia_periodes (
+  id uuid primary key default gen_random_uuid(),
+  absencia_id uuid not null references public.absencies(id) on delete cascade,
+  franja text not null default '',
+  etapa text not null default '',
+  tipus text not null default 'Lectiva' check (tipus in ('Lectiva','No lectiva')),
+  grup text not null default '',
+  materia text not null default ''
+);
+
+alter table public.horaris enable row level security;
+create policy "anon_full_access" on public.horaris for all using (true) with check (true);
+alter table public.absencia_periodes enable row level security;
+create policy "anon_full_access" on public.absencia_periodes for all using (true) with check (true);
