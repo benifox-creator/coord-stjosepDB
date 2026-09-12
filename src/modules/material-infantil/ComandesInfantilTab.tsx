@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Loader2, Download } from 'lucide-react'
 import { useComandesInfantil } from './useComandesInfantil'
 import { useMaterialsInfantil } from './useMaterialsInfantil'
+import { useProveidorsInfantil } from './useProveidorsInfantil'
 import { useConfigStore } from '../../store/configStore'
 import { ETAPES_INFANTIL } from './types'
 import type { ComandaInfantil, EtapaInfantil } from './types'
 import { necessitatBase, quantitatADemanar, costEstimat, nreAlumnesFromConfig } from './materialInfantil.utils'
+import { generarPedidoExcel } from './comandaExport.utils'
 import { ComandaInfantilForm } from './ComandaInfantilForm'
 
 interface Props {
@@ -15,6 +17,7 @@ interface Props {
 export function ComandesInfantilTab({ potGestionar }: Props) {
   const { comandes, loading, error, load, crear, eliminar } = useComandesInfantil()
   const { materials, load: loadMaterials } = useMaterialsInfantil()
+  const { proveidors, load: loadProveidors } = useProveidorsInfantil()
   const config = useConfigStore((s) => s.config)
   const getValues = useConfigStore((s) => s.getValues)
   const cursActiu = getValues('material-infantil.curs-actiu')[0]
@@ -22,8 +25,9 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
   const [formObert, setFormObert] = useState(false)
   const [confirmEliminar, setConfirmEliminar] = useState<string | null>(null)
   const [eliminant, setEliminant] = useState(false)
+  const [descarregant, setDescarregant] = useState(false)
 
-  useEffect(() => { load(); loadMaterials() }, [load, loadMaterials])
+  useEffect(() => { load(); loadMaterials(); loadProveidors() }, [load, loadMaterials, loadProveidors])
 
   const nAlumnes = nreAlumnesFromConfig(config, etapa)
 
@@ -41,6 +45,18 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
   }, [comandes, materials, cursActiu, etapa, nAlumnes])
 
   const totalCost = linies.reduce((s, l) => s + l.cost, 0)
+
+  async function handleDescarregar() {
+    const aDemanar = linies.filter((l) => l.quantitat > 0)
+    setDescarregant(true)
+    try {
+      await generarPedidoExcel(aDemanar, proveidors, cursActiu, etapa)
+    } catch (err) {
+      useComandesInfantil.setState({ error: err instanceof Error ? err.message : 'Error generant el fitxer' })
+    } finally {
+      setDescarregant(false)
+    }
+  }
 
   async function handleEliminar(c: ComandaInfantil) {
     setEliminant(true)
@@ -73,15 +89,24 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
           </div>
           <span className="text-xs text-gray-400">Curs {cursActiu} · {nAlumnes} alumnes</span>
         </div>
-        {potGestionar && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setFormObert(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
-            style={{ backgroundColor: '#861414' }}
+            onClick={handleDescarregar}
+            disabled={descarregant || linies.every((l) => l.quantitat === 0)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 disabled:opacity-50"
           >
-            <Plus size={14} /> Afegeix línia
+            {descarregant ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Descarrega la comanda
           </button>
-        )}
+          {potGestionar && (
+            <button
+              onClick={() => setFormObert(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
+              style={{ backgroundColor: '#861414' }}
+            >
+              <Plus size={14} /> Afegeix línia
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
