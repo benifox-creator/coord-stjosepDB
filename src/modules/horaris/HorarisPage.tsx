@@ -23,7 +23,8 @@ export function HorarisPage() {
   useEffect(() => { load() }, [])
 
   const [tab, setTab] = useState<Tab>('meu')
-  const [etapaMeva, setEtapaMeva] = useState<EtapaSubstitucio>(usuariActual?.Etapa ?? 'EI')
+  const [etapaMevaManual, setEtapaMevaManual] = useState<EtapaSubstitucio | null>(null)
+  const etapaMeva = etapaMevaManual ?? usuariActual?.Etapa ?? 'EI'
   const [professorSeleccionat, setProfessorSeleccionat] = useState('')
   const [etapaAliena, setEtapaAliena] = useState<EtapaSubstitucio>('EI')
   const [cellaSeleccionada, setCellaSeleccionada] = useState<{ dia: DiaSetmana; franja: string; existent: Horari | null } | null>(null)
@@ -80,7 +81,7 @@ export function HorarisPage() {
           <div className="space-y-3">
             <select
               value={etapaMeva}
-              onChange={(e) => setEtapaMeva(e.target.value as EtapaSubstitucio)}
+              onChange={(e) => setEtapaMevaManual(e.target.value as EtapaSubstitucio)}
               className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg"
             >
               {ETAPES_SUBSTITUCIO.map((e) => <option key={e} value={e}>{e}</option>)}

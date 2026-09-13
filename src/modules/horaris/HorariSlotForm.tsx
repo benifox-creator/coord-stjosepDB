@@ -19,7 +19,9 @@ export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDe
 
   const [tipus, setTipus] = useState<TipusPeriode>(horariExistent?.Tipus ?? 'Lectiva')
   const [grup, setGrup] = useState(horariExistent?.Grup ?? '')
-  const [materia, setMateria] = useState(horariExistent?.Materia ?? (tipusNoLectiva[0] ?? ''))
+  const [materia, setMateria] = useState(
+    horariExistent?.Materia ?? (tipus === 'No lectiva' ? (tipusNoLectiva[0] ?? '') : '')
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -108,7 +110,15 @@ export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDe
           {horariExistent && (
             <button
               type="button"
-              onClick={async () => { setSaving(true); await onEliminar() }}
+              onClick={async () => {
+                setSaving(true)
+                try {
+                  await onEliminar()
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Error eliminant el període')
+                  setSaving(false)
+                }
+              }}
               disabled={saving}
               className="px-3 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50"
             >
