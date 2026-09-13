@@ -1,8 +1,8 @@
-import { supabase } from '../../services/db'
+import { supabase, insertRow } from '../../services/db'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { getFirmaEmail } from '../../store/configStore'
 import { DIES_CA_LLARG, MESOS_CA_LLARG } from '../substitucions/substitucions.utils'
-import type { Absencia, EstatAbsencia } from './types'
+import type { Absencia, EstatAbsencia, PeriodeAbsencia } from './types'
 
 export const TABLE_ABSENCIES = 'absencies'
 
@@ -13,6 +13,17 @@ export function calcularHores(horaInici: string, horaFi: string): number {
   const minuts = (hFi * 60 + mFi) - (hIni * 60 + mIni)
   if (minuts <= 0) return 0
   return Math.round((minuts / 60) * 100) / 100
+}
+
+export function durataFranja(franja: string): number {
+  const [inici, fi] = franja.split('-')
+  return calcularHores(inici ?? '', fi ?? '')
+}
+
+export function duradaPeriodes(periodes: PeriodeAbsencia[], tipus?: PeriodeAbsencia['Tipus']): number {
+  return periodes
+    .filter((p) => tipus === undefined || p.Tipus === tipus)
+    .reduce((sum, p) => sum + durataFranja(p.Franja), 0)
 }
 
 export interface AbsenciaRow {
@@ -32,6 +43,51 @@ export interface AbsenciaRow {
   creat_per: string
   revisat_per: string
   revisat_el: string
+}
+
+export const TABLE_ABSENCIA_PERIODES = 'absencia_periodes'
+
+export interface PeriodeAbsenciaRow {
+  id: string
+  absencia_id: string
+  franja: string
+  etapa: string
+  tipus: string
+  grup: string
+  materia: string
+}
+
+export function periodeToInsert(absenciaId: string, p: PeriodeAbsencia): Record<string, unknown> {
+  return {
+    absencia_id: absenciaId,
+    franja: p.Franja,
+    etapa: p.Etapa,
+    tipus: p.Tipus,
+    grup: p.Grup,
+    materia: p.Materia,
+  }
+}
+
+export function rowToPeriodeAbsencia(row: PeriodeAbsenciaRow): PeriodeAbsencia {
+  return {
+    Franja: row.franja,
+    Etapa: row.etapa as PeriodeAbsencia['Etapa'],
+    Tipus: (row.tipus as PeriodeAbsencia['Tipus']) ?? 'Lectiva',
+    Grup: row.grup,
+    Materia: row.materia,
+  }
+}
+
+export async function insertPeriodesAbsencia(absenciaId: string, periodes: PeriodeAbsencia[]): Promise<void> {
+  for (const p of periodes) {
+    await insertRow(TABLE_ABSENCIA_PERIODES, periodeToInsert(absenciaId, p))
+  }
+}
+
+export async function getPeriodesAbsencia(absenciaId: string): Promise<PeriodeAbsencia[]> {
+  const { data, error } = await supabase.from(TABLE_ABSENCIA_PERIODES).select('*').eq('absencia_id', absenciaId)
+  if (error) throw new Error(`Error llegint períodes d'absència: ${error.message}`)
+  return ((data ?? []) as PeriodeAbsenciaRow[]).map(rowToPeriodeAbsencia)
 }
 
 export function rowToAbsencia(row: AbsenciaRow): Absencia {
