@@ -18,6 +18,7 @@ import {
   ChevronRight,
   HelpCircle,
   Boxes,
+  Clock,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { logout } from '../services/auth'
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { to: '/pla-accio',     label: "Pla d'Acció",        icon: Target,                      visKey: 'pla-accio' },
   { to: '/manteniment',   label: 'Manteniment',        icon: Wrench,                      visKey: 'manteniment' },
   { to: '/material-infantil', label: 'Material Infantil', icon: Boxes, visKey: 'material-infantil' },
+  { to: '/horaris', label: 'Horaris', icon: Clock, visKey: 'horaris' },
 ]
 
 const NAV_SETTINGS = [

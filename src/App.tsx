@@ -67,6 +67,7 @@ import type { Manteniment } from './modules/manteniment/types'
 import { ConfiguracioPage } from './modules/configuracio/ConfiguracioPage'
 import { MaterialInfantilPage } from './modules/material-infantil/MaterialInfantilPage'
 import { potVeureMaterialInfantil } from './modules/material-infantil/permisos'
+import { HorarisPage } from './modules/horaris/HorarisPage'
 import { useConfigStore, canAccessModul } from './store/configStore'
 import { useUsuarisStore, potGestionar, potEliminar, potAprovarAbsencies } from './store/usuarisStore'
 import './index.css'
@@ -724,6 +725,7 @@ function AppRoutes() {
                   path="/material-infantil"
                   element={<MaterialInfantilGuard><MaterialInfantilPage /></MaterialInfantilGuard>}
                 />
+                <Route path="/horaris" element={<VisibilitatGuard visKey="horaris"><HorarisPage /></VisibilitatGuard>} />
                 <Route
                   path="/configuracio"
                   element={<CoordinadorGuard><ConfiguracioPage /></CoordinadorGuard>}
