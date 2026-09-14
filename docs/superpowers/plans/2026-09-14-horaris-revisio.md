@@ -11,7 +11,9 @@ He revisat aquest treball (llegit el nucli de seguretat i les migracions d'horar
 ### Troballes de la revisió de seguretat
 
 **Important — cal arreglar abans de fusionar:**
-- `supabase/migrations/202609130007_operational_notifications.sql:9-16` — el trigger només fixa `reporter := app_private.email()` a l'INSERT d'`incidencies`. La política `module_update` (`202609130002_access.sql:75-88`) només exigeix `app_private.manager()`, sense restringir columnes, així que qualsevol coordinador/direcció/titular/cap d'estudis pot fer `update incidencies set reporter='qualsevol@fora.cat'` i la cua envia el correu del centre a aquesta adreça — evitant la llista blanca que `queue_email` sí aplica a la resta del sistema. Comparat amb `validate_substitution`, que sí verifica el destinatari contra `usuaris`, aquest camí és l'excepció insegura. **Fix:** conservar `reporter := old.reporter` en UPDATE (o validar-lo dins `app_private.enqueue`).
+- `supabase/migrations/202609130007_operational_notifications.sql:9-16` — el trigger només fixa `reporter := app_private.email()` a l'INSERT d'`incidencies`. La política `module_update` (`202609130002_access.sql:75-88`) només exigeix `app_private.manager()`, sense restringir columnes, així que qualsevol coordinador/direcció/titular/cap d'estudis pot fer `update incidencies set reporter='qualsevol@fora.cat'` i la cua envia el correu del centre a aquesta adreça — evitant la llista blanca que `queue_email` sí aplica a la resta del sistema. Comparat amb `validate_substitution`, que sí verifica el destinatari contra `usuaris`, aquest camí és l'excepció insegura.
+
+  **✅ Arreglat (2026-09-14):** el trigger ara fa `new.reporter := old.reporter` en qualsevol UPDATE d'`incidencies`, així el reporter queda immutable un cop creada la incidència. Afegit un test de regressió a `tests/database.test.ts` ("does not let closing an incident redirect its notification to an arbitrary reporter") que falla sense el fix i passa amb ell (verificat manualment revertint el fix i tornant-lo a aplicar). Suite completa: 54/54 tests, build net. **Encara sense commitejar** — forma part del mateix lot de canvis pendents de commitejar del punt "Què queda pendent de debò" més avall.
 
 **Minor (no bloquegen, però val la pena anotar-los):**
 - `…0007:8-10` — `app_private.email()` retorna `NULL` (no `''`) sense sessió amb claim verificat; `reporter` és `not null`, així que qualsevol inserció fora del flux normal (service_role, script d'importació) falla amb un error poc clar.
@@ -43,7 +45,7 @@ Concretament:
 
 ## Què queda pendent de debò
 
-1. **Tancar el forat de seguretat d'`incidencies.reporter`** (veure troballes de seguretat més amunt) — és l'únic bloquejant real trobat en tota la revisió. Sense el fix, qualsevol manager pot desviar correus del centre a una adreça externa.
+1. ~~Tancar el forat de seguretat d'`incidencies.reporter`~~ — **fet i verificat** amb test de regressió (veure troballes de seguretat més amunt). Encara sense commitejar, com la resta del lot.
 2. **Decidir què fer amb els canvis sense commitejar.** Ara mateix hi ha 58 fitxers modificats i uns quants directoris nous (`supabase/migrations/`, `supabase/functions/`, `tests/`, `src/app/`, `src/utils/`) sense cap commit. Abans de continuar-hi treballant cal:
    - Confirmar que la sessió que ho ha escrit ("Dispatch background conversation") ha acabat i no hi tornarà a escriure a sobre.
    - Commitejar-ho en commits lògics (per migració/àrea, seguint l'estil `feat(...)`/`fix(...)` ja establert), no en un sol commit gegant.
