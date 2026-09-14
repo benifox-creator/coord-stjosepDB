@@ -17,12 +17,21 @@
 - [ ] Migració 004: si hi ha dades d'un curs escolar diferent al que la data d'execució derivaria, ajustar el backfill abans de continuar
 - [ ] Confirmar que ja existeix un coordinador a `usuaris` (no hi ha autoalta del primer administrador)
 
-## Fase 2 — Autenticació
+## Fase 2 — Autenticació ✅ VALIDADA (2026-09-14)
 
-- [ ] Configurar Firebase com a Third-party Auth de Supabase per al projecte Firebase correcte (seguir la [documentació oficial](https://supabase.com/docs/guides/auth/third-party/firebase-auth))
-- [ ] Assignar el claim `role: authenticated` als usuaris amb Firebase Admin, preservant els altres claims
-- [ ] Forçar la renovació de sessió (logout/login) dels usuaris de prova
-- [ ] Login real amb un compte `@stjosep.org` i confirmar que `auth.jwt()` porta `email`/`email_verified` correctament (es pot comprovar amb `select app_private.email()` des del SQL Editor autenticat, o simplement veient que l'app reconeix l'usuari)
+- [x] Configurar Firebase com a Third-party Auth de Supabase per al projecte `coord-stjosep`
+- [x] Assignar el claim `role: authenticated` amb Firebase Admin, preservant els altres claims (script: `../../set-firebase-claim.mjs`, fora del repositori)
+- [x] Forçar la renovació de sessió (logout/login)
+- [x] Login real amb un compte `@stjosep.org` i confirmar que el token arriba complet
+
+**Evidència recollida** (proves fetes sense aplicar cap migració ni tocar les polítiques actuals, per tant sense risc):
+
+- Logs d'`edge_logs` de Supabase per a peticions des de `localhost:5173`: `jwt_issuer = https://securetoken.google.com/coord-stjosep`, `jwt_alg = RS256`, `jwt_role = authenticated`, `auth_user = <UID de Firebase>`, `status 200`. És a dir, **Supabase valida el token emès per Firebase i en resol la identitat**.
+- Funció de diagnòstic temporal (creada i esborrada després): `email = amoreno@stjosep.org`, `email_verified = "true"`, `domini_ok = true`, i sobretot **`passaria_app_private_email = true`** — la comprovació exacta que farà `app_private.email()` un cop aplicades les migracions.
+
+**Gotcha d'alta d'usuaris (no documentat a la guia original):** el claim només es pot assignar a usuaris que **ja existeixen a Firebase**, o sigui que han entrat com a mínim una vegada. Després de migrar, algú que entri per primer cop no tindrà claim → el servidor el tractarà com a anònim i li denegarà tot, sense que ell pugui fer-hi res. Cal executar-li el script i demanar-li que torni a entrar. Si el claustre creix, val la pena automatitzar-ho amb una Cloud Function que assigni el claim en crear-se l'usuari.
+
+**Estat dels comptes a 2026-09-14:** `amoreno@stjosep.org` (coordinador) i `administrador@stjosep.org` (direcció) tenen el claim. `lferrer@stjosep.org` existeix a Firebase però no està donat d'alta a `usuaris` (era una prova, no necessita accés). Només hi ha **2 usuaris reals registrats**, cosa que redueix molt el risc del canvi: això encara és un pilot, no un desplegament amb tot el claustre a sobre.
 
 ## Fase 3 — Permisos per rol (comptes reals separats, no simulats)
 
