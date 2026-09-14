@@ -6,7 +6,21 @@
 
 Mentre s'executava el pla original (Tasques 1-7 completades i commitejades a `feat-horaris`), una altra sessió ha treballat **sense commitejar**, en aquest mateix worktree, en una iniciativa molt més àmplia (`docs/operacio-i-migracio.md`): substitueix el model de seguretat permissiu (`anon_full_access`) per RLS real basat en JWT de Firebase com a Third-party Auth de Supabase, mou la lògica de negoci crítica al servidor (funcions `security definer` en PL/pgSQL), afegeix un sistema d'auditoria, una cua de notificacions per correu, i versiona els horaris per curs escolar. Això toca **58 fitxers** de tot el projecte, no només Horaris.
 
-He revisat aquest treball (llegit el nucli de seguretat i les migracions d'horaris/absències jo mateix; una revisió de seguretat acotada de la resta —notificacions, préstecs, la Edge Function— corre en paral·lel i s'annexarà aquí). Veredicte provisional: **és un treball sòlid i coherent, no trencat ni maliciós** — `npm test` (53/53) i `npm run build` (incloent el nou `check:worker`) passen nets ara mateix amb tot això aplicat.
+He revisat aquest treball (llegit el nucli de seguretat i les migracions d'horaris/absències jo mateix, més una revisió de seguretat acotada de la resta —notificacions, préstecs, la Edge Function— ja completada). Veredicte: **és un treball sòlid i coherent en conjunt, no trencat ni maliciós, però amb un forat de seguretat real que cal tancar abans de fusionar-ho** — `npm test` (53/53) i `npm run build` (incloent el nou `check:worker`) passen nets ara mateix amb tot això aplicat.
+
+### Troballes de la revisió de seguretat
+
+**Important — cal arreglar abans de fusionar:**
+- `supabase/migrations/202609130007_operational_notifications.sql:9-16` — el trigger només fixa `reporter := app_private.email()` a l'INSERT d'`incidencies`. La política `module_update` (`202609130002_access.sql:75-88`) només exigeix `app_private.manager()`, sense restringir columnes, així que qualsevol coordinador/direcció/titular/cap d'estudis pot fer `update incidencies set reporter='qualsevol@fora.cat'` i la cua envia el correu del centre a aquesta adreça — evitant la llista blanca que `queue_email` sí aplica a la resta del sistema. Comparat amb `validate_substitution`, que sí verifica el destinatari contra `usuaris`, aquest camí és l'excepció insegura. **Fix:** conservar `reporter := old.reporter` en UPDATE (o validar-lo dins `app_private.enqueue`).
+
+**Minor (no bloquegen, però val la pena anotar-los):**
+- `…0007:8-10` — `app_private.email()` retorna `NULL` (no `''`) sense sessió amb claim verificat; `reporter` és `not null`, així que qualsevol inserció fora del flux normal (service_role, script d'importació) falla amb un error poc clar.
+- `supabase/preflight.sql:8-20` — el primer error dins el bloc `DO` avorta la transacció i amaga les comprovacions posteriors; l'operador no veu "errors i files" alhora com demana la guia. (Sí és realment de només lectura: `begin transaction read only`.)
+- `…0005:60-66` (`retry_notification`) — sense límit de freqüència; qualsevol `created_by` pot reintentar en bucle els seus propis avisos fallats.
+
+**Confirmat correcte:** el parsing d'hores i `slot()` (rang `[)`, verificat amb test propi que "9:00-10:00"/"10:00-11:00" no col·lideixen), la cua de notificacions (`for update skip locked`, lease reclamable, `attempts<5`, backoff `least(3600,30*2^attempts)`), la Edge Function (POST+secret abans de qualsevol feina, falla tancada si falta el secret, cap fuita de secrets en errors), la migració de comandes (sense conflicte amb RLS), i que `schema.sql` no ha divergit de les migracions (verificat pels propis tests, que apliquen totes dues rutes).
+
+**Buits de cobertura de tests** (no bloquegen, però són el següent que jo afegiria): no hi ha cap test que un professor no pugui llegir les absències d'un altre (`absence_read`, `202609130002_access.sql:101`, sense provar — el cas anàleg a `horaris` sí que ho està), ni de `substitution_read`, `own_notifications`, denegació d'escriptura a `convidat`, o `app_private.minutes` amb entrada malformada.
 
 ## Per què el pla original queda superat
 
@@ -29,10 +43,11 @@ Concretament:
 
 ## Què queda pendent de debò
 
-1. **Decidir què fer amb els canvis sense commitejar.** Ara mateix hi ha 58 fitxers modificats i uns quants directoris nous (`supabase/migrations/`, `supabase/functions/`, `tests/`, `src/app/`, `src/utils/`) sense cap commit. Abans de continuar-hi treballant cal:
+1. **Tancar el forat de seguretat d'`incidencies.reporter`** (veure troballes de seguretat més amunt) — és l'únic bloquejant real trobat en tota la revisió. Sense el fix, qualsevol manager pot desviar correus del centre a una adreça externa.
+2. **Decidir què fer amb els canvis sense commitejar.** Ara mateix hi ha 58 fitxers modificats i uns quants directoris nous (`supabase/migrations/`, `supabase/functions/`, `tests/`, `src/app/`, `src/utils/`) sense cap commit. Abans de continuar-hi treballant cal:
    - Confirmar que la sessió que ho ha escrit ("Dispatch background conversation") ha acabat i no hi tornarà a escriure a sobre.
    - Commitejar-ho en commits lògics (per migració/àrea, seguint l'estil `feat(...)`/`fix(...)` ja establert), no en un sol commit gegant.
-2. **Revisió de seguretat/correcció de la resta de l'abast** (notificacions, préstecs, Edge Function, `preflight.sql`) — en curs en paral·lel a aquest document; qualsevol troballa Important/Crítica s'hi annexarà abans de considerar-ho llest per fusionar.
-3. **`schema.sql` ha quedat desactualitzat respecte a les migracions** (per exemple, encara no reflecteix `curs_escolar`/`vigent_desde`/`vigent_fins` a `horaris` als seus `create table`) — la pròpia guia `docs/operacio-i-migracio.md` ho reconeix ("`schema.sql` és exclusivament el punt de partida d'una base nova"), però cal verificar que un cop aplicades totes les migracions sobre una base nova creada amb `schema.sql`, el resultat és idèntic al d'aplicar-les sobre la base real — forma part de la revisió pendent del punt 2.
-4. **Verificació manual final amb sessions reals de cada rol** (Tasca 10 original, mai feta) — necessita algú amb accés real al domini `@stjosep.org`.
-5. **Decidir l'abast d'aquest merge**: donat que el treball sense commitejar va molt més enllà d'Horaris (préstecs, reserves, auditoria, notificacions), pot valer la pena tractar-ho com una branca/iniciativa pròpia en lloc de fusionar-ho tot sota `feat-horaris` — a decidir amb qui porti la sessió "Dispatch background conversation".
+3. **`schema.sql` ha quedat desactualitzat respecte a les migracions** (per exemple, encara no reflecteix `curs_escolar`/`vigent_desde`/`vigent_fins` a `horaris` als seus `create table`) — verificat que no és un problema real: els propis tests (`tests/database.test.ts`, `tests/migration.test.ts`) apliquen totes dues rutes (schema.sql nou + migracions, i schema.sql antic + migracions) i passen; `schema.sql` sol ja no crea cap política (falla tancat).
+4. **Afegir els tests de RLS que falten** (aïllament d'absències entre professors, `substitution_read`, `own_notifications`, denegació a `convidat`, `app_private.minutes` amb entrada malformada) — no bloquegen, però són el buit de cobertura més clar.
+5. **Verificació manual final amb sessions reals de cada rol** (Tasca 10 original, mai feta) — necessita algú amb accés real al domini `@stjosep.org`.
+6. **Decidir l'abast d'aquest merge**: donat que el treball sense commitejar va molt més enllà d'Horaris (préstecs, reserves, auditoria, notificacions), pot valer la pena tractar-ho com una branca/iniciativa pròpia en lloc de fusionar-ho tot sota `feat-horaris` — a decidir amb qui porti la sessió "Dispatch background conversation".
