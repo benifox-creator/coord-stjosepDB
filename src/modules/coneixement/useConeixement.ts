@@ -61,6 +61,8 @@ export function useConeixement(esCoordinador: boolean) {
     }
   }, [esCoordinador])
 
+  // External fetch: synchronous loading state prevents stale content during refresh.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: ArticleFormData): Promise<void> {

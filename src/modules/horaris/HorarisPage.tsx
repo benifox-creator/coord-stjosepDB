@@ -1,3 +1,4 @@
+import { schoolYear } from '../../utils/schoolCalendar'
 import { useEffect, useState } from 'react'
 import { useHoraris } from './useHoraris'
 import { HorariGrid } from './HorariGrid'
@@ -20,7 +21,10 @@ export function HorarisPage() {
   const usuariActual = usuaris.find((u) => u.Email.toLowerCase() === email) ?? null
   const potVeureTot = potVeureTotHorari(rol)
 
-  useEffect(() => { load() }, [])
+  const [referenceDate, setReferenceDate] = useState(new Date().toLocaleDateString('sv-SE'))
+  const selectedYear = schoolYear(new Date(referenceDate + 'T12:00:00'))
+  useEffect(() => { void load(selectedYear) }, [load, selectedYear])
+  const activeHoraris = horaris.filter(h => h.VigentDesde <= referenceDate && h.VigentFins >= referenceDate)
 
   const [tab, setTab] = useState<Tab>('meu')
   const [etapaMevaManual, setEtapaMevaManual] = useState<EtapaSubstitucio | null>(null)
@@ -32,8 +36,8 @@ export function HorarisPage() {
   const frangesMeves = useConfigStore((s) => s.getValues(ETAPA_FRANJA_KEY[etapaMeva]))
   const frangesAliena = useConfigStore((s) => s.getValues(ETAPA_FRANJA_KEY[etapaAliena]))
 
-  const horarisMeus = horaris.filter((h) => h.Professor.toLowerCase() === email && h.Etapa === etapaMeva)
-  const horarisAliens = horaris.filter((h) => h.Professor.toLowerCase() === professorSeleccionat.toLowerCase() && h.Etapa === etapaAliena)
+  const horarisMeus = activeHoraris.filter((h) => h.Professor.toLowerCase() === email && h.Etapa === etapaMeva)
+  const horarisAliens = activeHoraris.filter((h) => h.Professor.toLowerCase() === professorSeleccionat.toLowerCase() && h.Etapa === etapaAliena)
 
   async function handleDesarCella(data: Parameters<typeof crear>[0]) {
     if (cellaSeleccionada?.existent) {
@@ -74,6 +78,10 @@ export function HorarisPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
+        <label className="mb-4 flex items-center gap-3 text-sm">Horari vigent el
+          <input type="date" aria-label="Data de consulta" value={referenceDate} onChange={e => { if (e.target.value) setReferenceDate(e.target.value) }} className="rounded border p-2" />
+          <span>Curs {selectedYear}</span>
+        </label>
         {loading && <p className="text-xs text-gray-400">Carregant…</p>}
         {error && <p className="text-xs text-red-600">{error}</p>}
 
@@ -123,6 +131,7 @@ export function HorarisPage() {
 
       {cellaSeleccionada && (
         <HorariSlotForm
+          cursEscolar={selectedYear}
           diaSetmana={cellaSeleccionada.dia}
           etapa={etapaMeva}
           franja={cellaSeleccionada.franja}

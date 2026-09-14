@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X, AlertCircle, Loader2 } from 'lucide-react'
 import type { IncidenciaFormData, TipusProblema, PrioritatIncidencia } from './types'
 import { useConfigStore } from '../../store/configStore'
@@ -48,20 +48,6 @@ export function IncidenciaForm({
   const [disposituiText, setDisposituiText] = useState('')
   const [errors, setErrors] = useState<Errors>({})
   const [saving, setSaving] = useState(false)
-
-  // Sincronitza Tipus de problema quan l'usuari escriu text lliure
-  useEffect(() => {
-    if (tipusAltreSeleccionat) {
-      setForm((f) => ({ ...f, 'Tipus de problema': tipusAltreText as TipusProblema }))
-    }
-  }, [tipusAltreSeleccionat, tipusAltreText])
-
-  // Sincronitza el camp Dispositiu quan canvia la selecció o el text lliure
-  useEffect(() => {
-    if (disposituiAltre) {
-      setForm((f) => ({ ...f, Dispositiu: disposituiText }))
-    }
-  }, [disposituiAltre, disposituiText])
 
   function setField<K extends keyof IncidenciaFormData>(key: K, value: IncidenciaFormData[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -159,6 +145,7 @@ export function IncidenciaForm({
                   value={tipusAltreText}
                   onChange={(e) => {
                     setTipusAltreText(e.target.value)
+                    setField('Tipus de problema', e.target.value as TipusProblema)
                     if (errors['Tipus de problema']) setErrors((err) => ({ ...err, 'Tipus de problema': undefined }))
                   }}
                   placeholder="Descriu el tipus de problema..."
@@ -205,7 +192,7 @@ export function IncidenciaForm({
                   <input
                     type="text"
                     value={disposituiText}
-                    onChange={(e) => setDisposituiText(e.target.value)}
+                    onChange={(e) => { setDisposituiText(e.target.value); setField('Dispositiu', e.target.value) }}
                     placeholder="Descriu el dispositiu..."
                     className={inputCls(!!errors.Dispositiu && !disposituiText)}
                     autoFocus

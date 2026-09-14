@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { supabase, insertRow, updateRowById, deleteRowById } from '../../services/db'
-import { formatDateISO } from './prestecs.utils'
-import { adjustStock, parseMaterial, serializeMaterial, getMaterialIdsByCodi } from '../material/material.utils'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { supabase, callRpc, updateRowById } from '../../services/db'
+import { parseMaterial, serializeMaterial } from '../material/material.utils'
 import type { Prestec, EstatPrestec, PrestecFormData } from './types'
 
 const TABLE = 'prestecs'
@@ -50,30 +49,8 @@ function rowToPrestec(row: PrestecRow): Prestec {
 
 const SELECT_AMB_ITEMS = '*, prestec_items(quantitat, material:material_id(codi, nom))'
 
-async function fetchPrestecItems(prestecId: string): Promise<{ ID: string; Quantitat: number }[]> {
-  const { data, error } = await supabase
-    .from('prestec_items')
-    .select('quantitat, material:material_id(codi)')
-    .eq('prestec_id', prestecId)
-  if (error) throw new Error(`Error llegint material del préstec: ${error.message}`)
-  return ((data ?? []) as unknown as { quantitat: number; material: { codi: string } | null }[])
-    .filter((it) => it.material)
-    .map((it) => ({ ID: it.material!.codi, Quantitat: it.quantitat }))
-}
-
-async function crearPrestecItems(prestecId: string, material: string): Promise<void> {
-  const items = parseMaterial(material)
-  if (items.length === 0) return
-  const idMap = await getMaterialIdsByCodi(items.map((m) => m.ID))
-  const rows = items
-    .filter((m) => idMap[m.ID])
-    .map((m) => ({ prestec_id: prestecId, material_id: idMap[m.ID], quantitat: m.Quantitat }))
-  if (rows.length === 0) return
-  const { error } = await supabase.from('prestec_items').insert(rows)
-  if (error) throw new Error(`Error desant material del préstec: ${error.message}`)
-}
-
 export function usePrestecs() {
+  const requestId = useRef(crypto.randomUUID())
   const [prestecs, setPrestecs] = useState<Prestec[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -82,9 +59,17 @@ export function usePrestecs() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error: selectError } = await supabase.from(TABLE).select(SELECT_AMB_ITEMS).order('data_inici')
-      if (selectError) throw selectError
-      setPrestecs((data as unknown as PrestecRow[] ?? []).map(rowToPrestec))
+      const rows: PrestecRow[] = []
+      for (;;) {
+        const { data, error: selectError, count } = await supabase.from(TABLE)
+          .select(SELECT_AMB_ITEMS, { count: 'exact' }).order('data_inici').order('id').range(rows.length, rows.length + 499)
+        if (selectError) throw selectError
+        if (count === null) throw new Error('No es pot verificar la lectura dels préstecs')
+        rows.push(...(data ?? []) as unknown as PrestecRow[])
+        if (rows.length >= count) break
+        if (!data?.length) throw new Error('Lectura incompleta dels préstecs')
+      }
+      setPrestecs(rows.map(rowToPrestec))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
@@ -92,35 +77,22 @@ export function usePrestecs() {
     }
   }, [])
 
+  // External fetch: synchronous loading state prevents stale content during refresh.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: PrestecFormData): Promise<void> {
-    const row = await insertRow<{ id: string }>(TABLE, {
+    await callRpc('create_loan', { p_request_id: requestId.current, p_data: {
       dispositiu_id: data.Dispositiu_ID, dispositiu_nom: data.Dispositiu_Nom,
       usuari: data.Usuari, email: data.Email, data_inici: data.Data_inici,
-      data_fi_prevista: data.Data_fi_prevista, estat: 'Actiu', notes: data.Notes,
-    })
-    await crearPrestecItems(row.id, data.Material)
-    // Decrementar stock del material inclòs
-    const matItems = parseMaterial(data.Material)
-    if (matItems.length > 0) {
-      await adjustStock(matItems.map((m) => ({ ID: m.ID, delta: -m.Quantitat })))
-    }
+      data_fi_prevista: data.Data_fi_prevista, notes: data.Notes,
+    }, p_items: parseMaterial(data.Material).map(m => ({ codi: m.ID, quantitat: m.Quantitat })) })
+    requestId.current = crypto.randomUUID()
     await fetchData()
   }
 
   async function canviarEstat(prestec: Prestec, estat: EstatPrestec): Promise<void> {
-    const dataFiReal = estat === 'Retornat' && !prestec.Data_fi_real
-      ? formatDateISO(new Date())
-      : prestec.Data_fi_real
-    await updateRowById(TABLE, prestec.id, { estat, data_fi_real: dataFiReal })
-    // Si es retorna, incrementar stock del material
-    if (estat === 'Retornat' && prestec.Estat !== 'Retornat') {
-      const items = await fetchPrestecItems(prestec.id)
-      if (items.length > 0) {
-        await adjustStock(items.map((m) => ({ ID: m.ID, delta: m.Quantitat })))
-      }
-    }
+    await callRpc('change_loan_state', { p_id: prestec.id, p_state: estat })
     await fetchData()
   }
 
@@ -130,14 +102,7 @@ export function usePrestecs() {
   }
 
   async function eliminar(prestec: Prestec): Promise<void> {
-    // Si el préstec estava actiu, restaurem el stock del material
-    if (prestec.Estat !== 'Retornat') {
-      const items = await fetchPrestecItems(prestec.id)
-      if (items.length > 0) {
-        await adjustStock(items.map((m) => ({ ID: m.ID, delta: m.Quantitat })))
-      }
-    }
-    await deleteRowById(TABLE, prestec.id)
+    await callRpc('delete_loan', { p_id: prestec.id })
     await fetchData()
   }
 

@@ -14,6 +14,10 @@ export interface Horari {
   Tipus: TipusPeriode
   Grup: string
   Materia: string
+  CursEscolar: string
+  VigentDesde: string
+  VigentFins: string
+  NecessitaCobertura: boolean
   Creat_el: string
   Creat_per: string
 }
@@ -25,4 +29,8 @@ export interface HorariFormData {
   Tipus: TipusPeriode
   Grup: string
   Materia: string
+  CursEscolar: string
+  VigentDesde: string
+  VigentFins: string
+  NecessitaCobertura: boolean
 }

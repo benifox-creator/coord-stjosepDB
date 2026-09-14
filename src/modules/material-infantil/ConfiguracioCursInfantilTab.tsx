@@ -24,14 +24,18 @@ export function ConfiguracioCursInfantilTab({ potGestionar }: Props) {
     Object.fromEntries(CAMPS.map((c) => [c.clau, getValues(c.clau)[0]])),
   )
   const [saving, setSaving] = useState<string | null>(null)
+  const [error, setError] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
 
   async function handleDesar(clau: string) {
+    setError('')
     setSaving(clau)
     try {
       await update(clau, [valors[clau]])
       setSaved(clau)
       setTimeout(() => setSaved(null), 1500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desant la configuració')
     } finally {
       setSaving(null)
     }
@@ -40,11 +44,14 @@ export function ConfiguracioCursInfantilTab({ potGestionar }: Props) {
   return (
     <div className="flex-1 overflow-auto px-6 py-6">
       <div className="max-w-md space-y-4">
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         {CAMPS.map(({ clau, label, type }) => (
           <div key={clau} className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-600">{label}</label>
+            <label htmlFor={clau} className="text-sm font-medium text-gray-600">{label}</label>
             <div className="flex gap-2">
               <input
+                id={clau}
+                min={type === 'number' ? 0 : undefined}
                 type={type}
                 value={valors[clau]}
                 disabled={!potGestionar}

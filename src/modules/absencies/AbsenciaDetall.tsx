@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Check, XCircle, Trash2, ClipboardPlus } from 'lucide-react'
-import type { Absencia } from './types'
+import { getPeriodesAbsencia } from './absencies.utils'
+import type { Absencia, PeriodeAbsencia } from './types'
 import type { Substitucio, EstatSubstitucio } from '../substitucions/types'
 import { formatDate } from '../substitucions/substitucions.utils'
 import { useUsuarisStore } from '../../store/usuarisStore'
@@ -34,8 +35,17 @@ export function AbsenciaDetall({
   absencia, substitucionsVinculades, potAprovar, potGestionar, potEliminar,
   onClose, onAprovar, onRebutjar, onEliminar, onCrearSubstitucio,
 }: Props) {
+  const [snapshot, setSnapshot] = useState<{id:string; periods:PeriodeAbsencia[]; error?:string} | null>(null)
+  useEffect(() => {
+    let active=true
+    if (absencia.TePeriodes) void getPeriodesAbsencia(absencia.id)
+      .then(periods=>{if(active) setSnapshot({id:absencia.id,periods})})
+      .catch(err=>{if(active) setSnapshot({id:absencia.id,periods:[],error:err instanceof Error?err.message:'Error carregant períodes'})})
+    return ()=>{active=false}
+  },[absencia.id,absencia.TePeriodes])
   const usuaris = useUsuarisStore((s) => s.usuaris)
   const nomProfessor = usuaris.find((u) => u.Email === absencia.Professor)?.Nom || absencia.Professor
+  const [error, setError] = useState('')
   const [rebutjant, setRebutjant] = useState(false)
   const [motiuRebuig, setMotiuRebuig] = useState('')
   const [working, setWorking] = useState(false)
@@ -46,7 +56,7 @@ export function AbsenciaDetall({
     setWorking(true)
     try {
       await onAprovar(absencia)
-    } finally {
+    } catch (err) { setError(err instanceof Error ? err.message : 'Error aprovant l’absència') } finally {
       setWorking(false)
     }
   }
@@ -55,7 +65,7 @@ export function AbsenciaDetall({
     setWorking(true)
     try {
       await onRebutjar(absencia, motiuRebuig.trim())
-    } finally {
+    } catch (err) { setError(err instanceof Error ? err.message : 'Error rebutjant l’absència') } finally {
       setWorking(false)
       setRebutjant(false)
     }
@@ -84,6 +94,7 @@ export function AbsenciaDetall({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 text-sm">
+          {error && <p role="alert" className="text-red-600">{error}</p>}
           <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full border ${ESTAT_COLORS[absencia.Estat]}`}>
             {absencia.Estat}
           </span>
@@ -97,13 +108,17 @@ export function AbsenciaDetall({
               <p className="text-text-main font-medium">{absencia.Hores.toString().replace('.', ',')}</p>
               {absencia.HoresNoLectives > 0 && (
                 <p className="text-amber-700 text-[11px] mt-0.5">
-                  {absencia.HoresNoLectives.toString().replace('.', ',')}h no lectives — no necessiten substitut
+                  {absencia.HoresNoLectives.toString().replace('.', ',')}h no lectives
                 </p>
               )}
             </div>
             <div className="col-span-2"><p className="text-gray-400">Motiu</p><p className="text-text-main font-medium">{absencia.Motiu}</p></div>
           </div>
 
+          {absencia.TePeriodes && <section aria-label="Períodes afectats">
+            <h3 className="text-xs font-medium text-gray-600 mb-2">Períodes afectats · fotografia en comunicar l’absència</h3>
+            {snapshot?.id!==absencia.id ? <p role="status">Carregant períodes…</p> : snapshot.error ? <p role="alert" className="text-red-700">{snapshot.error}</p> : <ul className="space-y-2">{snapshot.periods.map((p,i)=><li key={i} className="rounded border border-gray-200 p-2 text-xs">{p.Franja} · {p.Grup} {p.Materia}<p className="text-gray-600">{p.NecessitaCobertura?'Cal cobertura':'Sense cobertura prevista'}</p></li>)}</ul>}
+          </section>}
           {absencia.Notes && (
             <div><p className="text-xs text-gray-400 mb-1">Tasques a realitzar</p><p className="text-text-main whitespace-pre-wrap">{absencia.Notes}</p></div>
           )}
@@ -192,7 +207,7 @@ export function AbsenciaDetall({
             </div>
           )}
 
-          {absencia.Estat === 'Aprovada' && potGestionar && (
+          {absencia.Estat === 'Aprovada' && !absencia.TePeriodes && potGestionar && (
             <button
               onClick={() => onCrearSubstitucio(absencia)}
               className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-lg"

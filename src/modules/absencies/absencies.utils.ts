@@ -1,4 +1,5 @@
-import { supabase, insertRow } from '../../services/db'
+import { timeMinutes, slotMinutes } from '../../utils/schoolCalendar'
+import { getAll, supabase } from '../../services/db'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { getFirmaEmail } from '../../store/configStore'
 import { DIES_CA_LLARG, MESOS_CA_LLARG } from '../substitucions/substitucions.utils'
@@ -7,12 +8,9 @@ import type { Absencia, EstatAbsencia, PeriodeAbsencia } from './types'
 export const TABLE_ABSENCIES = 'absencies'
 
 export function calcularHores(horaInici: string, horaFi: string): number {
-  const [hIni, mIni] = horaInici.split(':').map(Number)
-  const [hFi, mFi] = horaFi.split(':').map(Number)
-  if ([hIni, mIni, hFi, mFi].some((n) => n === undefined || Number.isNaN(n))) return 0
-  const minuts = (hFi * 60 + mFi) - (hIni * 60 + mIni)
-  if (minuts <= 0) return 0
-  return Math.round((minuts / 60) * 100) / 100
+  try {
+    return Math.round(Math.max(0, timeMinutes(horaFi) - timeMinutes(horaInici)) / 60 * 100) / 100
+  } catch { return 0 }
 }
 
 export function durataFranja(franja: string): number {
@@ -21,12 +19,15 @@ export function durataFranja(franja: string): number {
 }
 
 export function duradaPeriodes(periodes: PeriodeAbsencia[], tipus?: PeriodeAbsencia['Tipus']): number {
-  return periodes
-    .filter((p) => tipus === undefined || p.Tipus === tipus)
-    .reduce((sum, p) => sum + durataFranja(p.Franja), 0)
+  const minutes = periodes.filter(p => tipus === undefined || p.Tipus === tipus).reduce((total, p) => {
+    const [start, end] = slotMinutes(p.Franja)
+    return total + end - start
+  }, 0)
+  return Math.round(minutes / 60 * 100) / 100
 }
 
 export interface AbsenciaRow {
+  te_periodes?: boolean
   id: string
   codi: string
   professor: string
@@ -48,6 +49,7 @@ export interface AbsenciaRow {
 export const TABLE_ABSENCIA_PERIODES = 'absencia_periodes'
 
 export interface PeriodeAbsenciaRow {
+  necessita_cobertura?: boolean
   id: string
   absencia_id: string
   franja: string
@@ -70,6 +72,7 @@ export function periodeToInsert(absenciaId: string, p: PeriodeAbsencia): Record<
 
 export function rowToPeriodeAbsencia(row: PeriodeAbsenciaRow): PeriodeAbsencia {
   return {
+    NecessitaCobertura: row.necessita_cobertura ?? false,
     Franja: row.franja,
     Etapa: row.etapa as PeriodeAbsencia['Etapa'],
     Tipus: (row.tipus as PeriodeAbsencia['Tipus']) ?? 'Lectiva',
@@ -78,16 +81,9 @@ export function rowToPeriodeAbsencia(row: PeriodeAbsenciaRow): PeriodeAbsencia {
   }
 }
 
-export async function insertPeriodesAbsencia(absenciaId: string, periodes: PeriodeAbsencia[]): Promise<void> {
-  for (const p of periodes) {
-    await insertRow(TABLE_ABSENCIA_PERIODES, periodeToInsert(absenciaId, p))
-  }
-}
-
 export async function getPeriodesAbsencia(absenciaId: string): Promise<PeriodeAbsencia[]> {
-  const { data, error } = await supabase.from(TABLE_ABSENCIA_PERIODES).select('*').eq('absencia_id', absenciaId)
-  if (error) throw new Error(`Error llegint períodes d'absència: ${error.message}`)
-  return ((data ?? []) as PeriodeAbsenciaRow[]).map(rowToPeriodeAbsencia)
+  const data = await getAll<PeriodeAbsenciaRow>(TABLE_ABSENCIA_PERIODES, 'id', { absencia_id: absenciaId })
+  return data.map(rowToPeriodeAbsencia).sort((a,b) => slotMinutes(a.Franja)[0]-slotMinutes(b.Franja)[0])
 }
 
 export function rowToAbsencia(row: AbsenciaRow): Absencia {
@@ -95,6 +91,7 @@ export function rowToAbsencia(row: AbsenciaRow): Absencia {
     id: row.id,
     ID: row.codi,
     Professor: row.professor,
+    TePeriodes: row.te_periodes ?? false,
     Data: row.data,
     HoraInici: row.hora_inici,
     HoraFi: row.hora_fi,
@@ -166,7 +163,7 @@ export function buildEmailNovaAbsencia(
     '',
     `  Data:    ${diaStr}`,
     `  Horari:  ${a.HoraInici}–${a.HoraFi} (${a.Hores.toString().replace('.', ',')} hores)`,
-    ...(a.HoresNoLectives > 0 ? [`  (${a.HoresNoLectives.toString().replace('.', ',')} hores no lectives, no necessiten substitut)`] : []),
+    ...(a.HoresNoLectives > 0 ? [`  (${a.HoresNoLectives.toString().replace('.', ',')} hores no lectives)`] : []),
     `  Motiu:   ${a.Motiu}`,
     ...(a.Notes ? ['', `  Notes: ${a.Notes}`] : []),
     '',

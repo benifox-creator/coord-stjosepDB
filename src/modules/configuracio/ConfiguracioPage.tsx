@@ -20,6 +20,10 @@ interface GrupConfig {
 
 const GRUPS: GrupConfig[] = [
   {
+    modul: 'Calendari del centre', color: '#861414',
+    llistes: [{ clau: 'centre.dies-no-lectius', label: 'Dies no lectius', descripcio: 'Una data per entrada, en format AAAA-MM-DD. Aquests dies no generen períodes d’absència des de l’horari.' }],
+  },
+  {
     modul: 'Reserves',
     color: '#0c71c3',
     llistes: [
@@ -81,7 +85,7 @@ const GRUPS: GrupConfig[] = [
 function LlistaEditor({ llista }: { llista: LlistaConfig }) {
   const savedValues = useConfigStore((s) => s.config[llista.clau])
   const update = useConfigStore((s) => s.update)
-  const valors = savedValues && savedValues.length > 0 ? savedValues : (CONFIG_DEFAULTS[llista.clau] ?? [])
+  const valors = savedValues ?? CONFIG_DEFAULTS[llista.clau] ?? []
 
   const [nouValor, setNouValor] = useState('')
   const [afegint, setAfegint] = useState(false)
@@ -94,6 +98,9 @@ function LlistaEditor({ llista }: { llista: LlistaConfig }) {
   async function handleAfegir() {
     const trimmed = nouValor.trim()
     if (!trimmed) return
+    if (llista.clau === 'centre.dies-no-lectius' && (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed) || Number.isNaN(new Date(trimmed).getTime()) || new Date(trimmed).toISOString().slice(0, 10) !== trimmed)) {
+      setError('Introdueix una data vàlida en format AAAA-MM-DD.'); return
+    }
     if (valors.includes(trimmed)) {
       setError('Aquesta opció ja existeix.')
       return

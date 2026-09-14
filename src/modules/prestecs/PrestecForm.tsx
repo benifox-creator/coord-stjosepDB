@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, AlertCircle, Loader2, Plus, Infinity } from 'lucide-react'
+import { X, AlertCircle, Loader2, Plus, Infinity as InfinityIcon } from 'lucide-react'
 import { formatDateISO } from './prestecs.utils'
 import { serializeMaterial } from '../material/material.utils'
 import type { PrestecFormData } from './types'
@@ -186,7 +186,7 @@ export function PrestecForm({ onClose, onGuardar, materialDisponible = [] }: Pro
             <FormField label={`Data retorn prev.${tempsIllimitat ? '' : ' *'}`} error={errors.Data_fi_prevista}>
               {tempsIllimitat ? (
                 <div className="input flex items-center gap-2 text-blue-600 bg-blue-50 border-blue-200 cursor-default select-none">
-                  <Infinity size={15} />
+                  <InfinityIcon size={15} />
                   <span className="text-sm">Temps il·limitat</span>
                 </div>
               ) : (
@@ -211,7 +211,7 @@ export function PrestecForm({ onClose, onGuardar, materialDisponible = [] }: Pro
               className="w-4 h-4 rounded accent-primary"
             />
             <span className="text-sm text-gray-600 flex items-center gap-1.5">
-              <Infinity size={14} className="text-blue-500" /> Préstec de temps il·limitat (sense data de retorn)
+              <InfinityIcon size={14} className="text-blue-500" /> Préstec de temps il·limitat (sense data de retorn)
             </span>
           </label>
 

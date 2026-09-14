@@ -1,3 +1,4 @@
+import { yearDates } from '../../utils/schoolCalendar'
 import { useState } from 'react'
 import { X, Loader2, Trash2 } from 'lucide-react'
 import type { DiaSetmana, Horari, HorariFormData, TipusPeriode } from './types'
@@ -5,6 +6,7 @@ import type { EtapaSubstitucio } from '../substitucions/types'
 import { useConfigStore } from '../../store/configStore'
 
 interface Props {
+  cursEscolar: string
   diaSetmana: DiaSetmana
   etapa: EtapaSubstitucio
   franja: string
@@ -14,7 +16,7 @@ interface Props {
   onCancel: () => void
 }
 
-export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDesar, onEliminar, onCancel }: Props) {
+export function HorariSlotForm({ cursEscolar, diaSetmana, etapa, franja, horariExistent, onDesar, onEliminar, onCancel }: Props) {
   const tipusNoLectiva = useConfigStore((s) => s.getValues('horaris.tipus-no-lectiva'))
 
   const [tipus, setTipus] = useState<TipusPeriode>(horariExistent?.Tipus ?? 'Lectiva')
@@ -22,6 +24,10 @@ export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDe
   const [materia, setMateria] = useState(
     horariExistent?.Materia ?? (tipus === 'No lectiva' ? (tipusNoLectiva[0] ?? '') : '')
   )
+  const dates = yearDates(cursEscolar)
+  const [vigentDesde, setVigentDesde] = useState(horariExistent?.VigentDesde ?? dates.start)
+  const [vigentFins, setVigentFins] = useState(horariExistent?.VigentFins ?? dates.end)
+  const [needsCover, setNeedsCover] = useState(horariExistent?.NecessitaCobertura ?? true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -31,10 +37,11 @@ export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDe
       setError('Cal indicar el grup i la matèria.')
       return
     }
-    if (tipus === 'No lectiva' && !materia.trim()) {
+    if (tipus === 'No lectiva' && !tipusNoLectiva.includes(materia)) {
       setError('Cal indicar el tipus de no lectiva.')
       return
     }
+    if (vigentDesde < dates.start || vigentFins > dates.end || vigentFins < vigentDesde) { setError('Revisa la vigència del període.'); return }
     setError('')
     setSaving(true)
     try {
@@ -42,6 +49,7 @@ export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDe
         DiaSetmana: diaSetmana, Etapa: etapa, Franja: franja, Tipus: tipus,
         Grup: tipus === 'Lectiva' ? grup.trim() : '',
         Materia: materia.trim(),
+        CursEscolar: cursEscolar, VigentDesde: vigentDesde, VigentFins: vigentFins, NecessitaCobertura: needsCover,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desant el període')
@@ -63,11 +71,11 @@ export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDe
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-3">
           <div className="flex gap-2">
             <label className="flex items-center gap-1.5 text-xs text-gray-600">
-              <input type="radio" name="tipus" checked={tipus === 'Lectiva'} onChange={() => setTipus('Lectiva')} />
+              <input type="radio" name="tipus" checked={tipus === 'Lectiva'} onChange={() => { setTipus('Lectiva'); setMateria(''); setNeedsCover(true) }} />
               Lectiva
             </label>
             <label className="flex items-center gap-1.5 text-xs text-gray-600">
-              <input type="radio" name="tipus" checked={tipus === 'No lectiva'} onChange={() => setTipus('No lectiva')} />
+              <input type="radio" name="tipus" checked={tipus === 'No lectiva'} onChange={() => { setTipus('No lectiva'); setMateria(tipusNoLectiva[0] ?? ''); setNeedsCover(false) }} />
               No lectiva
             </label>
           </div>
@@ -103,6 +111,11 @@ export function HorariSlotForm({ diaSetmana, etapa, franja, horariExistent, onDe
             </div>
           )}
 
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={needsCover} onChange={e => setNeedsCover(e.target.checked)} />Necessita cobertura en cas d'absència</label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs">Vigent des de<input type="date" value={vigentDesde} min={dates.start} max={vigentFins} onChange={e => setVigentDesde(e.target.value)} className="w-full border rounded p-2" /></label>
+            <label className="text-xs">Vigent fins a<input type="date" value={vigentFins} min={vigentDesde} max={dates.end} onChange={e => setVigentFins(e.target.value)} className="w-full border rounded p-2" /></label>
+          </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
         </form>
 

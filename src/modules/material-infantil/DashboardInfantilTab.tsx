@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useComandesInfantil } from './useComandesInfantil'
 import { useMaterialsInfantil } from './useMaterialsInfantil'
 import { useConfigStore } from '../../store/configStore'
-import { necessitatBase, quantitatADemanar, costEstimat, nreAlumnesFromConfig } from './materialInfantil.utils'
+import { orderLine, nreAlumnesFromConfig } from './materialInfantil.utils'
 
 const COLOR = '#861414'
 
@@ -17,17 +17,13 @@ export function DashboardInfantilTab() {
 
   useEffect(() => { load(); loadMaterials() }, [load, loadMaterials])
 
-  function calculaCost(c: (typeof comandes)[number]) {
-    const material = materials.find((m) => m.id === c.MaterialId)
-    const nAlumnes = nreAlumnesFromConfig(config, c.Etapa)
-    const nb = material ? necessitatBase(material.UnitatsPerAlumne, nAlumnes) : 0
-    const quantitat = quantitatADemanar(nb, c.MargeSeguretat, c.EstocAplicat)
-    return { material, cost: material ? costEstimat(quantitat, material.PreuUnitari) : 0 }
-  }
+  const calculaCost = useCallback((c: (typeof comandes)[number]) => {
+    return orderLine(c, materials.find(m => m.id === c.MaterialId), nreAlumnesFromConfig(config, c.Etapa, c.CursEscolar))
+  }, [materials, config])
 
   const liniesCursActiu = useMemo(
-    () => comandes.filter((c) => c.CursEscolar === cursActiu).map((c) => ({ comanda: c, ...calculaCost(c) })),
-    [comandes, materials, config, cursActiu],
+    () => comandes.filter((c) => c.CursEscolar === cursActiu).map((c) => calculaCost(c)),
+    [comandes, calculaCost, cursActiu],
   )
 
   const costTotal = liniesCursActiu.reduce((s, l) => s + l.cost, 0)
@@ -56,7 +52,7 @@ export function DashboardInfantilTab() {
     return Array.from(map.entries())
       .map(([curs, v]) => ({ curs, cost: Math.round(v.cost * 100) / 100, linies: v.linies }))
       .sort((a, b) => b.curs.localeCompare(a.curs))
-  }, [comandes, materials, config])
+  }, [comandes, calculaCost])
 
   return (
     <div className="flex-1 overflow-auto px-6 py-6 space-y-6">

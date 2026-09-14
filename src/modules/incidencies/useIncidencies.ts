@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
-import { getFirmaEmail } from '../../store/configStore'
-import { sendEmail } from '../../services/gmail'
-import { formatTimestamp, calcularDiesOberts, formatDate, formatDatetime } from './incidencies.utils'
+import { formatTimestamp, calcularDiesOberts } from './incidencies.utils'
 import type { Incidencia, EstatIncidencia, IncidenciaFormData } from './types'
 
 const TABLE = 'incidencies'
@@ -46,45 +44,6 @@ function rowToIncidencia(row: IncidenciaRow): Incidencia {
   }
 }
 
-function buildEmailTancament(inc: Incidencia, dataResolucio: string, dies: string): string {
-  const lines = [
-    'Benvolgut/da,',
-    '',
-    `T'informem que la incidència ${inc.Ticket} ha estat resolta i tancada.`,
-    '',
-    '────────────────────────────',
-    'DETALLS DE LA INCIDÈNCIA',
-    '────────────────────────────',
-    `Ticket:             ${inc.Ticket}`,
-    `Tipus de problema:  ${inc['Tipus de problema']}`,
-    `Localització:       ${inc.Localització}`,
-  ]
-  if (inc.Dispositiu) lines.push(`Dispositiu:         ${inc.Dispositiu}`)
-  lines.push(
-    `Data d'obertura:    ${formatDatetime(inc['Marca de temps'])}`,
-    `Data de resolució:  ${formatDate(dataResolucio)}`,
-    `Dies obert:         ${dies || '0'}`,
-  )
-  if (inc.Comentaris) {
-    lines.push(
-      '',
-      '────────────────────────────',
-      'RESOLUCIÓ / COMENTARIS',
-      '────────────────────────────',
-      inc.Comentaris,
-    )
-  }
-  lines.push(
-    '',
-    `Si necessites més informació, contacta amb ${getFirmaEmail()}.`,
-    '',
-    'Gràcies,',
-    getFirmaEmail(),
-    'Col·legi Sant Josep Obrer',
-  )
-  return lines.join('\n')
-}
-
 export function useIncidencies() {
   const [incidencies, setIncidencies] = useState<Incidencia[]>([])
   const [loading, setLoading] = useState(true)
@@ -104,6 +63,8 @@ export function useIncidencies() {
     }
   }, [])
 
+  // External fetch: synchronous loading state prevents stale content during refresh.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchData() }, [fetchData])
 
   async function crear(data: IncidenciaFormData): Promise<void> {
@@ -124,7 +85,7 @@ export function useIncidencies() {
     await fetchData()
   }
 
-  async function canviarEstat(inc: Incidencia, nouEstat: EstatIncidencia): Promise<{ emailEnviat?: boolean }> {
+  async function canviarEstat(inc: Incidencia, nouEstat: EstatIncidencia): Promise<{ emailProgramat?: boolean }> {
     const ara = new Date()
     const dataResolucio = nouEstat === 'Tancada' ? formatTimestamp(ara) : inc['Data Resolució']
     const dies = nouEstat === 'Tancada'
@@ -137,27 +98,9 @@ export function useIncidencies() {
       return {}
     }
 
-    // Marca com a pendent i actualitza
-    await updateRowById(TABLE, inc.id, { estat: 'Tancada', data_resolucio: dataResolucio, dies_tasca_oberta: dies, notificat: 'pending' })
-
-    // Intenta enviar email i actualitza Notificat
-    let emailEnviat = false
-    if (inc.Reporter) {
-      try {
-        await sendEmail({
-          to: inc.Reporter,
-          subject: `Incidència ${inc.Ticket} resolta — ${inc['Tipus de problema']}`,
-          body: buildEmailTancament(inc, dataResolucio, dies),
-        })
-        emailEnviat = true
-      } catch {
-        // Notificat queda 'pending' per reintentar manualment
-      }
-      await updateRowById(TABLE, inc.id, { notificat: emailEnviat ? 'true' : 'pending' })
-    }
-
+    const row = await updateRowById<IncidenciaRow>(TABLE, inc.id, { estat: 'Tancada', data_resolucio: dataResolucio, dies_tasca_oberta: dies })
     await fetchData()
-    return { emailEnviat }
+    return { emailProgramat: row.notificat === 'queued' }
   }
 
   async function assignar(inc: Incidencia, assignat: string): Promise<void> {

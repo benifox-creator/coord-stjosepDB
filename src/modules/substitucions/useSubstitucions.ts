@@ -1,12 +1,10 @@
 import { create } from 'zustand'
-import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
-import { sendEmail } from '../../services/gmail'
+import { getAll, insertRow, callRpc, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
-import { useUsuarisStore } from '../../store/usuarisStore'
 import type { Substitucio, SubstitucioFormData, EstatSubstitucio } from './types'
 import {
   TABLE_SUBSTITUCIONS,
-  rowToSubstitucio, substitucioToInsert, substitucioToUpdate, buildEmailSubstitucio,
+  rowToSubstitucio, substitucioToInsert,
   type SubstitucioRow,
 } from './substitucions.utils'
 
@@ -17,6 +15,7 @@ interface SubstitucionsState {
   load: () => Promise<void>
   crear: (data: SubstitucioFormData) => Promise<void>
   canviarEstat: (s: Substitucio, estat: EstatSubstitucio) => Promise<void>
+  assignar: (s: Substitucio, email: string) => Promise<Substitucio>
   eliminar: (s: Substitucio) => Promise<void>
 }
 
@@ -60,24 +59,22 @@ export const useSubstitucions = create<SubstitucionsState>((set, get) => ({
     const creada = rowToSubstitucio(row)
     set((s) => ({ substitucions: [...s.substitucions, creada] }))
 
-    try {
-      const usuaris = useUsuarisStore.getState().usuaris
-      const substitut = usuaris.find((u) => u.Email === data.ProfessorSubstitut)
-      if (substitut) {
-        const { subject, body } = buildEmailSubstitucio(creada, substitut.Nom || substitut.Email)
-        await sendEmail({ to: substitut.Email, subject, body })
-      }
-    } catch {
-      // error d'email és no bloquejant
-    }
+
   },
 
   async canviarEstat(s, estat) {
-    const row = await updateRowById<SubstitucioRow>(TABLE_SUBSTITUCIONS, s.id, substitucioToUpdate({ Estat: estat }))
+    const row = await callRpc<SubstitucioRow>('update_substitution', { p_id: s.id, p_expected_teacher: s.ProfessorSubstitut, p_expected_state: s.Estat, p_teacher: s.ProfessorSubstitut, p_state: estat })
     const updated = rowToSubstitucio(row)
     set((st) => ({
       substitucions: st.substitucions.map((x) => (x.id === s.id ? updated : x)),
     }))
+  },
+
+  async assignar(s, email) {
+    const row = await callRpc<SubstitucioRow>('update_substitution', { p_id: s.id, p_expected_teacher: s.ProfessorSubstitut, p_expected_state: s.Estat, p_teacher: email, p_state: s.Estat })
+    const updated = rowToSubstitucio(row)
+    set(st => ({ substitucions: st.substitucions.map(x => x.id === s.id ? updated : x) }))
+    return updated
   },
 
   async eliminar(s) {

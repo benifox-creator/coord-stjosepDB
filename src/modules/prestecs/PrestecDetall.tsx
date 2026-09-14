@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   X, User, Mail, Calendar, ChevronDown,
-  CheckCircle, Loader2, MessageSquare, RotateCcw, Archive, Trash2, Infinity,
+  CheckCircle, Loader2, MessageSquare, RotateCcw, Archive, Trash2, Infinity as InfinityIcon,
 } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { formatDate, estatEfectiu, diesRestants } from './prestecs.utils'
@@ -188,7 +188,7 @@ export function PrestecDetall({
               value={
                 !prestec.Data_fi_prevista ? (
                   <span className="flex items-center gap-1.5 text-blue-600 font-medium">
-                    <Infinity size={14} /> Temps il·limitat
+                    <InfinityIcon size={14} /> Temps il·limitat
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">

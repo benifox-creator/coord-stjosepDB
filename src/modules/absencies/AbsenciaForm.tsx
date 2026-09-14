@@ -1,4 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useHoraris } from '../horaris/useHoraris'
+import { diaSetmanaDeData } from '../horaris/horaris.utils'
+import { schoolYear, slotMinutes } from '../../utils/schoolCalendar'
+import { useAuthStore } from '../../store/authStore'
+import { duradaPeriodes } from './absencies.utils'
+import { useState, useMemo, useEffect } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import type { AbsenciaFormData } from './types'
 import { calcularHores } from './absencies.utils'
@@ -22,6 +27,23 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
     Motiu: '',
     Notes: '',
   })
+  const [requestId] = useState(() => crypto.randomUUID())
+  const { horaris, load, loading: loadingHoraris, error: errorHoraris } = useHoraris()
+  const email = (useAuthStore(s => s.user?.email) ?? '').toLowerCase()
+  const [manual, setManual] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const year = schoolYear(new Date(data.Data + 'T12:00:00'))
+  useEffect(() => { void load(year) }, [load, year])
+  const holidays = useConfigStore(s => s.getValues('centre.dies-no-lectius'))
+  const available = horaris.filter(h => h.Professor === email && h.DiaSetmana === diaSetmanaDeData(data.Data)
+    && h.VigentDesde <= data.Data && h.VigentFins >= data.Data && !holidays.includes(data.Data))
+    .sort((a,b) => slotMinutes(a.Franja)[0] - slotMinutes(b.Franja)[0])
+  const usePeriods = !manual && available.length > 0
+  const selected = available.filter(h => selectedIds.includes(h.id)).map(h => ({ ...h, HorariId: h.id }))
+  const calculated = usePeriods && selected.length ? {
+    HoraInici: selected[0].Franja.split('-')[0], HoraFi: selected[selected.length-1].Franja.split('-')[1],
+    HoresNoLectives: duradaPeriodes(selected, 'No lectiva'),
+  } : data
   const [teHoresNoLectives, setTeHoresNoLectives] = useState(false)
   const [motiuAltre, setMotiuAltre] = useState('')
   const [saving, setSaving] = useState(false)
@@ -31,14 +53,17 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
     setData((prev) => ({ ...prev, [k]: v }))
   }
 
-  const hores = useMemo(() => calcularHores(data.HoraInici, data.HoraFi), [data.HoraInici, data.HoraFi])
+  const manualHours = useMemo(() => calcularHores(data.HoraInici, data.HoraFi), [data.HoraInici, data.HoraFi])
+  const hores = usePeriods ? duradaPeriodes(selected) : manualHours
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!data.Data) { setError('Cal indicar la data.'); return }
-    if (!data.HoraInici || !data.HoraFi) { setError("Cal indicar l'hora d'inici i de fi."); return }
+    if (usePeriods && !selected.length) { setError('Selecciona almenys un període.'); return }
+    if (!manual && (loadingHoraris || errorHoraris)) { setError('Revisa la càrrega de l’horari o tria l’entrada manual.'); return }
+    if (!calculated.HoraInici || !calculated.HoraFi) { setError("Cal indicar l'hora d'inici i de fi."); return }
     if (hores <= 0) { setError("L'hora de fi ha de ser posterior a la d'inici."); return }
-    if (teHoresNoLectives && (data.HoresNoLectives < 0 || data.HoresNoLectives > hores)) {
+    if (!usePeriods && teHoresNoLectives && (data.HoresNoLectives < 0 || data.HoresNoLectives > hores)) {
       setError("Les hores no lectives no poden ser negatives ni superar el total d'hores.")
       return
     }
@@ -47,7 +72,7 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
     setError('')
     setSaving(true)
     try {
-      await onDesar({ ...data, HoresNoLectives: teHoresNoLectives ? data.HoresNoLectives : 0, Motiu: motiuFinal })
+      await onDesar({ ...data, ...calculated, RequestId: requestId, Periodes: usePeriods ? selected : undefined, HoresNoLectives: usePeriods ? calculated.HoresNoLectives : teHoresNoLectives ? data.HoresNoLectives : 0, Motiu: motiuFinal })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error desant l'absència")
       setSaving(false)
@@ -57,10 +82,10 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/30" onClick={() => { if (!saving) onCancel() }} />
-      <div className="relative z-10 w-full max-w-md bg-white shadow-2xl flex flex-col h-full">
+      <div role="dialog" aria-modal="true" aria-label="Nova absència" className="relative z-10 w-full max-w-md bg-white shadow-2xl flex flex-col h-full">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
           <h2 className="text-sm font-semibold text-text-main">Nova absència</h2>
-          <button onClick={() => { if (!saving) onCancel() }} disabled={saving} className="text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          <button aria-label="Tanca el formulari" onClick={() => { if (!saving) onCancel() }} disabled={saving} className="text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
             <X size={18} />
           </button>
         </div>
@@ -69,14 +94,18 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Data</label>
             <input
-              type="date"
+              aria-label="Data de l’absència" type="date"
               value={data.Data}
-              onChange={(e) => set('Data', e.target.value)}
+              onChange={(e) => { if (e.target.value) { set('Data', e.target.value); setSelectedIds([]) } }}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <label className="flex gap-2 text-sm"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)} />Entrada manual / absència parcial</label>
+          {loadingHoraris && <p role="status" className="text-sm">Carregant horari…</p>}
+          {errorHoraris && <p role="alert" className="text-sm text-red-600">{errorHoraris}</p>}
+          {usePeriods && <fieldset className="space-y-2"><legend className="mb-2 text-sm font-medium">Períodes afectats</legend>{available.map(h => <label key={h.id} className="flex gap-2 rounded border p-3 text-sm"><input type="checkbox" checked={selectedIds.includes(h.id)} onChange={e => setSelectedIds(ids => e.target.checked ? [...ids,h.id] : ids.filter(id => id !== h.id))} /><span>{h.Franja} · {h.Grup} {h.Materia}<span className="block text-xs text-gray-500">{h.Tipus} · {h.NecessitaCobertura ? 'Cal cobertura' : 'Sense cobertura'}</span></span></label>)}</fieldset>}
+          {!usePeriods && <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Hora d'inici</label>
               <input
@@ -97,12 +126,13 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
             </div>
           </div>
 
+          }
           {hores > 0 && (
             <div className="space-y-2">
               <p className="text-xs text-gray-500">
                 Total: <span className="font-semibold text-text-main">{hores.toString().replace('.', ',')} hores</span>
               </p>
-              <label className="flex items-center gap-2 text-xs text-gray-600">
+              {!usePeriods && <label className="flex items-center gap-2 text-xs text-gray-600">
                 <input
                   type="checkbox"
                   checked={teHoresNoLectives}
@@ -112,9 +142,9 @@ export function AbsenciaForm({ onDesar, onCancel }: Props) {
                   }}
                   className="rounded border-gray-300 text-primary focus:ring-primary/30"
                 />
-                Alguna d'aquestes hores no és lectiva (no necessita substitut)
-              </label>
-              {teHoresNoLectives && (
+                Alguna d'aquestes hores no és lectiva
+              </label>}
+              {!usePeriods && teHoresNoLectives && (
                 <div className="flex items-center gap-2 pl-6">
                   <input
                     type="number"

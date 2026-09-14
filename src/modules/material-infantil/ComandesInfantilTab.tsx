@@ -6,7 +6,7 @@ import { useProveidorsInfantil } from './useProveidorsInfantil'
 import { useConfigStore } from '../../store/configStore'
 import { ETAPES_INFANTIL } from './types'
 import type { ComandaInfantil, EtapaInfantil } from './types'
-import { necessitatBase, quantitatADemanar, costEstimat, nreAlumnesFromConfig } from './materialInfantil.utils'
+import { orderLine, isOrderExportable, nreAlumnesFromConfig } from './materialInfantil.utils'
 import { generarPedidoExcel } from './comandaExport.utils'
 import { ComandaInfantilForm } from './ComandaInfantilForm'
 
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function ComandesInfantilTab({ potGestionar }: Props) {
-  const { comandes, loading, error, load, crear, eliminar } = useComandesInfantil()
+  const { comandes, loading, error, load, crear, eliminar, canviarEstat } = useComandesInfantil()
   const { materials, load: loadMaterials } = useMaterialsInfantil()
   const { proveidors, load: loadProveidors } = useProveidorsInfantil()
   const config = useConfigStore((s) => s.config)
@@ -29,25 +29,24 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
 
   useEffect(() => { load(); loadMaterials(); loadProveidors() }, [load, loadMaterials, loadProveidors])
 
-  const nAlumnes = nreAlumnesFromConfig(config, etapa)
+  const nAlumnes = nreAlumnesFromConfig(config, etapa, cursActiu)
 
   const linies = useMemo(() => {
     return comandes
       .filter((c) => c.CursEscolar === cursActiu && c.Etapa === etapa)
       .map((c) => {
         const material = materials.find((m) => m.id === c.MaterialId)
-        const nb = material ? necessitatBase(material.UnitatsPerAlumne, nAlumnes) : 0
-        const quantitat = quantitatADemanar(nb, c.MargeSeguretat, c.EstocAplicat)
-        const cost = material ? costEstimat(quantitat, material.PreuUnitari) : 0
-        return { comanda: c, material, necessitatBase: nb, quantitat, cost }
+        return orderLine(c, material, nAlumnes)
       })
       .sort((a, b) => (a.material?.Nom ?? '').localeCompare(b.material?.Nom ?? ''))
   }, [comandes, materials, cursActiu, etapa, nAlumnes])
 
+  const [savingState, setSavingState] = useState<string | null>(null)
+  const historicalEstimate = linies.some(l => ['Demanat', 'Rebut'].includes(l.comanda.Estat) && !l.comanda.Fotografia)
   const totalCost = linies.reduce((s, l) => s + l.cost, 0)
 
   async function handleDescarregar() {
-    const aDemanar = linies.filter((l) => l.quantitat > 0)
+    const aDemanar = linies.filter((l) => l.quantitat > 0 && isOrderExportable(l.comanda))
     setDescarregant(true)
     try {
       await generarPedidoExcel(aDemanar, proveidors, cursActiu, etapa)
@@ -92,7 +91,7 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
         <div className="flex items-center gap-2">
           <button
             onClick={handleDescarregar}
-            disabled={descarregant || linies.every((l) => l.quantitat === 0)}
+            disabled={descarregant || !linies.some(l => l.quantitat > 0 && isOrderExportable(l.comanda))}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 disabled:opacity-50"
           >
             {descarregant ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Descarrega la comanda
@@ -109,6 +108,7 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
         </div>
       </div>
 
+      {historicalEstimate && <p className="mx-6 mt-4 text-sm text-amber-800">Hi ha comandes anteriors sense fotografia de confirmació. Els seus imports són estimacions amb el catàleg actual.</p>}
       {error && (
         <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
@@ -143,7 +143,7 @@ export function ComandesInfantilTab({ potGestionar }: Props) {
                 <td className="px-3 py-2.5 text-right text-gray-600">{comanda.MargeSeguretat}</td>
                 <td className="px-3 py-2.5 text-right font-semibold text-text-main">{quantitat}</td>
                 <td className="px-3 py-2.5 text-right text-gray-600">{cost.toFixed(2)}€</td>
-                <td className="px-3 py-2.5 text-gray-600">{comanda.Estat}</td>
+                <td className="px-3 py-2.5 text-gray-600">{potGestionar ? <select disabled={savingState !== null} aria-label="Estat de la comanda" value={comanda.Estat} onChange={async e => { setSavingState(comanda.id); try { await canviarEstat(comanda, e.target.value as typeof comanda.Estat) } catch (err) { useComandesInfantil.setState({ error: err instanceof Error ? err.message : 'Error canviant l’estat' }) } finally { setSavingState(null) } }} className="rounded border p-1"><option>Pendent</option><option>Revisar</option><option>Demanat</option><option>Rebut</option><option>Cancel·lat</option></select> : comanda.Estat}</td>
                 {potGestionar && (
                   <td className="px-3 py-2.5 text-right">
                     {confirmEliminar === comanda.id ? (

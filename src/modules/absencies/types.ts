@@ -3,6 +3,8 @@ import type { EtapaSubstitucio } from '../substitucions/types'
 export type EstatAbsencia = 'Pendent revisió' | 'Aprovada' | 'Rebutjada'
 
 export interface PeriodeAbsencia {
+  HorariId?: string
+  NecessitaCobertura?: boolean
   Franja: string
   Etapa: EtapaSubstitucio
   Tipus: 'Lectiva' | 'No lectiva'
@@ -11,6 +13,7 @@ export interface PeriodeAbsencia {
 }
 
 export interface Absencia {
+  TePeriodes?: boolean
   id: string
   ID: string
   Professor: string
@@ -30,6 +33,7 @@ export interface Absencia {
 }
 
 export interface AbsenciaFormData {
+  RequestId?: string
   Data: string
   HoraInici: string
   HoraFi: string

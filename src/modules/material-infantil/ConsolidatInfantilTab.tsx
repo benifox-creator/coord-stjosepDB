@@ -3,7 +3,7 @@ import { useComandesInfantil } from './useComandesInfantil'
 import { useMaterialsInfantil } from './useMaterialsInfantil'
 import { useConfigStore } from '../../store/configStore'
 import { ETAPES_INFANTIL } from './types'
-import { necessitatBase, quantitatADemanar, costEstimat, nreAlumnesFromConfig } from './materialInfantil.utils'
+import { orderLine, nreAlumnesFromConfig } from './materialInfantil.utils'
 
 export function ConsolidatInfantilTab() {
   const { comandes, loading, error, load } = useComandesInfantil()
@@ -19,11 +19,8 @@ export function ConsolidatInfantilTab() {
       .filter((c) => c.CursEscolar === cursActiu)
       .map((c) => {
         const material = materials.find((m) => m.id === c.MaterialId)
-        const nAlumnes = nreAlumnesFromConfig(config, c.Etapa)
-        const nb = material ? necessitatBase(material.UnitatsPerAlumne, nAlumnes) : 0
-        const quantitat = quantitatADemanar(nb, c.MargeSeguretat, c.EstocAplicat)
-        const cost = material ? costEstimat(quantitat, material.PreuUnitari) : 0
-        return { comanda: c, material, quantitat, cost }
+        const nAlumnes = nreAlumnesFromConfig(config, c.Etapa, c.CursEscolar)
+        return orderLine(c, material, nAlumnes)
       })
       .sort((a, b) => a.comanda.Etapa.localeCompare(b.comanda.Etapa) || (a.material?.Nom ?? '').localeCompare(b.material?.Nom ?? ''))
   }, [comandes, materials, config, cursActiu])
