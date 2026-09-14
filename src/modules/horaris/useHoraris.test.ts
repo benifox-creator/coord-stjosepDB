@@ -27,6 +27,7 @@ describe('useHoraris.crear', () => {
     await useHoraris.getState().crear({
       DiaSetmana: 'Dilluns', Etapa: 'EP', Franja: '9:00-10:00',
       Tipus: 'Lectiva', Grup: 'EP-1r A', Materia: 'Matemàtiques',
+      CursEscolar: '2026-2027', VigentDesde: '2026-09-01', VigentFins: '2027-08-31', NecessitaCobertura: true,
     })
 
     expect(db.insertRow).toHaveBeenCalledWith('horaris', expect.objectContaining({
@@ -43,6 +44,7 @@ describe('useHoraris.eliminar', () => {
       horaris: [{
         id: 'h1', Professor: 'profe@stjosep.org', DiaSetmana: 'Dilluns', Etapa: 'EP',
         Franja: '9:00-10:00', Tipus: 'Lectiva', Grup: 'EP-1r A', Materia: 'Matemàtiques',
+      CursEscolar: '2026-2027', VigentDesde: '2026-09-01', VigentFins: '2027-08-31', NecessitaCobertura: true,
         Creat_el: '', Creat_per: 'profe@stjosep.org',
       }],
     })
@@ -52,5 +54,18 @@ describe('useHoraris.eliminar', () => {
 
     expect(db.deleteRowById).toHaveBeenCalledWith('horaris', 'h1')
     expect(useHoraris.getState().horaris).toHaveLength(0)
+  })
+})
+
+describe('useHoraris.load', () => {
+  it('ignores an older response after switching academic years', async () => {
+    let finishOld!: (rows: unknown[]) => void
+    vi.mocked(db.getAll).mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve }))
+      .mockResolvedValueOnce([{ id: 'new-course', curs_escolar: '2027-2028' }])
+    const old = useHoraris.getState().load('2026-2027')
+    await useHoraris.getState().load('2027-2028')
+    finishOld([{ id: 'old-course', curs_escolar: '2026-2027' }])
+    await old
+    expect(useHoraris.getState().horaris.map(h => h.id)).toEqual(['new-course'])
   })
 })
