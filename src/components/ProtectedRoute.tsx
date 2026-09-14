@@ -1,41 +1,19 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useAuthStore } from '../store/authStore'
 import { useUsuarisStore } from '../store/usuarisStore'
+import { useConfigStore } from '../store/configStore'
 
-interface Props {
-  children: React.ReactNode
-}
-
-export function ProtectedRoute({ children }: Props) {
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
-  const googleAccessToken = useAuthStore((s) => s.googleAccessToken)
-  const rol = useUsuarisStore((s) => s.rol)
-  const accesNegat = useUsuarisStore((s) => s.accesNegat)
-  const rolLoading = useUsuarisStore((s) => s.loading)
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-surface">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (!user) return <Navigate to="/login" replace />
-  if (!googleAccessToken) return <Navigate to="/login" replace />
-
-  // Esperem que loadRol acabi abans de decidir
-  if (rol === null && !accesNegat && rolLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-surface">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  // Usuari autenticat però no autoritzat pel coordinador
+  const rol = useUsuarisStore(s => s.rol)
+  const accesNegat = useUsuarisStore(s => s.accesNegat)
+  const { loaded, error, load } = useConfigStore()
+  if (!loading && !user) return <Navigate to="/login" replace />
   if (accesNegat) return <Navigate to="/no-autoritzat" replace />
-
+  if (error) return <div role="alert" className="p-8 text-center">
+    <p>No s'ha pogut carregar la configuració d'accés: {error}</p>
+    <button className="mt-4 text-primary underline" onClick={() => void load()}>Torna-ho a provar</button>
+  </div>
+  if (loading || !rol || !loaded) return <div role="status" className="p-8 text-center">Comprovant l'accés…</div>
   return <>{children}</>
 }

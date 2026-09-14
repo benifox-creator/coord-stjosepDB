@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && npm run check:worker && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:worker": "tsc --ignoreConfig --noEmit --strict --target ES2022 --module esnext --moduleResolution bundler --lib ES2022,DOM --skipLibCheck supabase/functions/send-notifications/index.ts"
   },
   "dependencies": {
     "@sentry/react": "^10.65.0",
@@ -27,6 +28,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",

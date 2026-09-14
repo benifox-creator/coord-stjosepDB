@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { supabase } from '../services/db'
+import { getAll, supabase } from '../services/db'
+import { schoolYear } from '../utils/schoolCalendar'
 
 const TABLE = 'config'
 
@@ -36,7 +37,7 @@ export function canAccessModul(
   if (!rol) return false
   const key = `visibilitat.${visKey}`
   const saved = config[key]
-  const vals = saved && saved.length > 0 ? saved : (CONFIG_DEFAULTS[key] ?? [])
+  const vals = saved ?? CONFIG_DEFAULTS[key] ?? []
   return vals.includes(rol)
 }
 
@@ -68,6 +69,7 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Xarxa', 'Equipament', 'Programari', 'Seguretat', 'Formació', 'Infraestructura',
   ],
   'manteniment.email': [],
+  'centre.dies-no-lectius': [],
   'emails.firma': ['Administració'],
   'absencies.motius': [
     'Visita mèdica', 'Assumptes propis', 'Baixa/malaltia', 'Formació', 'Altre',
@@ -91,7 +93,7 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'material-infantil.categories': [
     'Plàstica', 'Papereria', 'Psicomotricitat', 'Higiene', 'Aula', 'Llibres/quaderns', 'Altres',
   ],
-  'material-infantil.curs-actiu': ['2026-2027'],
+  'material-infantil.curs-actiu': [schoolYear()],
   'material-infantil.alumnes-i3': ['0'],
   'material-infantil.alumnes-i4': ['0'],
   'material-infantil.alumnes-i5': ['0'],
@@ -130,32 +132,30 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   getValues(clau) {
     const saved = get().config[clau]
-    return saved && saved.length > 0 ? saved : (CONFIG_DEFAULTS[clau] ?? [])
+    return saved ?? CONFIG_DEFAULTS[clau] ?? []
   },
 
   async load() {
     if (get().loading) return
     set({ loading: true, error: null })
     try {
-      const { data, error } = await supabase.from(TABLE).select('clau, valors')
-      if (error) throw error
+      const data = await getAll<{ clau: string; valors: string[] }>(TABLE, 'clau', {}, 'clau')
       const config: Record<string, string[]> = {}
       for (const row of (data ?? []) as { clau: string; valors: string[] }[]) {
-        if (row.clau && row.valors?.length > 0) config[row.clau] = row.valors
+        if (row.clau && Array.isArray(row.valors)) config[row.clau] = row.valors
       }
       set({ config, loaded: true })
-    } catch {
-      // Taula no existeix o sense accés — usem defaults silenciosament
-      set({ loaded: true })
+    } catch (err) {
+      set({ loaded: false, error: err instanceof Error ? err.message : 'Error carregant configuració' })
     } finally {
       set({ loading: false })
     }
   },
 
   async update(clau, valors) {
-    set((s) => ({ config: { ...s.config, [clau]: valors } }))
     const { error } = await supabase.from(TABLE).upsert({ clau, valors })
     if (error) throw new Error(`Error desant configuració: ${error.message}`)
+    set((s) => ({ config: { ...s.config, [clau]: valors } }))
   },
 }))
 

@@ -4,6 +4,7 @@ import type { Rol, Usuari, EtapaSubstitucio } from '../modules/usuaris/types'
 import { ETAPES_USUARI, ROLS } from '../modules/usuaris/types'
 
 const TABLE = 'usuaris'
+let sessionGeneration = 0
 
 const ROLS_VALIDS = new Set<string>(ROLS)
 const ETAPES_VALIDES = new Set<string>(ETAPES_USUARI)
@@ -85,8 +86,10 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
   loading: false,
   error: null,
 
-  async loadRol(email, displayName) {
-    set({ loading: true, error: null, accesNegat: false })
+  async loadRol(email) {
+    const generation = ++sessionGeneration
+    const apply = (state: Partial<UsuarisState>) => { if (generation === sessionGeneration) set(state) }
+    apply({ rol: null, loading: true, error: null, accesNegat: false })
     try {
       const emailNorm = email.trim().toLowerCase()
       const { data: existing, error: selectError } = await supabase
@@ -98,47 +101,31 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
       if (selectError) throw selectError
 
       if (existing) {
-        set({ rol: parseRol((existing as UsuariRow).rol), accesNegat: false })
+        apply({ rol: parseRol((existing as UsuariRow).rol), accesNegat: false })
         return
       }
 
-      // Si encara no hi ha cap usuari registrat, el primer que entra es fa coordinador
-      const { count, error: countError } = await supabase
-        .from(TABLE)
-        .select('id', { count: 'exact', head: true })
-      if (countError) throw countError
-
-      if ((count ?? 0) === 0) {
-        try {
-          await insertRow(TABLE, {
-            email,
-            nom: displayName ?? '',
-            rol: 'coordinador',
-          })
-          set({ rol: 'coordinador' })
-        } catch {
-          set({ accesNegat: true })
-        }
-      } else {
-        set({ accesNegat: true })
-      }
+      // Les altes i el primer administrador es provisionen explícitament.
+      apply({ accesNegat: true })
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Error carregant rol' })
-      set({ accesNegat: true })
+      apply({ error: err instanceof Error ? err.message : 'Error carregant rol' })
+      apply({ accesNegat: true })
     } finally {
-      set({ loading: false })
+      apply({ loading: false })
     }
   },
 
   async loadAll() {
-    set({ loading: true, error: null })
+    const generation = sessionGeneration
+    const apply = (state: Partial<UsuarisState>) => { if (generation === sessionGeneration) set(state) }
+    apply({ loading: true, error: null })
     try {
       const rows = await getAll<UsuariRow>(TABLE, 'email')
-      set({ usuaris: rows.map(rowToUsuari) })
+      apply({ usuaris: rows.map(rowToUsuari) })
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Error carregant usuaris' })
+      apply({ error: err instanceof Error ? err.message : 'Error carregant usuaris' })
     } finally {
-      set({ loading: false })
+      apply({ loading: false })
     }
   },
 
@@ -181,6 +168,7 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
   },
 
   reset() {
+    sessionGeneration++
     set({ rol: null, accesNegat: false, usuaris: [], loading: false, error: null })
   },
 }))
