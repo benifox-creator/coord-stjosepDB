@@ -30,7 +30,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Veure la nota a checks.yml: el lockfile generat a macOS no porta les
+        # dependències del binding WASM de rolldown i `npm ci` hi falla a Linux.
+        run: npm install --no-audit --no-fund
 
       - name: Lint
         run: npm run lint

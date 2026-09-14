@@ -12,7 +12,12 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      # `npm install` i no `npm ci`: el package-lock.json es genera a macOS i no
+      # inclou les dependències de @napi-rs/wasm-runtime (el binding WASM de
+      # rolldown), que només s'expandeixen quan es resol l'arbre a Linux. Amb
+      # `npm ci` això falla amb EUSAGE. Quan es pugui regenerar el lockfile en
+      # una màquina Linux, es pot tornar a `npm ci`.
+      - run: npm install --no-audit --no-fund
       - run: npm run lint
       - run: npm test
       - run: npm run build

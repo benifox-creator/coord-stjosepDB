@@ -93,6 +93,8 @@ Repetir per **cada** rol (coordinador, direcció, titular, cap d'estudis, profes
 ## Fase 10 — Desplegament final
 
 - [ ] `npm run lint`, `npm test` i `npm run build` passen al workflow de CI (`checks.yml`) sobre el Pull Request real, no només en local
+
+> **Deute tècnic conegut (2026-09-14):** els workflows fan `npm install` i no `npm ci`. El `package-lock.json` s'ha generat sempre a macOS i no conté les dependències de `@napi-rs/wasm-runtime` (el binding WASM de rolldown), que npm només expandeix quan resol l'arbre a Linux; amb `npm ci` el runner falla amb `EUSAGE — Missing: @emnapi/core from lock file`. Regenerar el lockfile a macOS no ho arregla (o no canvia res, o esborra els binaris de Linux). La solució neta és generar-lo una vegada en una màquina Linux (o en un job de CI que el commiti) i tornar llavors a `npm ci`, que és més estricte i reproduïble.
 - [ ] Publicar el frontend **només** quan la base de dades i la identitat hagin passat totes les fases anteriors
 - [ ] Verificar que el domini de producció està als orígens autoritzats de Firebase Auth i de les credencials OAuth de Google Cloud
 
