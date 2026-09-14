@@ -268,15 +268,7 @@ create table public.config (
   valors  jsonb not null default '[]'::jsonb
 );
 
--- ---------- RLS ----------
--- Política permisiva para todas las tablas: cualquiera con la anon key tiene
--- acceso completo (equivalente en permisos a la Sheets API de hoy, pero OJO:
--- la anon key es pública en el bundle del cliente, así que esto NO exige
--- haber pasado por el login de Firebase para leer/escribir -- es más abierto
--- que el modelo actual, que sí exige un token de Google válido del dominio
--- @stjosep.org. Endurecer con Supabase Third-Party Auth (verificación del
--- JWT de Firebase) antes de un uso más allá de pruebas internas.
-
+-- RLS is enabled here; apply the versioned migrations before using the app.
 alter table public.usuaris enable row level security;
 alter table public.substitucions enable row level security;
 alter table public.inventari enable row level security;
@@ -291,11 +283,8 @@ alter table public.prestec_items enable row level security;
 alter table public.reserves enable row level security;
 alter table public.config enable row level security;
 
-create policy "anon_full_access" on public.usuaris for all using (true) with check (true);
-create policy "anon_full_access" on public.substitucions for all using (true) with check (true);
 
 alter table public.absencies enable row level security;
-create policy "anon_full_access" on public.absencies for all using (true) with check (true);
 
 alter table public.substitucions
   add column absencia_id uuid references public.absencies(id);
@@ -365,27 +354,13 @@ create table public.comandes_infantil (
 alter table public.usuaris add column pot_gestionar_material boolean not null default false;
 
 alter table public.proveidors_infantil enable row level security;
-create policy "anon_full_access" on public.proveidors_infantil for all using (true) with check (true);
 alter table public.materials_infantil enable row level security;
-create policy "anon_full_access" on public.materials_infantil for all using (true) with check (true);
 alter table public.comandes_infantil enable row level security;
-create policy "anon_full_access" on public.comandes_infantil for all using (true) with check (true);
 
 alter table public.comandes_infantil
   add constraint comandes_infantil_curs_etapa_material_key
   unique (curs_escolar, etapa, material_id);
 
-create policy "anon_full_access" on public.inventari for all using (true) with check (true);
-create policy "anon_full_access" on public.incidencies for all using (true) with check (true);
-create policy "anon_full_access" on public.manteniment for all using (true) with check (true);
-create policy "anon_full_access" on public.coneixement for all using (true) with check (true);
-create policy "anon_full_access" on public.projectes for all using (true) with check (true);
-create policy "anon_full_access" on public.tasques for all using (true) with check (true);
-create policy "anon_full_access" on public.material for all using (true) with check (true);
-create policy "anon_full_access" on public.prestecs for all using (true) with check (true);
-create policy "anon_full_access" on public.prestec_items for all using (true) with check (true);
-create policy "anon_full_access" on public.reserves for all using (true) with check (true);
-create policy "anon_full_access" on public.config for all using (true) with check (true);
 
 -- ---------- horaris i absencia_periodes ----------
 
@@ -417,6 +392,4 @@ create table public.absencia_periodes (
 );
 
 alter table public.horaris enable row level security;
-create policy "anon_full_access" on public.horaris for all using (true) with check (true);
 alter table public.absencia_periodes enable row level security;
-create policy "anon_full_access" on public.absencia_periodes for all using (true) with check (true);
