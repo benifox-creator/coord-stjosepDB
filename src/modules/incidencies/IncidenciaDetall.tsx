@@ -13,7 +13,7 @@ interface Props {
   incidencia: Incidencia
   onClose: () => void
   isCoordinador?: boolean
-  onCanviarEstat: (inc: Incidencia, estat: EstatIncidencia) => Promise<{ emailEnviat?: boolean }>
+  onCanviarEstat: (inc: Incidencia, estat: EstatIncidencia) => Promise<{ emailProgramat?: boolean }>
   onAssignar: (inc: Incidencia, assignat: string) => Promise<void>
   onEditarComentaris: (inc: Incidencia, comentaris: string) => Promise<void>
   onEliminar?: (inc: Incidencia) => Promise<void>
@@ -33,6 +33,7 @@ export function IncidenciaDetall({
   const [estatObert, setEstatObert] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
   const [confirmEliminar, setConfirmEliminar] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null)
 
   const [editAssignat, setEditAssignat] = useState(false)
@@ -47,12 +48,15 @@ export function IncidenciaDetall({
 
   async function handleCanviarEstat(estat: EstatIncidencia) {
     if (estat === inc.Estat) { setEstatObert(false); return }
+    setActionError(null)
     setSaving('estat')
     try {
       const result = await onCanviarEstat(inc, estat)
       if (estat === 'Tancada') {
-        setBannerTancat(result.emailEnviat ? 'enviat' : 'pendent')
+        setBannerTancat(result.emailProgramat ? 'enviat' : 'pendent')
       }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No s’ha pogut desar el canvi')
     } finally {
       setSaving(null)
       setEstatObert(false)
@@ -64,6 +68,8 @@ export function IncidenciaDetall({
     try {
       await onAssignar(inc, assignatDraft)
       setEditAssignat(false)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No s’ha pogut desar el canvi')
     } finally {
       setSaving(null)
     }
@@ -74,6 +80,8 @@ export function IncidenciaDetall({
     try {
       await onEditarComentaris(inc, comentarisDraft)
       setEditComentaris(false)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No s’ha pogut desar el canvi')
     } finally {
       setSaving(null)
     }
@@ -105,12 +113,13 @@ export function IncidenciaDetall({
           </button>
         </div>
 
+        {actionError && <p role="alert" className="m-4 text-sm text-red-700">{actionError}</p>}
         {/* Banner notificació (quan es tanca) */}
         {bannerTancat === 'enviat' && (
           <div className="mx-4 mt-3 flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
             <Mail size={15} className="text-green-600 mt-0.5 shrink-0" />
             <p className="text-xs text-green-700">
-              Incidència tancada. S'ha enviat un correu de resolució a <span className="font-semibold">{inc.Reporter}</span>.
+              Incidència tancada. S'ha programat un correu de resolució a <span className="font-semibold">{inc.Reporter}</span>.
             </p>
             <button onClick={() => setBannerTancat(null)} className="ml-auto text-green-400 hover:text-green-600">
               <X size={14} />
@@ -121,7 +130,7 @@ export function IncidenciaDetall({
           <div className="mx-4 mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
             <Mail size={15} className="text-amber-600 mt-0.5 shrink-0" />
             <p className="text-xs text-amber-700">
-              Incidència tancada. No s'ha pogut enviar el correu a <span className="font-semibold">{inc.Reporter}</span>. Pots reintentar-ho manualment.
+              Incidència tancada. No hi ha un avís programat per a <span className="font-semibold">{inc.Reporter}</span>. Revisa les dades del destinatari.
             </p>
             <button onClick={() => setBannerTancat(null)} className="ml-auto text-amber-400 hover:text-amber-600">
               <X size={14} />
@@ -323,7 +332,7 @@ export function IncidenciaDetall({
             )
           ) : (
             <span className="text-xs text-gray-400">
-              {inc.Notificat === 'true' ? '✓ Notificat' : inc.Notificat === 'pending' ? '⏳ Pendent de notificar' : ''}
+              {inc.Notificat === 'true' ? '✓ Notificat' : inc.Notificat === 'queued' ? 'Avís programat · consulta l’estat a Inici' : inc.Notificat === 'pending' ? '⏳ Pendent de notificar' : ''}
             </span>
           )}
           <button onClick={onClose}

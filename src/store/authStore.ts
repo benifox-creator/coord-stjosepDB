@@ -1,27 +1,15 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User } from 'firebase/auth'
 
 interface AuthStore {
   user: User | null
-  googleAccessToken: string | null
-  setAuth: (user: User | null, token: string | null) => void
+  setAuth: (user: User | null) => void
   clearAuth: () => void
 }
 
-export const useAuthStore = create<AuthStore>()(
-  persist(
-    (set) => ({
-      user: null,
-      googleAccessToken: null,
-      setAuth: (user, googleAccessToken) => set({ user, googleAccessToken }),
-      clearAuth: () => set({ user: null, googleAccessToken: null }),
-    }),
-    {
-      name: 'coord-stjosepDB-auth',
-      storage: createJSONStorage(() => sessionStorage),
-      // Només persistim el token, no l'objecte User (no és serialitzable de forma fiable)
-      partialize: (state) => ({ googleAccessToken: state.googleAccessToken }),
-    }
-  )
-)
+// Firebase owns session persistence and token renewal. Provider tokens are never persisted here.
+export const useAuthStore = create<AuthStore>(set => ({
+  user: null,
+  setAuth: user => set({ user }),
+  clearAuth: () => set({ user: null }),
+}))

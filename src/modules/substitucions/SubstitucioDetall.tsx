@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, ChevronDown, CheckCircle, Loader2, Trash2, User, Calendar, Clock, BookOpen, Users } from 'lucide-react'
 import type { Substitucio, EstatSubstitucio } from './types'
 import { formatDate } from './substitucions.utils'
+import { useAuthStore } from '../../store/authStore'
 import { useUsuarisStore } from '../../store/usuarisStore'
 
 const ESTATS: EstatSubstitucio[] = ['Pendent', 'Realitzada', 'Cancel·lada']
@@ -17,11 +18,15 @@ interface Props {
   canGestionar: boolean
   onClose: () => void
   onCanviarEstat: (s: Substitucio, estat: EstatSubstitucio) => Promise<void>
+  onAssignar: (s: Substitucio, email: string) => Promise<void>
   onEliminar: (s: Substitucio) => Promise<void>
 }
 
-export function SubstitucioDetall({ substitucio: s, canGestionar, onClose, onCanviarEstat, onEliminar }: Props) {
+export function SubstitucioDetall({ substitucio: s, canGestionar, onClose, onCanviarEstat, onEliminar, onAssignar }: Props) {
   const usuaris = useUsuarisStore((st) => st.usuaris)
+  const [teacher, setTeacher] = useState(s.ProfessorSubstitut)
+  const [error, setError] = useState('')
+  const email = useAuthStore(st => st.user?.email)?.toLowerCase()
   const [estatObert, setEstatObert] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmEliminar, setConfirmEliminar] = useState(false)
@@ -37,7 +42,7 @@ export function SubstitucioDetall({ substitucio: s, canGestionar, onClose, onCan
     setSaving(true)
     try {
       await onCanviarEstat(s, estat)
-    } finally {
+    } catch (err) { setError(err instanceof Error ? err.message : 'Error desant l’estat') } finally {
       setSaving(false)
       setEstatObert(false)
     }
@@ -54,7 +59,7 @@ export function SubstitucioDetall({ substitucio: s, canGestionar, onClose, onCan
     }
   }
 
-  const canMarcarRealitzada = !canGestionar && s.Estat !== 'Realitzada' && s.Estat !== 'Cancel·lada'
+  const canMarcarRealitzada = !canGestionar && s.ProfessorSubstitut === email && s.Estat !== 'Realitzada' && s.Estat !== 'Cancel·lada'
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -88,6 +93,18 @@ export function SubstitucioDetall({ substitucio: s, canGestionar, onClose, onCan
         {/* Cos */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+          {canGestionar && s.Estat === 'Pendent' && <section className="space-y-2">
+            <label htmlFor="substitute-teacher" className="text-sm font-medium">Professor substitut</label>
+            <select id="substitute-teacher" value={teacher} onChange={e => setTeacher(e.target.value)} className="w-full rounded border p-2 text-sm">
+              <option value="">Pendent d'assignació</option>
+              {usuaris.filter(u => u.Rol !== 'convidat' && u.Email !== s.ProfessorAbsent).map(u => <option key={u.id} value={u.Email}>{u.Nom || u.Email}</option>)}
+            </select>
+            <button disabled={saving || teacher === s.ProfessorSubstitut} className="rounded bg-primary px-3 py-2 text-sm text-white disabled:opacity-50" onClick={async () => {
+              setSaving(true); setError('')
+              try { await onAssignar(s, teacher) } catch (err) { setError(err instanceof Error ? err.message : 'Error assignant el substitut') } finally { setSaving(false) }
+            }}>Desa l'assignació</button>
+          </section>}
           {/* Estat — gestió */}
           {canGestionar && (
             <section>

@@ -1,14 +1,8 @@
 import { create } from 'zustand'
-import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
-import { sendEmail } from '../../services/gmail'
-import { useAuthStore } from '../../store/authStore'
-import { useUsuarisStore } from '../../store/usuarisStore'
+import { getAll, callRpc, deleteRowById } from '../../services/db'
+import { useSubstitucions } from '../substitucions/useSubstitucions'
 import type { Absencia, AbsenciaFormData } from './types'
-import {
-  TABLE_ABSENCIES, rowToAbsencia, absenciaToInsert, absenciaToUpdate,
-  calcularHores, buildEmailNovaAbsencia, buildEmailRevisioAbsencia, getAprovadorsAbsenciesEmails,
-  type AbsenciaRow,
-} from './absencies.utils'
+import { TABLE_ABSENCIES, rowToAbsencia, type AbsenciaRow } from './absencies.utils'
 
 interface AbsenciesState {
   absencies: Absencia[]
@@ -40,63 +34,25 @@ export const useAbsencies = create<AbsenciesState>((set, get) => ({
   },
 
   async crear(data) {
-    const email = (useAuthStore.getState().user?.email ?? '').toLowerCase()
-    const hores = calcularHores(data.HoraInici, data.HoraFi)
-
-    const row = await insertRow<AbsenciaRow>(TABLE_ABSENCIES, absenciaToInsert({
-      Professor: email,
-      Data: data.Data,
-      HoraInici: data.HoraInici,
-      HoraFi: data.HoraFi,
-      Hores: hores,
-      HoresNoLectives: data.HoresNoLectives,
-      Motiu: data.Motiu,
-      Notes: data.Notes,
-      Estat: 'Pendent revisió',
-      Creat_per: email,
-    }))
+    const row = await callRpc<AbsenciaRow>('create_absence', {
+      p_request_id: data.RequestId ?? crypto.randomUUID(),
+      p_data: { data: data.Data, hora_inici: data.HoraInici, hora_fi: data.HoraFi,
+        hores_no_lectives: data.HoresNoLectives, motiu: data.Motiu, notes: data.Notes },
+      p_periode_ids: data.Periodes?.map(p => p.HorariId) ?? [],
+    })
     const creada = rowToAbsencia(row)
-    set((s) => ({ absencies: [...s.absencies, creada] }))
-
-    try {
-      const usuaris = useUsuarisStore.getState().usuaris
-      const nom = usuaris.find((u) => u.Email === email)?.Nom || email
-      const { subject, body } = buildEmailNovaAbsencia(creada, nom)
-      const destinataris = await getAprovadorsAbsenciesEmails()
-      await Promise.allSettled(destinataris.map((to) => sendEmail({ to, subject, body })))
-    } catch {
-      // error d'email és no bloquejant
-    }
+    set(s => ({ absencies: [...s.absencies.filter(a => a.id !== creada.id), creada] }))
   },
 
   async aprovar(a) {
-    const revisor = useAuthStore.getState().user?.email ?? ''
-    const row = await updateRowById<AbsenciaRow>(TABLE_ABSENCIES, a.id, absenciaToUpdate({
-      Estat: 'Aprovada', Revisat_per: revisor, Revisat_el: new Date().toISOString(),
-    }))
-    const updated = rowToAbsencia(row)
-    set((s) => ({ absencies: s.absencies.map((x) => (x.id === a.id ? updated : x)) }))
-    try {
-      const { subject, body } = buildEmailRevisioAbsencia(updated)
-      await sendEmail({ to: updated.Professor, subject, body })
-    } catch {
-      // no bloquejant
-    }
+    const row = await callRpc<AbsenciaRow>('review_absence', { p_id: a.id, p_approve: true, p_reason: '' })
+    set(s => ({ absencies: s.absencies.map(x => x.id === a.id ? rowToAbsencia(row) : x) }))
+    await useSubstitucions.getState().load()
   },
 
   async rebutjar(a, motiu) {
-    const revisor = useAuthStore.getState().user?.email ?? ''
-    const row = await updateRowById<AbsenciaRow>(TABLE_ABSENCIES, a.id, absenciaToUpdate({
-      Estat: 'Rebutjada', MotiuRebuig: motiu, Revisat_per: revisor, Revisat_el: new Date().toISOString(),
-    }))
-    const updated = rowToAbsencia(row)
-    set((s) => ({ absencies: s.absencies.map((x) => (x.id === a.id ? updated : x)) }))
-    try {
-      const { subject, body } = buildEmailRevisioAbsencia(updated)
-      await sendEmail({ to: updated.Professor, subject, body })
-    } catch {
-      // no bloquejant
-    }
+    const row = await callRpc<AbsenciaRow>('review_absence', { p_id: a.id, p_approve: false, p_reason: motiu })
+    set(s => ({ absencies: s.absencies.map(x => x.id === a.id ? rowToAbsencia(row) : x) }))
   },
 
   async eliminar(a) {

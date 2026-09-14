@@ -1,3 +1,4 @@
+import { rowToProveidor, type ProveidorInfantilRow } from './materialInfantil.utils'
 import type { SheetData, CellObject } from 'write-excel-file/browser'
 import type { ComandaInfantil, MaterialInfantil, ProveidorInfantil, EtapaInfantil } from './types'
 
@@ -41,7 +42,10 @@ export async function generarPedidoExcel(
 
   const grups = new Map<string, { proveidor: ProveidorInfantil | undefined; linies: typeof linies }>()
   for (const linia of linies) {
-    const proveidor = proveidors.find((p) => p.id === linia.material?.ProveidorId)
+    const snap = linia.comanda.Fotografia?.proveidor
+    const proveidor = linia.comanda.Fotografia
+      ? (snap ? rowToProveidor(snap as unknown as ProveidorInfantilRow) : undefined)
+      : proveidors.find((p) => p.id === linia.material?.ProveidorId)
     const clau = proveidor?.id ?? '_sense'
     if (!grups.has(clau)) grups.set(clau, { proveidor, linies: [] })
     grups.get(clau)!.linies.push(linia)

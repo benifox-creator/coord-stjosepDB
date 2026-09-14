@@ -1,73 +1,37 @@
-# React + TypeScript + Vite
+# SJO Hub · gestió del centre
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicació interna del Col·legi Sant Josep Obrer: horaris, absències i substitucions, reserves, inventari i préstecs, incidències, manteniment, planificació i material d’Infantil.
 
-Currently, two official plugins are available:
+React + TypeScript + Vite; identitat Firebase; dades i permisos PostgreSQL/Supabase. El frontend es publica a **GitHub Pages**. Firebase Hosting i el projecte antic basat en Sheets no descriuen aquest desplegament.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Desenvolupament
 
-## React Compiler
+Node 24 i npm. Copiar `.env.example` a `.env.local` i completar les variables públiques del projecte de proves.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm ci
+npm run dev
+npm run lint
+npm test
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`tests/preview.html` és una prova visual local amb dades fictícies i operacions desactivades. No s’inclou en el build de producció. Per verificar els fluxos complets cal una base de proves i comptes reals de cada rol.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Estructura
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `src/App.tsx`: sessió, protecció i rutes amb càrrega diferida.
+- `src/app/routes`: composició de cada mòdul i els seus formularis.
+- `src/modules`: vistes, models, càlculs i stores del domini escolar.
+- `src/services/db.ts`: credencial Firebase i lectures paginades; mai una clau de servei al navegador.
+- `supabase/migrations`: permisos, integritat, transaccions, fotografies històriques i cua d’avisos.
+- `supabase/functions/send-notifications`: enviament de la cua des d’un servei autoritzat.
+- `tests`: proves de clients i de PostgreSQL amb PGlite, inclosa la migració de l’esquema anterior.
+
+Les funcions del client ajuden a mostrar la interfície; **la base de dades imposa els permisos**. Les competències dels càrrecs no s’han ampliat.
+
+## Posada en servei
+
+Seguir [la guia d’operació i migració](docs/operacio-i-migracio.md). El frontend nou requereix les migracions i la integració Firebase–Supabase. No publicar-lo abans de preparar-les. Les proves locals no acrediten la configuració del servei remot.
+
+[Abast i estat de la consolidació](docs/consolidacio-centre.md).

@@ -128,6 +128,7 @@ export const proveidorToUpdate = proveidorToInsert
 // ---- Comandes ----
 
 export interface ComandaInfantilRow {
+  fotografia?: import('./types').OrderSnapshot | null
   id: string
   curs_escolar: string
   etapa: string
@@ -144,6 +145,7 @@ export function rowToComanda(row: ComandaInfantilRow): ComandaInfantil {
   return {
     id: row.id,
     CursEscolar: row.curs_escolar,
+    Fotografia: row.fotografia,
     Etapa: row.etapa as EtapaInfantil,
     MaterialId: row.material_id,
     EstocAplicat: row.estoc_aplicat,
@@ -189,11 +191,25 @@ export function suggeriEstocAplicat(
   cursEscolar: string,
 ): number {
   const jaAssignat = comandesExistents
-    .filter((c) => c.MaterialId === materialId && c.CursEscolar === cursEscolar)
+    .filter((c) => c.MaterialId === materialId && c.CursEscolar === cursEscolar && c.Estat !== 'Cancel·lat')
     .reduce((sum, c) => sum + c.EstocAplicat, 0)
   return Math.max(0, estocDisponibleMaterial - jaAssignat)
 }
 
-export function nreAlumnesFromConfig(config: Record<string, string[]>, etapa: EtapaInfantil): number {
-  return Number(config[`material-infantil.alumnes-${etapa.toLowerCase()}`]?.[0] ?? '0') || 0
+export function nreAlumnesFromConfig(config: Record<string, string[]>, etapa: EtapaInfantil, year?: string): number {
+  return Number((year ? config[`material-infantil.alumnes-${etapa.toLowerCase()}.${year}`]?.[0] : undefined) ?? config[`material-infantil.alumnes-${etapa.toLowerCase()}`]?.[0] ?? '0') || 0
+}
+
+// Confirmed orders use the stored snapshot. Drafts retain live planning figures.
+export function orderLine(c: ComandaInfantil, current: MaterialInfantil | undefined, pupils: number) {
+  const snap = c.Fotografia
+  const material = snap ? rowToMaterial(snap.material as unknown as MaterialInfantilRow) : current
+  const necessitat = material ? necessitatBase(material.UnitatsPerAlumne, pupils) : 0
+  const quantitat = snap?.quantitat ?? quantitatADemanar(necessitat, c.MargeSeguretat, c.EstocAplicat)
+  const cost = c.Estat === 'Cancel·lat' ? 0 : snap?.cost ?? (material ? costEstimat(quantitat, material.PreuUnitari) : 0)
+  return { comanda: c, material, necessitatBase: necessitat, quantitat, cost }
+}
+
+export function isOrderExportable(c: ComandaInfantil): boolean {
+  return c.Estat === 'Pendent' || c.Estat === 'Revisar' || c.Estat === 'Demanat'
 }

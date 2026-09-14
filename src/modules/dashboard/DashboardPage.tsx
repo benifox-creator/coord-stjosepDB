@@ -1,3 +1,4 @@
+import { OperationsOverview, NotificationStatus } from './OperationsOverview'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, BookOpen, Calendar, Monitor, Package, ChevronRight } from 'lucide-react'
@@ -86,7 +87,7 @@ function EmptyRow({ cols, msg }: { cols: number; msg: string }) {
 export function DashboardPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
-  const nom = user?.displayName?.split(' ')[0] ?? 'Coordinador/a'
+  const nom = user?.displayName?.split(' ')[0] ?? 'Benvingut/da'
   const rol = useUsuarisStore((s) => s.rol)
   const config = useConfigStore((s) => s.config)
 
@@ -160,6 +161,9 @@ export function DashboardPage() {
           {new Date().toLocaleDateString('ca-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
+
+      <OperationsOverview />
+      <NotificationStatus />
 
       {/* Banner d'alertes urgents */}
       {!anyLoading && hasAlerts && (

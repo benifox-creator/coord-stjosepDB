@@ -1,21 +1,33 @@
-import { supabase } from '../../services/db'
+import { timeMinutes, slotMinutes } from '../../utils/schoolCalendar'
+import { getAll, supabase } from '../../services/db'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { getFirmaEmail } from '../../store/configStore'
 import { DIES_CA_LLARG, MESOS_CA_LLARG } from '../substitucions/substitucions.utils'
-import type { Absencia, EstatAbsencia } from './types'
+import type { Absencia, EstatAbsencia, PeriodeAbsencia } from './types'
 
 export const TABLE_ABSENCIES = 'absencies'
 
 export function calcularHores(horaInici: string, horaFi: string): number {
-  const [hIni, mIni] = horaInici.split(':').map(Number)
-  const [hFi, mFi] = horaFi.split(':').map(Number)
-  if ([hIni, mIni, hFi, mFi].some((n) => n === undefined || Number.isNaN(n))) return 0
-  const minuts = (hFi * 60 + mFi) - (hIni * 60 + mIni)
-  if (minuts <= 0) return 0
-  return Math.round((minuts / 60) * 100) / 100
+  try {
+    return Math.round(Math.max(0, timeMinutes(horaFi) - timeMinutes(horaInici)) / 60 * 100) / 100
+  } catch { return 0 }
+}
+
+export function durataFranja(franja: string): number {
+  const [inici, fi] = franja.split('-')
+  return calcularHores(inici ?? '', fi ?? '')
+}
+
+export function duradaPeriodes(periodes: PeriodeAbsencia[], tipus?: PeriodeAbsencia['Tipus']): number {
+  const minutes = periodes.filter(p => tipus === undefined || p.Tipus === tipus).reduce((total, p) => {
+    const [start, end] = slotMinutes(p.Franja)
+    return total + end - start
+  }, 0)
+  return Math.round(minutes / 60 * 100) / 100
 }
 
 export interface AbsenciaRow {
+  te_periodes?: boolean
   id: string
   codi: string
   professor: string
@@ -34,11 +46,52 @@ export interface AbsenciaRow {
   revisat_el: string
 }
 
+export const TABLE_ABSENCIA_PERIODES = 'absencia_periodes'
+
+export interface PeriodeAbsenciaRow {
+  necessita_cobertura?: boolean
+  id: string
+  absencia_id: string
+  franja: string
+  etapa: string
+  tipus: string
+  grup: string
+  materia: string
+}
+
+export function periodeToInsert(absenciaId: string, p: PeriodeAbsencia): Record<string, unknown> {
+  return {
+    absencia_id: absenciaId,
+    franja: p.Franja,
+    etapa: p.Etapa,
+    tipus: p.Tipus,
+    grup: p.Grup,
+    materia: p.Materia,
+  }
+}
+
+export function rowToPeriodeAbsencia(row: PeriodeAbsenciaRow): PeriodeAbsencia {
+  return {
+    NecessitaCobertura: row.necessita_cobertura ?? false,
+    Franja: row.franja,
+    Etapa: row.etapa as PeriodeAbsencia['Etapa'],
+    Tipus: (row.tipus as PeriodeAbsencia['Tipus']) ?? 'Lectiva',
+    Grup: row.grup,
+    Materia: row.materia,
+  }
+}
+
+export async function getPeriodesAbsencia(absenciaId: string): Promise<PeriodeAbsencia[]> {
+  const data = await getAll<PeriodeAbsenciaRow>(TABLE_ABSENCIA_PERIODES, 'id', { absencia_id: absenciaId })
+  return data.map(rowToPeriodeAbsencia).sort((a,b) => slotMinutes(a.Franja)[0]-slotMinutes(b.Franja)[0])
+}
+
 export function rowToAbsencia(row: AbsenciaRow): Absencia {
   return {
     id: row.id,
     ID: row.codi,
     Professor: row.professor,
+    TePeriodes: row.te_periodes ?? false,
     Data: row.data,
     HoraInici: row.hora_inici,
     HoraFi: row.hora_fi,
@@ -110,7 +163,7 @@ export function buildEmailNovaAbsencia(
     '',
     `  Data:    ${diaStr}`,
     `  Horari:  ${a.HoraInici}–${a.HoraFi} (${a.Hores.toString().replace('.', ',')} hores)`,
-    ...(a.HoresNoLectives > 0 ? [`  (${a.HoresNoLectives.toString().replace('.', ',')} hores no lectives, no necessiten substitut)`] : []),
+    ...(a.HoresNoLectives > 0 ? [`  (${a.HoresNoLectives.toString().replace('.', ',')} hores no lectives)`] : []),
     `  Motiu:   ${a.Motiu}`,
     ...(a.Notes ? ['', `  Notes: ${a.Notes}`] : []),
     '',

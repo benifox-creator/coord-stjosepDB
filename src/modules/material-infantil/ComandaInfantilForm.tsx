@@ -19,12 +19,12 @@ interface Props {
 export function ComandaInfantilForm({ etapa, cursEscolar, materials, comandesExistents, onDesar, onCancel }: Props) {
   const config = useConfigStore((s) => s.config)
   const getValues = useConfigStore((s) => s.getValues)
-  const nAlumnes = nreAlumnesFromConfig(config, etapa)
+  const nAlumnes = nreAlumnesFromConfig(config, etapa, cursEscolar)
   const margePct = Number(getValues('material-infantil.marge-seguretat-pct')[0]) || 0
 
   const materialsDisponibles = useMemo(() => {
     const jaUsats = new Set(
-      comandesExistents.filter((c) => c.CursEscolar === cursEscolar && c.Etapa === etapa).map((c) => c.MaterialId),
+      comandesExistents.filter((c) => c.CursEscolar === cursEscolar && c.Etapa === etapa && c.Estat !== 'Cancel·lat').map((c) => c.MaterialId),
     )
     return materials
       .filter((m) => !jaUsats.has(m.id))

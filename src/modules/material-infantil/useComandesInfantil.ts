@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { getAll, insertRow, deleteRowById } from '../../services/db'
+import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
 import type { ComandaInfantil, ComandaInfantilFormData } from './types'
 import {
@@ -12,6 +12,7 @@ interface ComandesInfantilState {
   error: string | null
   load: () => Promise<void>
   crear: (data: ComandaInfantilFormData) => Promise<void>
+  canviarEstat: (c: ComandaInfantil, estat: ComandaInfantil['Estat']) => Promise<void>
   eliminar: (c: ComandaInfantil) => Promise<void>
 }
 
@@ -37,6 +38,11 @@ export const useComandesInfantil = create<ComandesInfantilState>((set, get) => (
     const email = (useAuthStore.getState().user?.email ?? '').toLowerCase()
     const row = await insertRow<ComandaInfantilRow>(TABLE_COMANDES, comandaToInsert({ ...data, Creat_per: email }))
     set((s) => ({ comandes: [...s.comandes, rowToComanda(row)] }))
+  },
+
+  async canviarEstat(c, estat) {
+    const row = await updateRowById<ComandaInfantilRow>(TABLE_COMANDES, c.id, { estat })
+    set(s => ({ comandes: s.comandes.map(x => x.id === c.id ? rowToComanda(row) : x) }))
   },
 
   async eliminar(c) {

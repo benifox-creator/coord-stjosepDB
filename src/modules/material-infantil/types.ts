@@ -53,7 +53,17 @@ export interface ProveidorInfantil {
 
 export type ProveidorInfantilFormData = Omit<ProveidorInfantil, 'id'>
 
+export interface OrderSnapshot {
+  quantitat: number
+  preu_unitari: number
+  cost: number
+  material: Record<string, unknown>
+  proveidor: Record<string, unknown> | null
+  confirmat_el: string
+}
+
 export interface ComandaInfantil {
+  Fotografia?: OrderSnapshot | null
   id: string
   CursEscolar: string
   Etapa: EtapaInfantil
@@ -66,4 +76,4 @@ export interface ComandaInfantil {
   Creat_per: string
 }
 
-export type ComandaInfantilFormData = Omit<ComandaInfantil, 'id' | 'Creat_el' | 'Creat_per'>
+export type ComandaInfantilFormData = Omit<ComandaInfantil, 'id' | 'Creat_el' | 'Creat_per' | 'Fotografia'>

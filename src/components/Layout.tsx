@@ -18,6 +18,7 @@ import {
   ChevronRight,
   HelpCircle,
   Boxes,
+  Clock,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { logout } from '../services/auth'
@@ -26,17 +27,18 @@ import { useConfigStore, canAccessModul } from '../store/configStore'
 import { potVeureMaterialInfantil } from '../modules/material-infantil/permisos'
 
 const NAV_ITEMS = [
-  { to: '/',              label: 'Dashboard',          icon: LayoutDashboard, end: true,  visKey: null },
+  { to: '/',              label: 'Inici',          icon: LayoutDashboard, end: true,  visKey: null },
   { to: '/incidencies',   label: 'Incidències',        icon: AlertTriangle,               visKey: 'incidencies' },
   { to: '/inventari',     label: 'Inventari',          icon: Package,                     visKey: 'inventari' },
   { to: '/material',      label: 'Material i Stock',   icon: Archive,                     visKey: 'material' },
   { to: '/prestecs',      label: 'Préstecs',           icon: Smartphone,                  visKey: 'prestecs' },
   { to: '/reserves',      label: 'Reserves',           icon: CalendarDays,                visKey: 'reserves' },
-  { to: '/substitucions', label: 'Substitucions',       icon: UserCheck,                   visKey: 'substitucions' },
+  { to: '/substitucions', label: 'Absències i substitucions',       icon: UserCheck,                   visKey: 'substitucions' },
   { to: '/coneixement',   label: 'Base Coneixement',   icon: BookOpen,                    visKey: 'coneixement' },
   { to: '/pla-accio',     label: "Pla d'Acció",        icon: Target,                      visKey: 'pla-accio' },
   { to: '/manteniment',   label: 'Manteniment',        icon: Wrench,                      visKey: 'manteniment' },
   { to: '/material-infantil', label: 'Material Infantil', icon: Boxes, visKey: 'material-infantil' },
+  { to: '/horaris', label: 'Horaris', icon: Clock, visKey: 'horaris' },
 ]
 
 const NAV_SETTINGS = [
@@ -59,7 +61,8 @@ export function Layout({ children }: Props) {
 
   // Mentre el rol carrega (null), mostrem tots els ítems optimistament
   const itemsVisibles = NAV_ITEMS.filter(({ visKey }) => {
-    if (visKey === null || rol === null) return true
+    if (visKey === null) return true
+    if (rol === null) return false
     if (visKey === 'material-infantil') return potVeureMaterialInfantil(usuariActual, rol, config)
     return canAccessModul(config, visKey, rol)
   })

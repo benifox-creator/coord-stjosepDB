@@ -1,3 +1,5 @@
+import { slotMinutes } from '../../utils/schoolCalendar'
+import { useSearchParams } from 'react-router-dom'
 import { useState, useMemo } from 'react'
 import { Plus, RefreshCw, ChevronLeft, ChevronRight, BarChart2, CalendarDays, CalendarOff, List } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
@@ -224,7 +226,10 @@ function FilaEstadistiques({
 }
 
 export function SubstitucionsPage({ substitucions, loading, error, onRefresh, onNova, onVeure, absencies, loadingAbsencies, errorAbsencies, onRefreshAbsencies, onNovaAbsencia, onVeureAbsencia }: Props) {
-  const [tab, setTab] = useState<Tab>('setmana')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const tab: Tab = rawTab === 'absencies' || rawTab === 'totes' || rawTab === 'estadistiques' ? rawTab : 'setmana'
+  const setTab = (next: Tab) => setSearchParams({ tab: next })
   const [weekOffset, setWeekOffset] = useState(0)
   const [filtreEstadistiques, setFiltreEstadistiques] = useState<'mes' | 'trimestre' | 'curs'>('mes')
 
@@ -244,16 +249,17 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
     })
     // sort each day by franja
     Object.keys(map).forEach((k) => {
-      map[k].sort((a, b) => a.Franja.localeCompare(b.Franja))
+      map[k].sort((a, b) => slotMinutes(a.Franja)[0] - slotMinutes(b.Franja)[0])
     })
     return map
   }, [substitucions, weekDates])
 
   // Estadístiques
   const usuaris = useUsuarisStore((s) => s.usuaris)
-  const now = new Date()
+  const now = new Date(avui + 'T12:00:00')
   const estadistiques = useMemo(() => {
-    const validSubst = substitucions.filter((s) => s.Estat !== 'Cancel·lada')
+    const now = new Date(avui + 'T12:00:00')
+    const validSubst = substitucions.filter((s) => s.Estat !== 'Cancel·lada' && s.ProfessorSubstitut)
 
     const isPeriod = (iso: string) => {
       const d = new Date(iso + 'T00:00:00')
@@ -263,7 +269,8 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
       if (filtreEstadistiques === 'trimestre') {
         // 1r trim: set–des | 2n trim: gen–mar | 3r trim: abr–jun
         const trimestre = (m: number) => m >= 8 ? 1 : m <= 2 ? 2 : m <= 5 ? 3 : 0
-        return trimestre(now.getMonth()) !== 0
+        return d.getFullYear() === now.getFullYear()
+          && trimestre(now.getMonth()) !== 0
           && trimestre(d.getMonth()) !== 0
           && trimestre(now.getMonth()) === trimestre(d.getMonth())
       }
@@ -301,7 +308,7 @@ export function SubstitucionsPage({ substitucions, loading, error, onRefresh, on
     return Object.entries(map)
       .map(([email, d]) => ({ email, ...d }))
       .sort((a, b) => (b.classes + b.patis) - (a.classes + a.patis))
-  }, [substitucions, filtreEstadistiques, usuaris, now])
+  }, [substitucions, filtreEstadistiques, usuaris, avui])
 
   const kpis = useMemo(() => ({
     setmana: substitucions.filter((s) =>
