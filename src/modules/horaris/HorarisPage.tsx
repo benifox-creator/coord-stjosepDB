@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useHoraris } from './useHoraris'
 import { HorariGrid } from './HorariGrid'
 import { HorariSlotForm } from './HorariSlotForm'
-import { potVeureTotHorari } from './permisos'
+import { potVeureTotHorari, potEditarHorarisAliens } from './permisos'
 import type { DiaSetmana, Horari } from './types'
 import { ETAPES_SUBSTITUCIO, ETAPA_FRANJA_KEY, type EtapaSubstitucio } from '../substitucions/types'
 import { useAuthStore } from '../../store/authStore'
@@ -20,6 +20,7 @@ export function HorarisPage() {
 
   const usuariActual = usuaris.find((u) => u.Email.toLowerCase() === email) ?? null
   const potVeureTot = potVeureTotHorari(rol)
+  const potEditarAliens = potEditarHorarisAliens(rol)
 
   const [referenceDate, setReferenceDate] = useState(new Date().toLocaleDateString('sv-SE'))
   const selectedYear = schoolYear(new Date(referenceDate + 'T12:00:00'))
@@ -31,7 +32,10 @@ export function HorarisPage() {
   const etapaMeva = etapaMevaManual ?? usuariActual?.Etapa ?? 'EI'
   const [professorSeleccionat, setProfessorSeleccionat] = useState('')
   const [etapaAliena, setEtapaAliena] = useState<EtapaSubstitucio>('EI')
-  const [cellaSeleccionada, setCellaSeleccionada] = useState<{ dia: DiaSetmana; franja: string; existent: Horari | null } | null>(null)
+  // `professor` i `etapa` es fixen en obrir la cel·la perquè el formulari no
+  // depengui dels selectors: si es canvien amb el diàleg obert, el període s'ha
+  // de desar igualment a l'horari on s'ha clicat.
+  const [cellaSeleccionada, setCellaSeleccionada] = useState<{ dia: DiaSetmana; franja: string; existent: Horari | null; professor: string; etapa: EtapaSubstitucio } | null>(null)
 
   const frangesMeves = useConfigStore((s) => s.getValues(ETAPA_FRANJA_KEY[etapaMeva]))
   const frangesAliena = useConfigStore((s) => s.getValues(ETAPA_FRANJA_KEY[etapaAliena]))
@@ -43,7 +47,7 @@ export function HorarisPage() {
     if (cellaSeleccionada?.existent) {
       await editar(cellaSeleccionada.existent, data)
     } else {
-      await crear(data)
+      await crear(data, cellaSeleccionada?.professor)
     }
     setCellaSeleccionada(null)
   }
@@ -98,7 +102,7 @@ export function HorarisPage() {
               franges={frangesMeves}
               horaris={horarisMeus}
               editable
-              onClickCella={(dia, franja, existent) => setCellaSeleccionada({ dia, franja, existent })}
+              onClickCella={(dia, franja, existent) => setCellaSeleccionada({ dia, franja, existent, professor: email, etapa: etapaMeva })}
             />
           </div>
         )}
@@ -108,7 +112,13 @@ export function HorarisPage() {
             <div className="flex gap-2">
               <select
                 value={professorSeleccionat}
-                onChange={(e) => setProfessorSeleccionat(e.target.value)}
+                onChange={(e) => {
+                  setProfessorSeleccionat(e.target.value)
+                  // Parteix de l'etapa del professor triat; en té una de sola a
+                  // la fitxa, i així la graella no surt buida per defecte.
+                  const etapa = usuaris.find((u) => u.Email === e.target.value)?.Etapa
+                  if (etapa) setEtapaAliena(etapa)
+                }}
                 className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg"
               >
                 <option value="">Selecciona un professor…</option>
@@ -124,7 +134,17 @@ export function HorarisPage() {
                 {ETAPES_SUBSTITUCIO.map((e) => <option key={e} value={e}>{e}</option>)}
               </select>
             </div>
-            {professorSeleccionat && <HorariGrid franges={frangesAliena} horaris={horarisAliens} editable={false} />}
+            {professorSeleccionat && potEditarAliens && (
+              <p className="text-xs text-gray-500">Estàs editant l’horari de {usuaris.find((u) => u.Email.toLowerCase() === professorSeleccionat.toLowerCase())?.Nom || professorSeleccionat}.</p>
+            )}
+            {professorSeleccionat && (
+              <HorariGrid
+                franges={frangesAliena}
+                horaris={horarisAliens}
+                editable={potEditarAliens}
+                onClickCella={(dia, franja, existent) => setCellaSeleccionada({ dia, franja, existent, professor: professorSeleccionat, etapa: etapaAliena })}
+              />
+            )}
           </div>
         )}
       </div>
@@ -133,7 +153,7 @@ export function HorarisPage() {
         <HorariSlotForm
           cursEscolar={selectedYear}
           diaSetmana={cellaSeleccionada.dia}
-          etapa={etapaMeva}
+          etapa={cellaSeleccionada.etapa}
           franja={cellaSeleccionada.franja}
           horariExistent={cellaSeleccionada.existent}
           onDesar={handleDesarCella}
