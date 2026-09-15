@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Settings, Plus, X, Loader2, AlertCircle, RotateCcw, Users, ChevronDown, Eye, Mail } from 'lucide-react'
+import { Settings, Plus, X, Loader2, AlertCircle, RotateCcw, Users, ChevronDown, Eye, Mail, Upload } from 'lucide-react'
 import { useConfigStore, CONFIG_DEFAULTS, MODULS_VISIBILITAT, ROLS_VISIBILITAT, ROL_VIS_LABELS } from '../../store/configStore'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
 import { ROLS, ROL_LABELS, ROL_COLORS, ROL_DESCRIPCIONS, ETAPES_USUARI } from '../usuaris/types'
 import type { Usuari, Rol, EtapaSubstitucio } from '../usuaris/types'
 import { ETAPA_FRANJA_KEY } from '../substitucions/types'
+import { ImportarUsuarisModal, type ResultatImportacio } from '../usuaris/ImportarUsuarisModal'
+import type { DadesUsuariImportat } from '../usuaris/excelImport.utils'
 
 interface LlistaConfig {
   clau: string
@@ -472,8 +474,28 @@ function GestioUsuaris({ emailActual }: { emailActual: string }) {
   const loading = useUsuarisStore((s) => s.loading)
   const error = useUsuarisStore((s) => s.error)
   const loadAll = useUsuarisStore((s) => s.loadAll)
+  const crear = useUsuarisStore((s) => s.crear)
+  const [important, setImportant] = useState(false)
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  // Alta seqüencial i no en paral·lel: amb un claustre són poques desenes de
+  // files i la velocitat és igual, però així se sap exactament quina ha fallat
+  // en lloc de quedar-se amb mitja importació feta i cap pista de quina part.
+  async function handleImportar(dades: DadesUsuariImportat[]): Promise<ResultatImportacio> {
+    const errors: ResultatImportacio['errors'] = []
+    let creats = 0
+    for (const u of dades) {
+      try {
+        await crear(u.Email, u.Nom, u.Rol, u.Etapa, u.PotGestionarMaterial)
+        creats++
+      } catch (err) {
+        errors.push({ correu: u.Email, error: err instanceof Error ? err.message : 'Error desconegut' })
+      }
+    }
+    await loadAll()
+    return { creats, errors }
+  }
 
   if (loading && usuaris.length === 0) {
     return <div className="flex items-center gap-2 text-sm text-gray-400 py-4"><Loader2 size={14} className="animate-spin" /> Carregant usuaris...</div>
@@ -485,9 +507,25 @@ function GestioUsuaris({ emailActual }: { emailActual: string }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-400 leading-relaxed">
-        Afegeix un usuari abans que iniciï sessió per assignar-li el perfil correcte des del primer moment.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs text-gray-400 leading-relaxed">
+          Afegeix un usuari abans que iniciï sessió per assignar-li el perfil correcte des del primer moment.
+        </p>
+        <button
+          type="button"
+          onClick={() => setImportant(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 shrink-0"
+        >
+          <Upload size={13} /> Importa d’Excel
+        </button>
+      </div>
+      {important && (
+        <ImportarUsuarisModal
+          usuarisExistents={usuaris}
+          onImportar={handleImportar}
+          onClose={() => setImportant(false)}
+        />
+      )}
       <div className="bg-white border border-gray-200 rounded-xl">
         {usuaris.length === 0 ? (
           <p className="text-sm text-gray-400 italic px-4 py-3">Sense usuaris registrats.</p>
