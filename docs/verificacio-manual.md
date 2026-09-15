@@ -33,6 +33,32 @@
 
 **Estat dels comptes a 2026-09-14:** `amoreno@stjosep.org` (coordinador) i `administrador@stjosep.org` (direcció) tenen el claim. `lferrer@stjosep.org` existeix a Firebase però no està donat d'alta a `usuaris` (era una prova, no necessita accés). Només hi ha **2 usuaris reals registrats**, cosa que redueix molt el risc del canvi: això encara és un pilot, no un desplegament amb tot el claustre a sobre.
 
+## Fase 2b — Superfície del servidor ✅ VERIFICADA (2026-09-15)
+
+Auditoria feta **només amb lectures** sobre la base de producció, sense escriure-hi res. No substitueix les proves amb sessions reals de les fases següents; cobreix el que es pot comprovar sense navegador.
+
+- [x] **Cap taula de `public` sense RLS activada**, i cap taula amb RLS però sense cap política (que equivaldria a denegar-ho tot en silenci)
+- [x] **Cap privilegi concedit al rol `anon`** sobre cap objecte de `public`
+- [x] **Cap funció executable per `anon`**
+- [x] Les polítiques d'`horaris` desplegades són `schedule_read` (select) i `own_schedule` (all)
+
+**Auditoria dels RPC `SECURITY DEFINER`.** L'analitzador de Supabase avisa que 8 funcions `SECURITY DEFINER` són invocables pel rol `authenticated`. Això és el disseny volgut —són la via per on el client fa les operacions sensibles—, però només és segur si cadascuna comprova els permisos pel seu compte, perquè `SECURITY DEFINER` s'executa amb els privilegis del propietari i se salta l'RLS. Comprovades una a una:
+
+| Funció | Comprovació pròpia |
+|---|---|
+| `create_absence` | `module_visible('substitucions')` i `creator()` |
+| `review_absence` | `module_visible('substitucions')` i `approver()` |
+| `update_substitution` | `module_visible('substitucions')`, i després `manager()` **o** ser el substitut marcant com a "Realitzada" una substitució pròpia i pendent |
+| `create_loan` | `module_visible('prestecs')` i `creator()` |
+| `change_loan_state` | `module_visible('prestecs')` i `manager()` |
+| `delete_loan` | `admin()` |
+| `queue_email` | `creator()`, el destinatari ha de ser un usuari donat d'alta o el correu de manteniment, i límits de mida |
+| `retry_notification` | dins del `where`: `created_by = email()` **o** `admin()`; si no hi encaixa cap fila, excepció |
+
+Les altres dues funcions `SECURITY DEFINER` (`claim_notifications` i `finish_notification`) **no tenen comprovació pròpia**, i és correcte: no estan concedides ni a `authenticated` ni a `anon`, només al `service_role` que fa servir el worker de correu. Cal no concedir-les mai a `authenticated`.
+
+> Observacions per a qui ho revisi: `queue_email` impedeix fer servir l'aplicació com a reenviador de correu cap a adreces externes; `retry_notification` dona el mateix error tant si la notificació no existeix com si no és teva, cosa que evita confirmar l'existència d'identificadors aliens.
+
 ## Fase 3 — Permisos per rol (comptes reals separats, no simulats)
 
 Repetir per **cada** rol (coordinador, direcció, titular, cap d'estudis, professorat, convidat):
