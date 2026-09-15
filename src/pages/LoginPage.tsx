@@ -17,8 +17,8 @@ export function LoginPage() {
       navigate('/', { replace: true })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'error-desconegut'
-      if (message === 'domini-no-autoritzat') {
-        navigate('/no-autoritzat', { replace: true })
+      if (message === 'domini-no-autoritzat' || message === 'correu-no-disponible') {
+        navigate(`/no-autoritzat?motiu=${message}`, { replace: true })
       } else {
         setError("No s'ha pogut iniciar sessió. Torna-ho a intentar.")
       }
