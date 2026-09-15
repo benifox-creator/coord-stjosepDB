@@ -10,7 +10,9 @@ interface HorarisState {
   loading: boolean
   error: string | null
   load: (year?: string) => Promise<void>
-  crear: (data: HorariFormData) => Promise<void>
+  // `professor` només l'informa la coordinació en editar l'horari d'algú altre;
+  // per omissió l'horari és de qui té la sessió oberta.
+  crear: (data: HorariFormData, professor?: string) => Promise<void>
   editar: (h: Horari, data: HorariFormData) => Promise<void>
   eliminar: (h: Horari) => Promise<void>
 }
@@ -35,11 +37,11 @@ export const useHoraris = create<HorarisState>((set) => ({
     }
   },
 
-  async crear(data) {
+  async crear(data, professor) {
     const email = (useAuthStore.getState().user?.email ?? '').toLowerCase()
     const row = await insertRow<HorariRow>(TABLE_HORARIS, horariToInsert({
       ...data,
-      Professor: email,
+      Professor: (professor ?? email).toLowerCase(),
       DiaSetmana: data.DiaSetmana,
       Etapa: data.Etapa,
       Franja: data.Franja,

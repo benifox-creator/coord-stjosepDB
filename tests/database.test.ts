@@ -119,6 +119,35 @@ describe('schedule and absence workflow', () => {
     await asUser('other@stjosep.org')
     expect((await db.query('select * from public.horaris')).rows).toHaveLength(0)
   })
+  it('lets the coordinator edit and delete any schedule, but not other managers', async () => {
+    const id = await schedule()
+    await asUser('director@stjosep.org')
+    expect((await db.query('select * from public.horaris')).rows).toHaveLength(1)
+    expect((await db.query("update public.horaris set materia='Ciències' where id=$1 returning id",[id])).rows).toHaveLength(0)
+    await asUser('other@stjosep.org')
+    expect((await db.query("update public.horaris set materia='Ciències' where id=$1 returning id",[id])).rows).toHaveLength(0)
+    await asUser('admin@stjosep.org')
+    expect((await db.query("update public.horaris set materia='Ciències' where id=$1 returning id",[id])).rows).toHaveLength(1)
+    await db.query(`insert into public.horaris(professor,dia_setmana,etapa,franja,grup,materia,curs_escolar,vigent_desde,vigent_fins)
+      values('teacher@stjosep.org','Dimarts','EP','09:00-10:00','EP-1r A','Català','2026-2027','2026-09-01','2027-08-31')`)
+    expect((await db.query("delete from public.horaris where id=$1 returning id",[id])).rows).toHaveLength(1)
+  })
+  it('records the coordinator as the author when creating a schedule for someone else', async () => {
+    await asUser('admin@stjosep.org')
+    const row = (await db.query<{creat_per:string}>(`insert into public.horaris(professor,dia_setmana,etapa,franja,grup,materia,curs_escolar,vigent_desde,vigent_fins,creat_per)
+      values('teacher@stjosep.org','Dilluns','EP','09:00-10:00','EP-1r A','Català','2026-2027','2026-09-01','2027-08-31','teacher@stjosep.org') returning creat_per`)).rows[0]
+    expect(row.creat_per).toBe('admin@stjosep.org')
+  })
+  it('refuses a schedule for somebody who is not registered', async () => {
+    await asUser('admin@stjosep.org')
+    await expect(db.exec(`insert into public.horaris(professor,dia_setmana,etapa,franja,grup,materia,curs_escolar,vigent_desde,vigent_fins)
+      values('tipo@stjosep.org','Dilluns','EP','09:00-10:00','EP-1r A','Català','2026-2027','2026-09-01','2027-08-31')`)).rejects.toThrow('donat d’alta a Usuaris')
+  })
+  it('still refuses to move a schedule to another teacher', async () => {
+    const id = await schedule()
+    await asUser('admin@stjosep.org')
+    await expect(db.query("update public.horaris set professor='other@stjosep.org' where id=$1",[id])).rejects.toThrow('canviar el titular')
+  })
   it('keeps absences private between teachers but visible to managers', async () => {
     await absence([])
     await asUser('other@stjosep.org')

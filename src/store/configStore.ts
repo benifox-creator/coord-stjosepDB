@@ -84,12 +84,17 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     '1r BATX A', '1r BATX B', '2n BATX A', '2n BATX B',
     'GM',
   ],
-  'substitucions.franges.EI':    ['9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:00', '15:00-16:00', '16:00-17:00'],
-  'substitucions.franges.EP':    ['9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:00', '15:00-16:00', '16:00-17:00'],
-  'substitucions.franges.ESO12': ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
-  'substitucions.franges.ESO34': ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
-  'substitucions.franges.BATX':  ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24', '15:15-16:15', '16:15-17:15'],
-  'substitucions.franges.GM':    ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:30-12:30', '12:30-13:24'],
+  // Marcs horaris reals del centre (2026-2027). El pati és una franja més: qui el
+  // té el marca al seu horari com a "No lectiva → Pati" i ja genera cobertura.
+  'substitucions.franges.EI':    ['9:00-9:45', '9:45-10:30', '10:30-11:00', '11:00-12:00', '12:00-13:00', '15:00-15:45', '15:45-16:30', '16:30-17:00'],
+  'substitucions.franges.EP':    ['9:00-9:45', '9:45-10:30', '10:30-11:00', '11:00-12:00', '12:00-13:00', '15:00-15:30', '15:30-16:15', '16:15-17:00'],
+  'substitucions.franges.ESO12': ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-11:24', '11:24-12:24', '12:24-13:24', '13:24-14:24', '15:15-16:15', '16:15-17:15'],
+  'substitucions.franges.ESO34': ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-11:24', '11:24-12:24', '12:24-13:24', '13:24-14:24', '15:15-16:15', '16:15-17:15'],
+  // BATX té dues variants de migdia que se solapen entre elles (13:24-14:24 i
+  // 13:35-14:50): totes dues surten a la graella, i el servidor ja impedeix que
+  // ningú es marqui les dues alhora.
+  'substitucions.franges.BATX':  ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-11:24', '11:24-12:24', '12:24-13:24', '13:24-14:24', '13:35-14:50', '15:15-16:15', '16:15-17:15'],
+  'substitucions.franges.GM':    ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-11:24', '11:24-12:24', '12:24-13:24', '13:24-14:24', '15:15-16:15'],
   'material-infantil.categories': [
     'Plàstica', 'Papereria', 'Psicomotricitat', 'Higiene', 'Aula', 'Llibres/quaderns', 'Altres',
   ],
