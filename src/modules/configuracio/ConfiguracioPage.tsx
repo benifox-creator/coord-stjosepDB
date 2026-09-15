@@ -5,6 +5,7 @@ import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
 import { ROLS, ROL_LABELS, ROL_COLORS, ROL_DESCRIPCIONS, ETAPES_USUARI } from '../usuaris/types'
 import type { Usuari, Rol, EtapaSubstitucio } from '../usuaris/types'
+import { ETAPA_FRANJA_KEY } from '../substitucions/types'
 
 interface LlistaConfig {
   clau: string
@@ -78,6 +79,11 @@ const GRUPS: GrupConfig[] = [
     color: '#861414',
     llistes: [
       { clau: 'horaris.tipus-no-lectiva', label: 'Tipus de no lectiva', descripcio: 'Opcions disponibles en marcar un període de l\'horari com a no lectiu (guàrdies, pati, tutoria...).' },
+      ...ETAPES_USUARI.map((etapa) => ({
+        clau: ETAPA_FRANJA_KEY[etapa],
+        label: `Franges — ${etapa}`,
+        descripcio: `Files de la graella d'horari de ${etapa}, en format H:MM-H:MM. El pati també és una franja: qui el té el marca com a "No lectiva → Pati". Canviar aquesta llista no toca els horaris ja desats; els períodes amb una franja que ja no hi és continuen sortint a la graella.`,
+      })),
     ],
   },
 ]

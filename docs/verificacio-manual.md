@@ -48,6 +48,11 @@ Repetir per **cada** rol (coordinador, direcció, titular, cap d'estudis, profes
 - [ ] Un professor crea, edita i elimina el seu propi horari (Lectiva i No lectiva)
 - [ ] Amb dos comptes de professor diferents, confirmar que cap dels dos veu ni pot editar l'horari de l'altre a "El meu horari"
 - [ ] Coordinador, Direcció, Titular i Cap d'Estudis veuen "Tots els horaris"; professorat i convidat no
+- [ ] **Només el coordinador** pot editar l'horari d'una altra persona: a "Tots els horaris" li surten les cel·les clicables, i a Direcció, Titular i Cap d'Estudis no
+- [ ] Amb sessió de Direcció, intentar l'edició d'un horari aliè directament contra l'API → denegada (la graella de només lectura no és l'única barrera)
+- [ ] El coordinador crea un període per a un altre professor i aquell professor el veu a "El meu horari"
+- [ ] A `audit_events`, el canvi anterior queda registrat a nom del coordinador, no del professor
+- [ ] Les franges de cada etapa coincideixen amb els marcs horaris reals del centre, i es poden modificar des de Configuració → Horaris
 - [ ] Crear un període que se solapi amb un altre del mateix professor **encara que sigui d'una etapa diferent** → rebutjat amb un missatge clar
 - [ ] Dos períodes adjacents (p. ex. 9:00-10:00 i 10:00-11:00) → permesos, no compten com a solapament
 - [ ] Canviar el curs escolar al selector mostra l'horari vigent d'aquell curs, no el de l'actual
