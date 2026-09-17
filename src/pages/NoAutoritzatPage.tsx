@@ -1,13 +1,15 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { logout } from '../services/auth'
 import { useAuthStore } from '../store/authStore'
-import { useUsuarisStore } from '../store/usuarisStore'
+import { explicacio } from './noAutoritzat.utils'
 
 export function NoAutoritzatPage() {
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
-  const accesNegat = useUsuarisStore((s) => s.accesNegat)
+  const [searchParams] = useSearchParams()
+  // El correu es captura abans que l'efecte de tancar la sessió l'esborri del
+  // store; si no, la pàgina es quedaria sense la dada que ha de mostrar.
+  const [email] = useState(() => useAuthStore.getState().user?.email ?? '')
 
   useEffect(() => { logout() }, [])
 
@@ -16,9 +18,7 @@ export function NoAutoritzatPage() {
     navigate('/login', { replace: true })
   }
 
-  // Usuari del domini però no autoritzat pel coordinador
-  const esDomini = user?.email?.endsWith('@stjosep.org') ?? false
-  const noAutoritzatPelCoordinador = esDomini && accesNegat
+  const { titol, text, detall } = explicacio(searchParams.get('motiu') ?? '', email)
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-surface">
@@ -29,25 +29,11 @@ export function NoAutoritzatPage() {
         >
           ✕
         </div>
-        {noAutoritzatPelCoordinador ? (
-          <div>
-            <h1 className="text-lg font-semibold text-text-main mb-2">Sense accés</h1>
-            <p className="text-sm text-gray-500">
-              El compte <strong>{user?.email}</strong> no té accés a SJO Hub.
-            </p>
-            <p className="text-sm text-gray-400 mt-2">
-              Contacta amb el coordinador TIC per obtenir accés.
-            </p>
-          </div>
-        ) : (
-          <div>
-            <h1 className="text-lg font-semibold text-text-main mb-2">Accés no autoritzat</h1>
-            <p className="text-sm text-gray-500">
-              Aquest portal és exclusiu per a comptes <strong>@stjosep.org</strong>.
-              El teu compte de Google no pertany a aquest domini.
-            </p>
-          </div>
-        )}
+        <div>
+          <h1 className="text-lg font-semibold text-text-main mb-2">{titol}</h1>
+          <p className="text-sm text-gray-500">{text}</p>
+          {detall && <p className="text-sm text-gray-400 mt-2">{detall}</p>}
+        </div>
         <button
           onClick={handleTornar}
           className="text-sm font-medium text-white px-6 py-2 rounded-lg transition-colors"
