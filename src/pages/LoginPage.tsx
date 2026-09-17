@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { loginWithGoogle } from '../services/auth'
+import { missatgeErrorLogin } from './login.utils'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -20,7 +21,11 @@ export function LoginPage() {
       if (message === 'domini-no-autoritzat' || message === 'correu-no-disponible') {
         navigate(`/no-autoritzat?motiu=${message}`, { replace: true })
       } else {
-        setError("No s'ha pogut iniciar sessió. Torna-ho a intentar.")
+        // L'error es descartava sencer i a la pantalla només hi quedava "no
+        // s'ha pogut iniciar sessió", que no permet diagnosticar res ni a qui
+        // ho pateix ni a qui li ho han de resoldre.
+        console.error('[login] no s’ha pogut iniciar sessió', err)
+        setError(missatgeErrorLogin(err))
       }
     } finally {
       setLoading(false)
