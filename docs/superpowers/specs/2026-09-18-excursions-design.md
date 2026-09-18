@@ -74,13 +74,18 @@ La transparència és deliberada: que tothom vegi l'estat de totes les excursion
 
 `id`, `codi` (`EXC-0001`, amb `public.format_code`), `curs_escolar`, `estat`, `etapa`,
 `lloc`, `poblacio`, `activitat`, `data` (**date completa, amb any**), `hora_sortida`, `hora_tornada`,
-`transport` (`autocar` | `metro` | `cap`), `acompanyants_externs`, `observacions`, `nota_circular`,
+`transport` (`autocar` | `altres`) i `transport_detall` (text lliure: metro, tren, FGC, a peu…),
+`acompanyants_externs`, `observacions`, `nota_circular`,
 `responsable` (qui mana el dia de la sortida; per defecte qui la proposa),
 `proposada_per`, `proposada_el`, `aprovada_per`, `aprovada_el`, `motiu_rebuig`,
 `reservada_per`, `reservada_el`,
 `preu_alumne` (**el preu congelat; públic perquè surt a la circular**), `preu_confirmat_per`, `preu_confirmat_el`,
-`data_circular`, `data_limit_pagament`, `circular_enviada_per`, `circular_enviada_el`,
+`data_circular`, `data_limit_pagament`, `data_limit_resguard`, `circular_enviada_per`, `circular_enviada_el`,
 `creat_el`, `creat_per`.
+
+**Sobre el transport:** fins ara tot el que no era autocar s'apuntava com a "Metro", inclosos tren, FGC i anar a peu. El que li importa a l'aplicació és només **si es lloga autocar o no**, perquè és l'únic que té cost; el detall va a text lliure i surt a la circular.
+
+**Sortides de més d'un dia:** avui no n'hi ha, però es preveu que n'hi pugui haver (colònies amb nit, viatge de final de curs). **No es construeix ara**, i per això hi ha una sola `data`. El dia que calgui, el que s'haurà de tocar és: afegir `data_fi`, la frase de dates de la circular ("del 3 al 5 de juny") i decidir si el preu es calcula per nit. Queda dit perquè no sorprengui.
 
 ### `public.excursio_grups`
 
@@ -89,6 +94,8 @@ La transparència és deliberada: que tothom vegi l'estat de totes les excursion
 Es separa des d'ara perquè **el control de pagaments per número de llista penjarà d'aquí**, i així no caldrà migrar-ho després.
 
 **Previstos i finals** perquè entre el setembre i la sortida el nombre canvia. L'Excel ja ho tenia (`N Al` i `Alum.F`) i en la primera versió d'aquest document se'm va escapar. El preu es calcula amb els previstos; els finals serveixen per al control d'aforo i, més endavant, per al tancament.
+
+**Els alumnes s'escriuen a mà i no es guarden per grup a Configuració.** Al setembre les llistes encara no estan tancades i qui proposa ja sap quants en té; pre-omplir-ho amb un número desat seria donar per bo un valor que encara no existeix.
 
 ### `public.excursio_acompanyants`
 
@@ -196,11 +203,15 @@ Amb el 12 %, les famílies paguen pràcticament el mateix que avui i queda una e
 
 Entre aprovar una sortida i conèixer-ne el cost hi ha un pas que la primera versió d'aquest document es va saltar: **demanar pressupost a les empreses d'autocars i comparar**. Com que el pla es fa tot al setembre, el natural és enviar **la llista del curs sencer** i rebre una taula de preus; per això els costos arriben tard, i no per deixadesa.
 
-**Anada.** Al pla del curs es filtra per "pendents de pressupost", se'n seleccionen i es genera un **Excel** amb una fila per sortida: data, dia de la setmana, destinació, població, grups, **passatgers (alumnes previstos + acompanyants)**, hora de sortida, hora de tornada i una **columna de preu buida**.
+També es demana preu de **l'activitat**, perquè per volum de vegades fan preu especial. Així que en exportar es tria **què s'està demanant**: autocar, activitat o totes dues coses; d'això depenen les columnes de preu que surten. No té sentit enviar a una empresa d'autocars un full amb una columna d'entrades.
+
+**Anada.** Al pla del curs es filtra per "pendents de pressupost", se'n seleccionen i es genera un **Excel** amb una fila per sortida: codi, data, dia de la setmana, destinació, població, grups, **passatgers (alumnes previstos + acompanyants)**, hora de sortida, hora de tornada i la **columna o columnes de preu, buides**.
 
 **Tornada.** L'empresa retorna el mateix fitxer amb els preus i **es torna a importar**: cada fila s'identifica pel codi `EXC-0001` de la primera columna i els preus entren com a autocars de l'excursió. Es reaprofita el patró d'importació que ja es fa servir dues vegades (Material Infantil i Usuaris): previsualització fila a fila i res no s'escriu fins que es confirma.
 
 **Qui:** **exportar** és de Gestió (`excursions_gestio()`), perquè el fitxer no conté cap preu. **Importar** és de Costos (`excursions_costos()`), perquè sí que en porta.
+
+**L'empresa** es tria d'una llista editable a Configuració (`excursions.empreses-autocar`), com els espais de Reserves. Avui només se'n fa servir una, però canviar-la o demanar a dues ha de ser possible sense tocar codi. No cal una taula de proveïdors com la de Material Infantil: amb una llista n'hi ha prou.
 
 > El fitxer que surt del centre porta dates, destinacions i nombre d'alumnes per grup. **No porta cap nom d'alumne ni de docent**, i així ha de continuar.
 
@@ -213,6 +224,16 @@ Motiu: una plantilla editable és una plantilla que es pot trencar —a l'actual
 **Textos configurables:** introducció al pagament, passos del pagament (llista), frase de l'AMPA, política de devolucions, frase del resguard. Més una **nota lliure per excursió**.
 
 **Regles de contingut:** el dia de la setmana es calcula de la data real; la frase de l'AMPA només surt si hi ha aportació; l'any surt sempre del camp `data`.
+
+**Les tres dates es poden triar.** Es proposen soles (circular 15 dies abans; termini de pagament 8 dies abans, mogut fora de caps de setmana i dies no lectius; resguard l'endemà del termini) i **Gestió les pot canviar una a una**. La plantilla actual feia servir la mateixa data per al pagament i per al resguard, anomenant-la "dimarts" en un lloc i "dimecres" en un altre.
+
+**La devolució del 75 %** és per a qui avisa a última hora que no ve. El text per defecte ho dirà així en comptes de lligar-ho als pagaments fora de termini, que és el que deia fins ara i no s'entenia:
+
+> *Si un alumne no assisteix i s'avisa fora de termini, es retornarà el 75 % de l'import; el 25 % restant cobreix despeses ja compromeses.*
+
+És text configurable: si la intenció era una altra, es canvia sense tocar codi.
+
+**El pagament continua sent** amb codi de barres al caixer, i alguna família encara paga en efectiu. Un mètode de pagament en línia és una possibilitat de futur, no d'aquesta entrega.
 
 En enviar-la: es congela el preu, es genera el `.docx` editable, es descarrega, l'excursió passa a *circular enviada* i s'avisa per correu. Secretaria la retoca i l'envia.
 
@@ -231,6 +252,7 @@ Accions en bloc sobre les seleccionades: **aprovar**, i **exportar per a pressup
 
 `excursions.previsio.<ETAPA>` · `excursions.marge-pct.<ETAPA>` · `excursions.iva-pct` ·
 `excursions.arrodoniment` · `excursions.dies-abans-circular` · `excursions.dies-abans-termini` ·
+`excursions.empreses-autocar` ·
 `excursions.text-pagament-intro` · `excursions.passos-pagament` · `excursions.text-ampa` ·
 `excursions.text-devolucions` · `excursions.text-resguard` · `visibilitat.excursions`
 
@@ -246,15 +268,14 @@ Accions en bloc sobre les seleccionades: **aprovar**, i **exportar per a pressup
 
 **Peces pendents:** control de pagaments per número de llista (amb la llista **congelada** el dia que es crea l'excursió, perquè els números es desplacen quan entra alumnat a mig curs); bestretes i tancament econòmic (la vista que Direcció tenia a la fulla "JAV"); informes del curs (AMPA, autocars per trimestre, comparació amb el curs anterior); i que marcar els acompanyants generi les seves substitucions.
 
-**Quan hi hagi dades de pagaments**, la previsió d'assistència es podrà **proposar a partir de l'històric real de cada nivell** en lloc d'un número fix.
+**Quan hi hagi dades de pagaments**, la previsió d'assistència es podrà **proposar a partir de l'històric real de cada nivell** en lloc d'un número fix. Aquell control haurà de permetre marcar com a pagat **sigui quin sigui el mètode**: encara hi ha famílies que paguen en efectiu al tutor.
 
-**Preguntes obertes**, cap de les quals bloqueja aquesta entrega:
+**Altres possibilitats que el centre ja ha esmentat:** sortides de més d'un dia i un mètode de pagament en línia.
 
-- Les famílies encara paguen amb codi de barres al caixer de "la Caixa"? Si ara va pels rebuts mensuals d'Alexia, el control de pagaments potser no cal.
-- El resguard s'entrega el mateix dia que venç el pagament o l'endemà? Al boceto s'ha suposat l'endemà.
-- La frase del 75 % de devolució s'entén malament: en quins casos s'aplica?
-- Hi ha d'haver autorització retallable? Si demanés dades de salut, seria categoria especial (art. 9 RGPD) i canviaria la postura de protecció de dades del centre.
+**Decisions ja preses** (2026-09-18), que abans eren preguntes obertes: el pagament continua sent amb codi de barres al caixer i alguna família en efectiu; les dates de la circular es podran triar una a una; la devolució del 75 % és per a qui avisa a última hora; i no hi haurà autorització retallable.
 
 ## 13. Nota de protecció de dades
+
+**No hi ha autorització retallable ni es demanen alèrgies ni dades mèdiques**, confirmat amb el centre el 2026-09-18: avui la circular no en demana i no es vol començar a demanar-ne. Per tant **no entren dades de salut** a l'aplicació, i el que diu el dossier sobre protecció de dades es manté tal com està.
 
 Aquesta entrega **no introdueix cap dada d'alumnat**: les excursions es gestionen per grup i per nombre d'alumnes. Quan arribi el control de pagaments, es farà **per número de llista i sense noms**. Això és **pseudonimització**, no anonimització: com que el centre té la llista a Alexia, continua sent dada personal, i així s'ha de descriure al dossier ("dades pseudonimitzades", no "sense dades d'alumnes").
