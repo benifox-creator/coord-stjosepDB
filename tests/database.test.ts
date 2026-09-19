@@ -324,3 +324,54 @@ describe('notification worker', () => {
     expect((await db.query<{status:string}>('select status from public.notifications')).rows[0].status).toBe('sent')
   })
 })
+
+describe('excursions', () => {
+  async function excursio(estat = 'Esborrany', autor = 'teacher@stjosep.org') {
+    await asUser(autor)
+    const id = (await db.query<{id:string}>(`insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,creat_per)
+      values('EP','Can Montcau','La Castanyada','2026-10-19','9:00','17:00',$1) returning id`,[autor])).rows[0].id
+    if (estat !== 'Esborrany') {
+      await asUser('admin@stjosep.org')
+      await db.query('update public.excursions set estat=$1 where id=$2',[estat,id])
+      await asUser(autor)
+    }
+    return id
+  }
+
+  it('deixa que tothom vegi el pla sencer', async () => {
+    await excursio()
+    await asUser('other@stjosep.org')
+    expect((await db.query('select * from public.excursions')).rows).toHaveLength(1)
+  })
+
+  it('no deixa que un altre docent editi una proposta que no és seva', async () => {
+    const id = await excursio()
+    await asUser('other@stjosep.org')
+    expect((await db.query("update public.excursions set lloc='Un altre' where id=$1 returning id",[id])).rows).toHaveLength(0)
+  })
+
+  it('no deixa editar la pròpia excursió quan ja no és un esborrany', async () => {
+    const id = await excursio('Aprovada')
+    await asUser('teacher@stjosep.org')
+    expect((await db.query("update public.excursions set lloc='Un altre' where id=$1 returning id",[id])).rows).toHaveLength(0)
+  })
+
+  it('dona accés de gestió amb la casella, sense canviar el rol', async () => {
+    const id = await excursio()
+    await asUser('admin@stjosep.org')
+    await db.query("update public.usuaris set pot_gestionar_excursions=true where email='other@stjosep.org'")
+    await asUser('other@stjosep.org')
+    expect((await db.query("update public.excursions set lloc='Corregit' where id=$1 returning id",[id])).rows).toHaveLength(1)
+  })
+
+  it('nega qualsevol accés al convidat', async () => {
+    await excursio()
+    await asUser('guest@stjosep.org')
+    expect((await db.query('select * from public.excursions')).rows).toHaveLength(0)
+  })
+
+  it('assigna un codi llegible', async () => {
+    const id = await excursio()
+    expect((await db.query<{codi:string}>('select codi from public.excursions where id=$1',[id])).rows[0].codi).toMatch(/^EXC-\d{3,}$/)
+  })
+})

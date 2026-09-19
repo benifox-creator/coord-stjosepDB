@@ -154,18 +154,43 @@ with check (exists(select 1 from public.excursions e where e.id = excursio_id
   and (app_private.excursions_gestio()
     or (app_private.creator() and e.creat_per = app_private.email() and e.estat = 'Esborrany'))));
 
+-- Les polítiques filtren files, però no donen permís sobre la taula: són dues
+-- coses diferents i totes dues calen. Es fa com a la migració d'accés.
 do $$ declare t text; begin
   foreach t in array array['excursions','excursio_grups','excursio_acompanyants'] loop
+    execute format('revoke all on public.%I from anon', t);
+    execute format('grant select, insert, update, delete on public.%I to authenticated', t);
     execute format('create trigger audit_change after insert or update or delete on public.%I for each row execute function app_private.audit_change()', t);
   end loop;
 end $$;
+-- El `grant on all sequences` de la migració d'accés ja s'havia executat quan
+-- aquesta seqüència no existia, així que li cal el seu.
+grant usage, select on sequence public.excursions_codi_seq to authenticated;
 
 commit;
 ```
 
-- [ ] **Step 2: Copia les taules a `schema.sql`**
+**Cal redefinir `app_private.module_visible`** dins d'aquesta mateixa migració, afegint-hi dues coses: un valor per defecte per a `excursions` sense el convidat (si no, cau al genèric, que sí l'inclou), i que qui tingui qualsevol de les dues caselles vegi el mòdul encara que el seu rol no li hi doni accés, perquè **Secretaria no és professorat**. Copia la funció de `supabase/migrations/202609130002_access.sql` i afegeix-hi:
 
-`schema.sql` serveix per a una base de dades nova; les migracions, per a la que ja existeix. Afegeix al final de `supabase/schema.sql` **només** els `create sequence` i els tres `create table` d'aquesta migració (sense les polítiques ni els disparadors: els aplica la migració, que a `tests/database.test.ts` s'executa després de `schema.sql`).
+```sql
+  if module_name = 'excursions' and exists(select 1 from public.usuaris where lower(email)=app_private.email()
+    and (pot_gestionar_excursions or pot_gestionar_costos_excursions)) then return true; end if;
+```
+
+i al `case`:
+
+```sql
+      when 'excursions' then '["direccio","titular","cap_estudis","professorat"]'::jsonb
+```
+
+- [ ] **Step 2: NO toquis `schema.sql`**
+
+La primera versió d'aquest pla deia de copiar-hi les taules. **És un error** i es va descobrir executant-lo:
+
+- `schema.sql` s'executa **abans** que les migracions, i `public.format_code` i `app_private.school_year` es creen a les migracions 003 i 004. Els `default` que les fan servir encara no existirien.
+- I si les taules es creessin a tots dos llocs, la migració petaria amb "la relació ja existeix".
+
+Les crea només la migració. Perquè sigui segura si s'executa dues vegades, porta `if not exists` a la seqüència, a les taules, a l'índex i a les columnes noves d'`usuaris`.
 
 - [ ] **Step 3: Escriu els tests de permisos**
 
@@ -235,7 +260,7 @@ Si `nega qualsevol accés al convidat` falla, comprova que `visibilitat.excursio
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/202609190001_excursions.sql supabase/schema.sql tests/database.test.ts
+git add supabase/migrations/202609190001_excursions.sql tests/database.test.ts
 git commit -m "feat(excursions): taules, permisos i RLS del mòdul"
 ```
 
