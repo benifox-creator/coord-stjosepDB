@@ -83,6 +83,23 @@ Repetir per **cada** rol (coordinador, direcció, titular, cap d'estudis, profes
 - [ ] Dos períodes adjacents (p. ex. 9:00-10:00 i 10:00-11:00) → permesos, no compten com a solapament
 - [ ] Canviar el curs escolar al selector mostra l'horari vigent d'aquell curs, no el de l'actual
 
+## Fase 4b — Excursions (Fase A del mòdul)
+
+- [ ] Un docent crea un esborrany a mitges i el desa; li surt a la llista com a **Esborrany**
+- [ ] Amb camps buits, el botó d'enviar està apagat i la llista del que falta creix i minva mentre s'escriu
+- [ ] Posar-hi un dissabte o un dia de `centre.dies-no-lectius` impedeix enviar-la
+- [ ] **El servidor també ho rebutja, no només la pantalla**: des de la consola del navegador, amb sessió iniciada, `supabase.from('excursions').update({ estat: 'Proposada' }).eq('id', '<id d'un esborrany incomplet>')` ha de donar "Falten dades per enviar la proposta"
+- [ ] Un docent **no** pot editar la proposta d'un altre, ni la seva un cop proposada
+- [ ] Un docent **no** pot aprovar la seva pròpia excursió (l'acció ni tan sols li surt, i forçant-la no fa res)
+- [ ] Direcció aprova una proposta i qui la va proposar rep l'avís per correu
+- [ ] Direcció en rebutja una altra: **exigeix un motiu**, torna a Esborrany i el motiu surt a la fitxa
+- [ ] **Amb diverses propostes fetes el mateix dia, cada aprovador rep un sol correu**, no un per proposta (mirar `notifications` al SQL Editor: ha d'haver-hi una sola fila per aprovador amb `event_key` que comenci per `excursions-pendents:`)
+- [ ] Marcar com a reservada només ho pot fer qui gestiona
+- [ ] Cancel·lar una excursió avisa qui la va proposar i els acompanyants
+- [ ] A Configuració, donar la casella **Excursions** a un docent li permet gestionar; donar-li només aquesta **no** li ha de donar accés a cap dada econòmica (a la Fase A encara no n'hi ha: el punt important serà a la Fase B)
+- [ ] El **convidat** no veu el mòdul enlloc
+- [ ] Amb excursions del curs anterior, obrir el mòdul en un curs buit proposa copiar-les; copiar-ne dues les crea com a esborranys amb les dates un any més tard, amb els seus grups i **sense acompanyants ni responsable heretats**
+
 ## Fase 5 — Absències i substitucions
 
 - [ ] Amb horari carregat, crear una absència seleccionant períodes **amb un forat** (p. ex. 1r i 3r període, sense el 2n) i comprovar que les hores totals i no lectives són les correctes
