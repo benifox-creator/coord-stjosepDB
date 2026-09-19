@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   AlertTriangle,
+  MapPin,
   Package,
   Archive,
   Smartphone,
@@ -39,6 +40,7 @@ const NAV_ITEMS = [
   { to: '/manteniment',   label: 'Manteniment',        icon: Wrench,                      visKey: 'manteniment' },
   { to: '/material-infantil', label: 'Material Infantil', icon: Boxes, visKey: 'material-infantil' },
   { to: '/horaris', label: 'Horaris', icon: Clock, visKey: 'horaris' },
+  { to: '/excursions', label: 'Excursions', icon: MapPin, visKey: 'excursions' },
 ]
 
 const NAV_SETTINGS = [
