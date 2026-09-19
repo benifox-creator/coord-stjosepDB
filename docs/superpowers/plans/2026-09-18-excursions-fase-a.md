@@ -910,8 +910,10 @@ export const useExcursions = create<ExcursionsState>((set, get) => ({
   },
 }))
 
-// Els grups i els acompanyants es reescriuen sencers en desar: són poques files
-// i evita haver de comparar què s'ha afegit o tret.
+// ATENCIÓ: la primera versió del pla reescrivia grups i acompanyants sencers
+// (esborrar-ho tot i tornar-ho a inserir). És destructiu: si un insert falla a
+// mig camí, el que ja hi havia ja s'ha perdut. Es fa un diff i només es toca el
+// que ha canviat. Vegeu `sincronitzaFilles` al fitxer implementat.
 async function desaFilles(excursioId: string, data: ExcursioFormData) {
   for (const g of data.Grups.filter((g) => g.Grup)) {
     await insertRow('excursio_grups', { excursio_id: excursioId, grup: g.Grup, alumnes_previstos: g.AlumnesPrevistos })
