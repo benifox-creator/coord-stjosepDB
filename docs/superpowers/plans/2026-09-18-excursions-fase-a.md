@@ -506,7 +506,9 @@ git commit -m "feat(excursions): màquina d'estats i avisos al servidor"
 
 **Interfaces:**
 - Consumes: `EtapaSubstitucio` i `ETAPES_SUBSTITUCIO` de `src/modules/substitucions/types.ts`.
-- Produces: `Excursio`, `ExcursioGrup`, `EstatExcursio`, `ESTATS_EXCURSIO`, `TRANSPORTS`, `rowToExcursio`, `excursioToInsert`, `campsQueFalten`, `esDiaLectiu`, `ESTAT_COLORS`.
+- Produces: `Excursio`, `ExcursioGrup`, `EstatExcursio`, `ESTATS_EXCURSIO`, `TRANSPORTS`, `rowToExcursio`, `excursioToInsert`, `campsQueFalten`, `esDiaLectiu`, `dataTrasladada`, `ESTAT_COLORS`.
+
+> `dataTrasladada` és de la Task 8, però com que és una funció pura del mateix fitxer s'ha implementat aquí amb les seves proves. La Task 8 ja només ha de fer el diàleg i el mètode del store.
 
 - [ ] **Step 1: Escriu els tipus**
 
@@ -716,8 +718,8 @@ export function campsQueFalten(d: ExcursioFormData): string[] {
   if (!d.Lloc.trim()) falten.push('el lloc')
   if (!d.Activitat.trim()) falten.push("l'activitat")
   if (!d.Data) falten.push('la data')
-  if (!d.HoraSortida) falten.push("l'hora de sortida")
-  if (!d.HoraTornada) falten.push('l’hora de tornada')
+  if (!d.HoraSortida.trim()) falten.push("l'hora de sortida")
+  if (!d.HoraTornada.trim()) falten.push('l’hora de tornada')
   if (d.Transport === 'altres' && !d.TransportDetall.trim()) falten.push('com s’hi va')
   if (!d.Grups.some((g) => g.AlumnesPrevistos > 0)) falten.push('almenys un grup amb alumnes')
   return falten
@@ -727,6 +729,9 @@ export function esDiaLectiu(data: string, diesNoLectius: string[]): boolean {
   if (!data) return false
   // Amb T12:00:00 el dia no canvia per la zona horària, com a la resta de l'app.
   const dow = new Date(data + 'T12:00:00').getDay()
+  // Una data impossible dona NaN, que no és ni 0 ni 6: sense comprovar-ho,
+  // passaria per lectiva.
+  if (Number.isNaN(dow)) return false
   if (dow === 0 || dow === 6) return false
   return !diesNoLectius.includes(data)
 }
