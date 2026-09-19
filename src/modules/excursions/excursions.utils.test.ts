@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { campsQueFalten, esDiaLectiu, dataTrasladada } from './excursions.utils'
-import type { ExcursioFormData } from './types'
+import { campsQueFalten, esDiaLectiu, dataTrasladada, grupsTriables, formDataDe } from './excursions.utils'
+import type { Excursio, ExcursioFormData } from './types'
+
+const excursioDesada: Excursio = {
+  id: 'e1', Codi: 'EXC-001', CursEscolar: '2026-2027', Estat: 'Esborrany', Etapa: 'EP',
+  Lloc: 'Can Montcau', Poblacio: 'La Roca', Activitat: 'Castanyada', Data: '2026-10-19',
+  HoraSortida: '9:00', HoraTornada: '17:00', Transport: 'autocar', TransportDetall: '',
+  AcompanyantsExterns: 0, Observacions: '', Responsable: 'a@stjosep.org',
+  MotiuRebuig: null, MotiuCancellacio: null, ProposadaPer: null,
+  AprovadaPer: null, ReservadaPer: null, Creat_per: 'a@stjosep.org',
+  Grups: [{ id: 'g1', Grup: 'EP-1r A', AlumnesPrevistos: 25, AlumnesFinals: null }],
+  Acompanyants: [],
+}
 
 const completa: ExcursioFormData = {
   Etapa: 'EP', Lloc: 'Can Montcau', Poblacio: 'La Roca', Activitat: 'La Castanyada',
@@ -94,5 +105,47 @@ describe('traslladar una data al curs nou', () => {
 
   it('manté els dos dígits al mes i al dia', () => {
     expect(dataTrasladada('2025-09-01', '2025-2026', '2026-2027')).toBe('2026-09-01')
+  })
+})
+
+describe('opcions de grup triables', () => {
+  const tots = ['EP-1r A', 'EP-1r B', 'EP-2n A']
+
+  it('amaga els grups que ja ha agafat una altra fila', () => {
+    expect(grupsTriables(tots, ['EP-1r A'], '')).toEqual(['EP-1r B', 'EP-2n A'])
+  })
+
+  it('manté visible el grup de la fila que s’està editant', () => {
+    expect(grupsTriables(tots, ['EP-1r A', 'EP-2n A'], 'EP-1r A')).toEqual(['EP-1r A', 'EP-1r B'])
+  })
+
+  it('els ofereix tots quan encara no se n’ha triat cap', () => {
+    expect(grupsTriables(tots, [], '')).toEqual(tots)
+  })
+})
+
+describe('valors inicials del formulari', () => {
+  it('posa qui l’omple com a responsable en una de nova', () => {
+    const d = formDataDe(undefined, 'jo@stjosep.org')
+    expect(d.Responsable).toBe('jo@stjosep.org')
+    expect(d.Grups).toHaveLength(1)
+    expect(d.Data).toBe('')
+  })
+
+  it('converteix una data buida en cadena i no en null', () => {
+    const d = formDataDe({ ...excursioDesada, Data: null }, 'jo@stjosep.org')
+    expect(d.Data).toBe('')
+  })
+
+  it('deixa sempre una fila de grup encara que l’excursió no en tingui cap', () => {
+    const d = formDataDe({ ...excursioDesada, Grups: [] }, 'jo@stjosep.org')
+    expect(d.Grups).toEqual([{ Grup: '', AlumnesPrevistos: 0 }])
+  })
+
+  it('no comparteix la llista d’acompanyants amb l’excursió original', () => {
+    const original = { ...excursioDesada, Acompanyants: ['a@stjosep.org'] }
+    const d = formDataDe(original, 'jo@stjosep.org')
+    d.Acompanyants.push('b@stjosep.org')
+    expect(original.Acompanyants).toEqual(['a@stjosep.org'])
   })
 })

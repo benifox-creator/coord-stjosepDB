@@ -92,3 +92,36 @@ export function dataTrasladada(data: string | null, cursOrigen: string, cursDest
   const nouDia = Math.min(dia, ultimDia)
   return `${nouAny}-${String(mes).padStart(2, '0')}-${String(nouDia).padStart(2, '0')}`
 }
+
+/**
+ * Opcions de grup que es poden triar en una fila del formulari: les que encara
+ * no ha agafat ningú, més la que ja té aquesta fila. La base de dades té un
+ * índex únic per (excursió, grup) i rebutjaria un grup repetit en desar.
+ */
+export function grupsTriables(disponibles: string[], jaTriats: string[], actual: string): string[] {
+  return disponibles.filter((op) => op === actual || !jaTriats.includes(op))
+}
+
+/** Converteix una excursió desada en els valors del formulari. */
+export function formDataDe(e: Excursio | undefined, jo: string): ExcursioFormData {
+  if (!e) {
+    return {
+      Etapa: 'EP', Lloc: '', Poblacio: '', Activitat: '', Data: '',
+      HoraSortida: '', HoraTornada: '', Transport: 'autocar', TransportDetall: '',
+      AcompanyantsExterns: 0, Observacions: '', Responsable: jo,
+      Grups: [{ Grup: '', AlumnesPrevistos: 0 }], Acompanyants: [],
+    }
+  }
+  return {
+    Etapa: e.Etapa, Lloc: e.Lloc, Poblacio: e.Poblacio, Activitat: e.Activitat,
+    Data: e.Data ?? '', HoraSortida: e.HoraSortida, HoraTornada: e.HoraTornada,
+    Transport: e.Transport, TransportDetall: e.TransportDetall,
+    AcompanyantsExterns: e.AcompanyantsExterns, Observacions: e.Observacions,
+    Responsable: e.Responsable,
+    // Sempre almenys una fila, perquè el formulari no surti sense cap selector.
+    Grups: e.Grups.length
+      ? e.Grups.map((g) => ({ Grup: g.Grup, AlumnesPrevistos: g.AlumnesPrevistos }))
+      : [{ Grup: '', AlumnesPrevistos: 0 }],
+    Acompanyants: [...e.Acompanyants],
+  }
+}
