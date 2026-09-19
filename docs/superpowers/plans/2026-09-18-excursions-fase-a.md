@@ -119,11 +119,15 @@ create policy excursions_read on public.excursions for select to authenticated
 using (app_private.module_visible('excursions'));
 
 -- Qui proposa pot editar la seva excursió només mentre és un esborrany.
+-- El `using` diu quines files pot tocar i el `with check` com poden quedar:
+-- cal que al `with check` hi càpiga 'Proposada', o enviar la proposta seria
+-- rebutjat per la mateixa política que l'ha de permetre. Que la transició
+-- sigui legítima ja ho comprova el disparador.
 create policy excursions_propi on public.excursions for all to authenticated
 using (app_private.module_visible('excursions') and app_private.creator()
   and creat_per = app_private.email() and estat = 'Esborrany')
 with check (app_private.module_visible('excursions') and app_private.creator()
-  and creat_per = app_private.email() and estat = 'Esborrany');
+  and creat_per = app_private.email() and estat in ('Esborrany','Proposada'));
 
 create policy excursions_gestio on public.excursions for all to authenticated
 using (app_private.module_visible('excursions') and app_private.excursions_gestio())
@@ -277,6 +281,8 @@ git commit -m "feat(excursions): taules, permisos i RLS del mòdul"
 - Produces: `app_private.validate_excursio()` — disparador `before insert or update` sobre `public.excursions`.
 
 **Per què un disparador i no funcions RPC:** el disseny deia RPC, però un disparador imposa la regla **encara que algú escrigui directament contra l'API**, i no només quan passa per la funció. És el mateix que fa `app_private.validate_schedule()` a Horaris.
+
+**Com es comporta RLS en les proves:** quan una política no deixa veure una fila, l'`update` **no llança cap error: afecta zero files**. Les proves d'aquest tipus han de comprovar `returning id` buit i no esperar una excepció — i, de fet, això vol dir que el disparador ni s'arriba a executar. Les excepcions només surten quan la fila **sí** és visible i és el disparador qui la rebutja.
 
 **El truc del resum diari:** `public.notifications.event_key` és **únic** i `app_private.enqueue` fa `on conflict(event_key) do nothing`. Si la clau porta el correu de l'aprovador i la data, **només s'encua el primer avís de cada dia**. Amb 50 propostes en una setmana de setembre, cada aprovador rep un correu al dia i no cinquanta.
 

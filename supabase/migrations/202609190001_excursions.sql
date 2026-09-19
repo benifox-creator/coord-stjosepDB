@@ -101,11 +101,15 @@ create policy excursions_read on public.excursions for select to authenticated
 using (app_private.module_visible('excursions'));
 
 -- Qui proposa pot editar la seva excursió només mentre és un esborrany.
+-- El `using` diu quines files pot tocar (només els seus esborranys) i el
+-- `with check` com poden quedar: cal que hi càpiga 'Proposada', o enviar la
+-- proposta seria rebutjat per la mateixa política que l'ha de permetre.
+-- Que la transició sigui legítima ja ho comprova el disparador.
 create policy excursions_propi on public.excursions for all to authenticated
 using (app_private.module_visible('excursions') and app_private.creator()
   and creat_per = app_private.email() and estat = 'Esborrany')
 with check (app_private.module_visible('excursions') and app_private.creator()
-  and creat_per = app_private.email() and estat = 'Esborrany');
+  and creat_per = app_private.email() and estat in ('Esborrany','Proposada'));
 
 create policy excursions_gestio on public.excursions for all to authenticated
 using (app_private.module_visible('excursions') and app_private.excursions_gestio())
@@ -148,5 +152,104 @@ end $$;
 -- El `grant on all sequences` de la migració d'accés ja s'havia executat quan
 -- aquesta seqüència no existia, així que li cal el seu.
 grant usage, select on sequence public.excursions_codi_seq to authenticated;
+
+-- La màquina d'estats i els camps d'auditoria els imposa un disparador i no el
+-- client: així la regla es compleix encara que algú escrigui directament contra
+-- l'API, i no només quan passa per la interfície. És el mateix que fa
+-- `app_private.validate_schedule()` a Horaris.
+create or replace function app_private.validate_excursio() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare qui text := app_private.email(); destinatari text; total integer;
+begin
+  if tg_op = 'INSERT' then
+    new.creat_per := qui;
+    if new.estat <> 'Esborrany' then raise exception 'Una excursió neix com a esborrany'; end if;
+    if coalesce(trim(new.responsable),'') = '' then new.responsable := qui; end if;
+    return new;
+  end if;
+
+  -- Les hores es validen sempre que hi siguin, estigui en l'estat que estigui.
+  if new.hora_sortida <> '' then perform app_private.minutes(new.hora_sortida); end if;
+  if new.hora_tornada <> '' then perform app_private.minutes(new.hora_tornada); end if;
+
+  if new.estat = old.estat then return new; end if;
+
+  if new.estat = 'Cancel·lada' then
+    if not app_private.excursions_gestio() then raise exception 'No autoritzat'; end if;
+    new.cancellada_per := qui; new.cancellada_el := now();
+
+  elsif old.estat = 'Esborrany' and new.estat = 'Proposada' then
+    if not (app_private.creator() and (old.creat_per = qui or app_private.excursions_gestio())) then
+      raise exception 'No autoritzat';
+    end if;
+    if coalesce(trim(new.lloc),'') = '' or coalesce(trim(new.activitat),'') = ''
+      or new.data is null or new.hora_sortida = '' or new.hora_tornada = ''
+      or (new.transport = 'altres' and coalesce(trim(new.transport_detall),'') = '') then
+      raise exception 'Falten dades per enviar la proposta';
+    end if;
+    select coalesce(sum(alumnes_previstos),0) into total from public.excursio_grups where excursio_id = new.id;
+    if total = 0 then raise exception 'Falten dades: cal almenys un grup amb alumnes'; end if;
+    if extract(isodow from new.data) >= 6
+      or exists(select 1 from public.config where clau = 'centre.dies-no-lectius' and valors ? new.data::text) then
+      raise exception 'El dia % no és lectiu', to_char(new.data,'DD/MM/YYYY');
+    end if;
+    new.proposada_per := qui; new.proposada_el := now();
+    for destinatari in select email from public.usuaris where rol in ('coordinador','direccio','titular') loop
+      -- Una sola clau per aprovador i dia: el resum diari surt d'aquí. Amb 50
+      -- propostes en una setmana de setembre, cadascú rep un correu al dia.
+      perform app_private.enqueue(destinatari, 'Excursions pendents d''aprovar',
+        'Tens excursions pendents de revisar al pla del curs.',
+        'excursions-pendents:' || destinatari || ':' || current_date::text);
+    end loop;
+
+  elsif old.estat = 'Proposada' and new.estat in ('Aprovada','Esborrany') then
+    if not app_private.approver() then raise exception 'No autoritzat'; end if;
+    if new.estat = 'Aprovada' then
+      new.aprovada_per := qui; new.aprovada_el := now(); new.motiu_rebuig := null;
+    elsif coalesce(trim(new.motiu_rebuig),'') = '' then
+      raise exception 'Cal dir per què es rebutja';
+    end if;
+    perform app_private.enqueue(old.proposada_per,
+      'La teva excursió ' || old.codi || ': ' || new.estat,
+      coalesce(new.motiu_rebuig, 'Aprovada.'),
+      'excursio-resolta:' || old.id::text || ':' || new.estat);
+
+  elsif old.estat = 'Aprovada' and new.estat = 'Reservada' then
+    if not app_private.excursions_gestio() then raise exception 'No autoritzat'; end if;
+    new.reservada_per := qui; new.reservada_el := now();
+
+  else
+    raise exception 'Transició no vàlida: % → %', old.estat, new.estat;
+  end if;
+
+  return new;
+end;
+$$;
+create trigger validate_excursio before insert or update on public.excursions
+for each row execute function app_private.validate_excursio();
+
+-- Avís de cancel·lació a part, perquè ha de llegir una taula filla.
+create or replace function app_private.notify_excursio_cancellada() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare destinatari text;
+begin
+  for destinatari in
+    select coalesce(new.proposada_per, new.creat_per)
+    union
+    select email from public.excursio_acompanyants where excursio_id = new.id
+  loop
+    if destinatari is not null then
+      perform app_private.enqueue(destinatari,
+        'Excursió ' || new.codi || ' cancel·lada',
+        coalesce(new.motiu_cancellacio, 'Sense motiu indicat.'),
+        'excursio-cancellada:' || new.id::text || ':' || destinatari);
+    end if;
+  end loop;
+  return null;
+end;
+$$;
+create trigger notify_excursio_cancellada after update on public.excursions
+for each row when (new.estat = 'Cancel·lada' and old.estat <> 'Cancel·lada')
+execute function app_private.notify_excursio_cancellada();
 
 commit;
