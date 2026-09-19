@@ -28,6 +28,8 @@ interface UsuariRow {
   rol: string
   etapa: string | null
   pot_gestionar_material: boolean
+  pot_gestionar_excursions: boolean
+  pot_gestionar_costos_excursions: boolean
   data_alta: string
 }
 
@@ -39,6 +41,8 @@ function rowToUsuari(row: UsuariRow): Usuari {
     Rol: parseRol(row.rol),
     Etapa: parseEtapa(row.etapa),
     PotGestionarMaterial: row.pot_gestionar_material ?? false,
+    PotGestionarExcursions: row.pot_gestionar_excursions ?? false,
+    PotGestionarCostosExcursions: row.pot_gestionar_costos_excursions ?? false,
     Data_alta: row.data_alta,
   }
 }
@@ -76,6 +80,8 @@ interface UsuarisState {
   updateRol: (usuari: Usuari, nouRol: Rol) => Promise<void>
   updateEtapa: (usuari: Usuari, novaEtapa: EtapaSubstitucio | null) => Promise<void>
   updatePotGestionarMaterial: (usuari: Usuari, valor: boolean) => Promise<void>
+  updatePotGestionarExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
+  updatePotGestionarCostosExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
   reset: () => void
 }
 
@@ -164,6 +170,20 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     await updateRowById(TABLE, usuari.id, { pot_gestionar_material: valor })
     set((s) => ({
       usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, PotGestionarMaterial: valor } : u)),
+    }))
+  },
+
+  async updatePotGestionarExcursions(usuari, valor) {
+    await updateRowById(TABLE, usuari.id, { pot_gestionar_excursions: valor })
+    set((s) => ({
+      usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, PotGestionarExcursions: valor } : u)),
+    }))
+  },
+
+  async updatePotGestionarCostosExcursions(usuari, valor) {
+    await updateRowById(TABLE, usuari.id, { pot_gestionar_costos_excursions: valor })
+    set((s) => ({
+      usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, PotGestionarCostosExcursions: valor } : u)),
     }))
   },
 

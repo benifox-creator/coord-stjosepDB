@@ -11,6 +11,8 @@ export interface Usuari {
   Rol: Rol
   Etapa: EtapaSubstitucio | null
   PotGestionarMaterial: boolean
+  PotGestionarExcursions: boolean
+  PotGestionarCostosExcursions: boolean
   Data_alta: string
 }
 

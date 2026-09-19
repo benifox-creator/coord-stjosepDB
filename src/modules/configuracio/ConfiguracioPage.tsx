@@ -246,7 +246,10 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
   const updateRol = useUsuarisStore((s) => s.updateRol)
   const updateEtapa = useUsuarisStore((s) => s.updateEtapa)
   const updatePotGestionarMaterial = useUsuarisStore((s) => s.updatePotGestionarMaterial)
+  const updatePotGestionarExcursions = useUsuarisStore((s) => s.updatePotGestionarExcursions)
+  const updatePotGestionarCostosExcursions = useUsuarisStore((s) => s.updatePotGestionarCostosExcursions)
   const [savingPotGestionar, setSavingPotGestionar] = useState(false)
+  const [savingExcursions, setSavingExcursions] = useState(false)
   const [obert, setObert] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savingEtapa, setSavingEtapa] = useState(false)
@@ -278,6 +281,16 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
       await updateEtapa(usuari, v === '' ? null : v)
     } finally {
       setSavingEtapa(false)
+    }
+  }
+
+  async function handleToggleExcursions(quin: 'logistica' | 'costos') {
+    setSavingExcursions(true)
+    try {
+      if (quin === 'logistica') await updatePotGestionarExcursions(usuari, !usuari.PotGestionarExcursions)
+      else await updatePotGestionarCostosExcursions(usuari, !usuari.PotGestionarCostosExcursions)
+    } finally {
+      setSavingExcursions(false)
     }
   }
 
@@ -314,6 +327,32 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
           className="rounded border-gray-300 text-primary focus:ring-primary/30"
         />
         Material
+      </label>
+      <label
+        className="shrink-0 flex items-center gap-1 text-[11px] text-gray-500"
+        title="Pot organitzar excursions: reservar, circular i cancel·lar. No veu cap cost."
+      >
+        <input
+          type="checkbox"
+          checked={usuari.PotGestionarExcursions}
+          onChange={() => handleToggleExcursions('logistica')}
+          disabled={savingExcursions}
+          className="rounded border-gray-300 text-primary focus:ring-primary/30"
+        />
+        Excursions
+      </label>
+      <label
+        className="shrink-0 flex items-center gap-1 text-[11px] text-gray-500"
+        title="Pot veure i editar els costos i el preu de les excursions"
+      >
+        <input
+          type="checkbox"
+          checked={usuari.PotGestionarCostosExcursions}
+          onChange={() => handleToggleExcursions('costos')}
+          disabled={savingExcursions}
+          className="rounded border-gray-300 text-primary focus:ring-primary/30"
+        />
+        Costos
       </label>
       <select
         value={usuari.Etapa ?? ''}

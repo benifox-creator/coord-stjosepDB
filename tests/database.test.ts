@@ -324,3 +324,149 @@ describe('notification worker', () => {
     expect((await db.query<{status:string}>('select status from public.notifications')).rows[0].status).toBe('sent')
   })
 })
+
+describe('excursions', () => {
+  // Crea un esborrany complet: amb el disparador, les transicions han de ser
+  // legítimes, i per proposar cal com a mínim un grup amb alumnes.
+  async function completa(autor = 'teacher@stjosep.org', data = '2026-10-19') {
+    await asUser(autor)
+    const id = (await db.query<{id:string}>(`insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada)
+      values('EP','Can Montcau','La Castanyada',$1,'9:00','17:00') returning id`,[data])).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1r A',25)`,[id])
+    return id
+  }
+  async function proposada(autor = 'teacher@stjosep.org') {
+    const id = await completa(autor)
+    await db.query("update public.excursions set estat='Proposada' where id=$1",[id])
+    return id
+  }
+  async function aprovada(autor = 'teacher@stjosep.org') {
+    const id = await proposada(autor)
+    await asUser('admin@stjosep.org')
+    await db.query("update public.excursions set estat='Aprovada' where id=$1",[id])
+    await asUser(autor)
+    return id
+  }
+
+  it('deixa que tothom vegi el pla sencer', async () => {
+    await completa()
+    await asUser('other@stjosep.org')
+    expect((await db.query('select * from public.excursions')).rows).toHaveLength(1)
+  })
+
+  it('no deixa que un altre docent editi una proposta que no és seva', async () => {
+    const id = await completa()
+    await asUser('other@stjosep.org')
+    expect((await db.query("update public.excursions set lloc='Un altre' where id=$1 returning id",[id])).rows).toHaveLength(0)
+  })
+
+  it('no deixa editar la pròpia excursió quan ja no és un esborrany', async () => {
+    const id = await aprovada()
+    await asUser('teacher@stjosep.org')
+    expect((await db.query("update public.excursions set lloc='Un altre' where id=$1 returning id",[id])).rows).toHaveLength(0)
+  })
+
+  it('dona accés de gestió amb la casella, sense canviar el rol', async () => {
+    const id = await completa()
+    await asUser('admin@stjosep.org')
+    await db.query("update public.usuaris set pot_gestionar_excursions=true where email='other@stjosep.org'")
+    await asUser('other@stjosep.org')
+    expect((await db.query("update public.excursions set lloc='Corregit' where id=$1 returning id",[id])).rows).toHaveLength(1)
+  })
+
+  it('nega qualsevol accés al convidat', async () => {
+    await completa()
+    await asUser('guest@stjosep.org')
+    expect((await db.query('select * from public.excursions')).rows).toHaveLength(0)
+  })
+
+  it('assigna un codi llegible', async () => {
+    const id = await completa()
+    expect((await db.query<{codi:string}>('select codi from public.excursions where id=$1',[id])).rows[0].codi).toMatch(/^EXC-\d{3,}$/)
+  })
+
+  it('no deixa proposar una excursió a mitges', async () => {
+    await asUser('teacher@stjosep.org')
+    const id = (await db.query<{id:string}>("insert into public.excursions(etapa) values('EP') returning id")).rows[0].id
+    await expect(db.query("update public.excursions set estat='Proposada' where id=$1",[id]))
+      .rejects.toThrow('Falten dades')
+  })
+
+  it('no deixa proposar una excursió en un dia no lectiu', async () => {
+    await asUser('admin@stjosep.org')
+    await db.query(`insert into public.config values('centre.dies-no-lectius','["2026-10-19"]')`)
+    const id = await completa()
+    await expect(db.query("update public.excursions set estat='Proposada' where id=$1",[id]))
+      .rejects.toThrow('no és lectiu')
+  })
+
+  it('tampoc no deixa proposar-la en cap de setmana', async () => {
+    const id = await completa('teacher@stjosep.org', '2026-10-17')
+    await expect(db.query("update public.excursions set estat='Proposada' where id=$1",[id]))
+      .rejects.toThrow('no és lectiu')
+  })
+
+  it('segella qui proposa i quan, sense fiar-se del client', async () => {
+    const id = await completa()
+    await db.query("update public.excursions set estat='Proposada', proposada_per='altre@stjosep.org' where id=$1",[id])
+    const row = (await db.query<{proposada_per:string;proposada_el:string}>('select proposada_per,proposada_el from public.excursions where id=$1',[id])).rows[0]
+    expect(row.proposada_per).toBe('teacher@stjosep.org')
+    expect(row.proposada_el).not.toBeNull()
+  })
+
+  it('no deixa que un docent aprovi la seva pròpia excursió', async () => {
+    const id = await proposada()
+    // RLS no llança: simplement la fila deixa de ser visible per actualitzar-la,
+    // així que el disparador ni tan sols s'arriba a executar.
+    expect((await db.query("update public.excursions set estat='Aprovada' where id=$1 returning id",[id])).rows).toHaveLength(0)
+  })
+
+  it('avisa els aprovadors una sola vegada al dia', async () => {
+    await proposada()
+    await proposada('other@stjosep.org')
+    await asUser('admin@stjosep.org')   // els avisos només els llegeix qui els ha creat o la coordinació
+    const avisos = (await db.query<{recipient:string}>("select recipient from public.notifications where event_key like 'excursions-pendents:%'")).rows
+    expect(avisos.map(x=>x.recipient).sort()).toEqual(['admin@stjosep.org','director@stjosep.org'])
+  })
+
+  it('avisa qui la va proposar quan es resol, i exigeix el motiu del rebuig', async () => {
+    const id = await proposada()
+    await asUser('admin@stjosep.org')
+    await db.exec('savepoint sense_motiu')
+    await expect(db.query("update public.excursions set estat='Esborrany' where id=$1",[id]))
+      .rejects.toThrow('per què es rebutja')
+    await db.exec('rollback to savepoint sense_motiu')
+    await db.query("update public.excursions set estat='Esborrany', motiu_rebuig='Falta el pressupost' where id=$1",[id])
+    const n = (await db.query<{recipient:string}>("select recipient from public.notifications where event_key like 'excursio-resolta:%'")).rows
+    expect(n).toHaveLength(1)
+    expect(n[0].recipient).toBe('teacher@stjosep.org')
+  })
+
+  it('rebutja una transició que no existeix', async () => {
+    const id = await completa()
+    await asUser('admin@stjosep.org')
+    await expect(db.query("update public.excursions set estat='Reservada' where id=$1",[id]))
+      .rejects.toThrow('Transició no vàlida')
+  })
+
+  it('deixa marcar com a reservada només a qui gestiona', async () => {
+    const id = await aprovada()
+    expect((await db.query("update public.excursions set estat='Reservada' where id=$1 returning id",[id])).rows).toHaveLength(0)
+    await asUser('admin@stjosep.org')
+    await db.query("update public.excursions set estat='Reservada' where id=$1",[id])
+    expect((await db.query<{reservada_per:string}>('select reservada_per from public.excursions where id=$1',[id])).rows[0].reservada_per)
+      .toBe('admin@stjosep.org')
+  })
+
+  it('deixa cancel·lar en qualsevol moment i avisa els acompanyants', async () => {
+    // Els acompanyants s'afegeixen mentre encara és un esborrany: un cop
+    // proposada, l'autor ja no pot tocar-ne les filles.
+    const id = await completa()
+    await db.query(`insert into public.excursio_acompanyants(excursio_id,email) values($1,'other@stjosep.org')`,[id])
+    await db.query("update public.excursions set estat='Proposada' where id=$1",[id])
+    await asUser('admin@stjosep.org')
+    await db.query("update public.excursions set estat='Cancel·lada', motiu_cancellacio='Pluja' where id=$1",[id])
+    const n = (await db.query<{recipient:string}>("select recipient from public.notifications where event_key like 'excursio-cancellada:%'")).rows
+    expect(n.map(x=>x.recipient).sort()).toEqual(['other@stjosep.org','teacher@stjosep.org'])
+  })
+})

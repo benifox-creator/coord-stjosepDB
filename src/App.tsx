@@ -28,6 +28,7 @@ const DashboardPage = lazy(() => import('./modules/dashboard/DashboardPage').the
 const ConfiguracioPage = lazy(() => import('./modules/configuracio/ConfiguracioPage').then(m => ({ default: m.ConfiguracioPage })))
 const MaterialInfantilPage = lazy(() => import('./modules/material-infantil/MaterialInfantilPage').then(m => ({ default: m.MaterialInfantilPage })))
 const HorarisPage = lazy(() => import('./modules/horaris/HorarisPage').then(m => ({ default: m.HorarisPage })))
+const ExcursionsWrapper = lazy(() => import('./app/routes/ExcursionsWrapper'))
 const AjudaPage = lazy(() => import('./pages/AjudaPage').then(m => ({ default: m.AjudaPage })))
 
 function AuthSync() {
@@ -101,6 +102,7 @@ function AppRoutes() {
                   element={<MaterialInfantilGuard><MaterialInfantilPage /></MaterialInfantilGuard>}
                 />
                 <Route path="/horaris" element={<VisibilitatGuard visKey="horaris"><HorarisPage /></VisibilitatGuard>} />
+                <Route path="/excursions" element={<VisibilitatGuard visKey="excursions"><ExcursionsWrapper /></VisibilitatGuard>} />
                 <Route
                   path="/configuracio"
                   element={<CoordinadorGuard><ConfiguracioPage /></CoordinadorGuard>}
