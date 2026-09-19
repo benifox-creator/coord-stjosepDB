@@ -159,3 +159,60 @@ describe('canviar d’estat', () => {
     expect(e.Acompanyants).toEqual(['b@stjosep.org'])
   })
 })
+
+describe('copiar del curs anterior', () => {
+  const antiga = {
+    ...fila, id: 'vella', codi: 'EXC-010', curs_escolar: '2025-2026', data: '2025-10-20',
+    estat: 'Circular enviada', responsable: 'algu-que-ja-no-hi-es@stjosep.org', observacions: 'Portar esmorzar',
+  }
+
+  function preparaOrigen() {
+    taules({
+      excursions: [antiga, { ...antiga, id: 'nomes-una', codi: 'EXC-011' }],
+      grups: [
+        { id: 'g1', excursio_id: 'vella', grup: 'EP-1r A', alumnes_previstos: 25, alumnes_finals: 24 },
+        { id: 'g2', excursio_id: 'nomes-una', grup: 'EP-2n A', alumnes_previstos: 20, alumnes_finals: null },
+      ],
+      acompanyants: [{ id: 'a1', excursio_id: 'vella', email: 'qui-fos@stjosep.org' }],
+    })
+    vi.mocked(db.insertRow).mockResolvedValue({ ...fila, id: 'nova' } as never)
+  }
+
+  it('només copia les excursions triades', async () => {
+    preparaOrigen()
+    await useExcursions.getState().copiarDelCurs('2025-2026', ['vella'])
+    const excursionsInserides = vi.mocked(db.insertRow).mock.calls.filter((c) => c[0] === 'excursions')
+    expect(excursionsInserides).toHaveLength(1)
+  })
+
+  it('trasllada la data al curs nou i no copia l’estat', async () => {
+    preparaOrigen()
+    await useExcursions.getState().copiarDelCurs('2025-2026', ['vella'])
+    const payload = vi.mocked(db.insertRow).mock.calls.find((c) => c[0] === 'excursions')?.[1] as Record<string, unknown>
+    expect(payload.data).toBe('2026-10-20')
+    expect(payload.curs_escolar).toBe('2026-2027')
+    // Sense estat: el disparador obliga que neixi com a esborrany.
+    expect(payload).not.toHaveProperty('estat')
+  })
+
+  it('no copia el responsable, perquè qui hi anava pot no ser-hi ja', () => {
+    preparaOrigen()
+    return useExcursions.getState().copiarDelCurs('2025-2026', ['vella']).then(() => {
+      const payload = vi.mocked(db.insertRow).mock.calls.find((c) => c[0] === 'excursions')?.[1] as Record<string, unknown>
+      expect(payload).not.toHaveProperty('responsable')
+    })
+  })
+
+  it('copia els grups amb els alumnes previstos, però no els finals', async () => {
+    preparaOrigen()
+    await useExcursions.getState().copiarDelCurs('2025-2026', ['vella'])
+    const grup = vi.mocked(db.insertRow).mock.calls.find((c) => c[0] === 'excursio_grups')?.[1] as Record<string, unknown>
+    expect(grup).toEqual({ excursio_id: 'nova', grup: 'EP-1r A', alumnes_previstos: 25 })
+  })
+
+  it('no copia els acompanyants: les persones canvien d’un curs a l’altre', async () => {
+    preparaOrigen()
+    await useExcursions.getState().copiarDelCurs('2025-2026', ['vella'])
+    expect(vi.mocked(db.insertRow).mock.calls.some((c) => c[0] === 'excursio_acompanyants')).toBe(false)
+  })
+})

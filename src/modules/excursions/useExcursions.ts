@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { schoolYear } from '../../utils/schoolCalendar'
 import type { Excursio, ExcursioFormData, EstatExcursio } from './types'
-import { TAULA_EXCURSIONS, rowToExcursio, excursioToInsert, type ExcursioRow } from './excursions.utils'
+import { TAULA_EXCURSIONS, rowToExcursio, excursioToInsert, dataTrasladada, type ExcursioRow } from './excursions.utils'
 
 interface GrupRow { id: string; excursio_id: string; grup: string; alumnes_previstos: number; alumnes_finals: number | null }
 interface AcompanyantRow { id: string; excursio_id: string; email: string }
@@ -16,6 +16,7 @@ interface ExcursionsState {
   editar: (id: string, data: ExcursioFormData) => Promise<void>
   eliminar: (id: string) => Promise<void>
   canviarEstat: (id: string, estat: EstatExcursio, motiu?: string) => Promise<void>
+  copiarDelCurs: (cursOrigen: string, ids: string[]) => Promise<void>
 }
 
 // Si se'n demanen dues seguides, només val la darrera: si no, una resposta
@@ -78,6 +79,31 @@ export const useExcursions = create<ExcursionsState>((set, get) => ({
       // torna el servidor no els porta.
       e.id === id ? { ...rowToExcursio(fila), Grups: e.Grups, Acompanyants: e.Acompanyants } : e
     )) }))
+  },
+
+  async copiarDelCurs(cursOrigen, ids) {
+    const desti = schoolYear()
+    const [files, grups] = await Promise.all([
+      getAll<ExcursioRow>(TAULA_EXCURSIONS, 'data', { curs_escolar: cursOrigen }),
+      getAll<GrupRow>('excursio_grups', 'grup'),
+    ])
+    for (const f of files.filter((f) => ids.includes(f.id))) {
+      // No es copien l'estat (el disparador obliga que neixi com a esborrany),
+      // el responsable (qui hi anava pot no ser-hi ja: el posa qui copia) ni
+      // els acompanyants (les persones canvien d'un curs a l'altre).
+      const nova = await insertRow<ExcursioRow>(TAULA_EXCURSIONS, {
+        etapa: f.etapa, lloc: f.lloc, poblacio: f.poblacio, activitat: f.activitat,
+        data: dataTrasladada(f.data, cursOrigen, desti),
+        hora_sortida: f.hora_sortida, hora_tornada: f.hora_tornada,
+        transport: f.transport, transport_detall: f.transport_detall,
+        observacions: f.observacions, curs_escolar: desti,
+      })
+      for (const g of grups.filter((g) => g.excursio_id === f.id)) {
+        // Els alumnes finals del curs passat no es copien: són d'aquell any.
+        await insertRow('excursio_grups', { excursio_id: nova.id, grup: g.grup, alumnes_previstos: g.alumnes_previstos })
+      }
+    }
+    await get().load(desti)
   },
 }))
 
