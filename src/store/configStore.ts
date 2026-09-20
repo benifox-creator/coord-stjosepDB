@@ -112,6 +112,25 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'material-infantil.marge-seguretat-pct': ['0'],
   'material-infantil.pressupost-objectiu': ['0'],
   'horaris.tipus-no-lectiva': ['Guàrdia', 'Pati', 'Tutoria', 'Coordinació', 'Reunió', 'Hora lliure'],
+  // Previsió d'assistència: quants dels matriculats s'espera que hi vagin.
+  // A EI i EP en van més; és el que diuen les dades del centre.
+  'excursions.previsio.EI': ['0.8'],
+  'excursions.previsio.EP': ['0.8'],
+  'excursions.previsio.ESO 1r-2n': ['0.75'],
+  'excursions.previsio.ESO 3r-4t': ['0.75'],
+  'excursions.previsio.BATX': ['0.75'],
+  'excursions.previsio.GM': ['0.75'],
+  // El marge cobreix que no vinguin tants com s'esperava. El 12 % surt de
+  // simular 31 excursions reals: amb això les famílies paguen pràcticament
+  // el mateix que fins ara i només una queda per sota de cost.
+  'excursions.marge-pct.EI': ['12'],
+  'excursions.marge-pct.EP': ['12'],
+  'excursions.marge-pct.ESO 1r-2n': ['12'],
+  'excursions.marge-pct.ESO 3r-4t': ['12'],
+  'excursions.marge-pct.BATX': ['12'],
+  'excursions.marge-pct.GM': ['12'],
+  'excursions.iva-pct': ['10'],
+  'excursions.arrodoniment': ['0.5'],
   // Visibilitat per defecte: tots els rols veuen tots els mòduls
   'visibilitat.incidencies':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.inventari':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
