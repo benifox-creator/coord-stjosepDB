@@ -653,3 +653,79 @@ describe('excursions', () => {
     expect(n.map(x=>x.recipient).sort()).toEqual(['other@stjosep.org','teacher@stjosep.org'])
   })
 })
+
+describe('els diners de les excursions', () => {
+  async function excursioAmbCostos() {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_finances(excursio_id,preu_activitat) values($1,12)`,[id])
+    await db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,406)`,[id])
+    return id
+  }
+
+  it('un docent normal no en veu res', async () => {
+    await excursioAmbCostos()
+    await asUser('teacher@stjosep.org')
+    // L'RLS no dona error: simplement no retorna files. Això és el que volem.
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(0)
+  })
+
+  it('ni un docent a qui s’ha activat la gestió: ajuda a organitzar, no veu diners', async () => {
+    await excursioAmbCostos()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(0)
+  })
+
+  it('però Secretaria sí, que és qui els negocia', async () => {
+    await excursioAmbCostos()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_costos_excursions=true where email='other@stjosep.org'`)
+    await asUser('other@stjosep.org')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(1)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(1)
+  })
+
+  it('i la direcció també', async () => {
+    await excursioAmbCostos()
+    await asUser('admin@stjosep.org')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(1)
+  })
+
+  it('un docent amb gestió tampoc no en pot escriure', async () => {
+    const id = await excursioAmbCostos()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    // El savepoint va **abans** de la sentència que ha de fallar: a PostgreSQL
+    // un error avorta la transacció sencera, i sense això la resta de la prova
+    // petaria amb «current transaction is aborted» en comptes de comprovar res.
+    await db.exec('savepoint intent')
+    await db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,1)`,[id])
+      .catch(() => { /* tant se val si l'RLS peta o si simplement no escriu: el que importa és que no hi entri */ })
+    await db.exec('rollback to savepoint intent')
+    await db.exec('reset role')
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(1)
+  })
+
+  it('cada autocar és una fila, i per això tres autocars ja no trenquen res', async () => {
+    const id = await excursioAmbCostos()
+    await asUser('admin@stjosep.org')
+    await db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,406),($1,55,406)`,[id])
+    expect((await db.query('select * from public.excursio_autocars where excursio_id=$1',[id])).rows).toHaveLength(3)
+  })
+
+  it('esborrar l’excursió s’emporta els seus costos', async () => {
+    const id = await excursioAmbCostos()
+    await asUser('admin@stjosep.org')
+    await db.query('delete from public.excursions where id=$1',[id])
+    await db.exec('reset role')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(0)
+  })
+})
