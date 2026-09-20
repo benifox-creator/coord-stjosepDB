@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { useConfigStore, canAccessModul, MODULS_VISIBILITAT } from './configStore'
+import { useConfigStore, canAccessModul, MODULS_VISIBILITAT, CONFIG_DEFAULTS } from './configStore'
 
 describe('configuració de Horaris', () => {
   it('defineix una llista no buida de tipus de no lectiva', () => {
@@ -45,5 +45,32 @@ describe('configuració d’Excursions', () => {
 
   it('registra Excursions a la llista de mòduls configurables', () => {
     expect(MODULS_VISIBILITAT.map((m) => m.key)).toContain('excursions')
+  })
+})
+
+describe('els grups del centre', () => {
+  const grups = CONFIG_DEFAULTS['substitucions.grups']
+
+  it('segueixen tots el patró ETAPA-nivell, amb línia o sense', () => {
+    for (const g of grups) {
+      expect(g, g).toMatch(/^(EI|EP|ESO|BATX|CFGM)-\d( [A-C])?$/)
+    }
+  })
+
+  it('tenen les línies que toquen a cada etapa', () => {
+    const linies: Record<string, number> = {}
+    for (const g of grups) {
+      const nivell = g.includes(' ') ? g.slice(0, g.lastIndexOf(' ')) : g
+      linies[nivell] = (linies[nivell] ?? 0) + 1
+    }
+    for (const [nivell, n] of Object.entries(linies)) {
+      const esperades = nivell.startsWith('CFGM') ? 1 : nivell.startsWith('BATX') ? 2 : 3
+      expect(n, `${nivell} hauria de tenir ${esperades} línies`).toBe(esperades)
+    }
+  })
+
+  it('cobreixen els 17 nivells del centre sense repetir cap grup', () => {
+    expect(new Set(grups).size).toBe(grups.length)
+    expect(grups).toHaveLength(45)
   })
 })

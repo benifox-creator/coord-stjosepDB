@@ -4,6 +4,8 @@ import type { SubstitucioFormData, EtapaSubstitucio, TipusSubstitucio } from './
 import { ETAPES_SUBSTITUCIO } from './types'
 import { formatDateISO } from './substitucions.utils'
 import { useUsuarisStore } from '../../store/usuarisStore'
+import { useConfigStore } from '../../store/configStore'
+import { opcionsDeGrup } from '../../utils/grups'
 
 interface Props {
   dataInicial?: string
@@ -22,6 +24,7 @@ export function SubstitucioForm({
 }: Props) {
   const avui = formatDateISO(new Date())
   const usuaris = useUsuarisStore((s) => s.usuaris)
+  const grupsDelCentre = useConfigStore((s) => s.getValues('substitucions.grups'))
 
 
   const [data, setData] = useState<SubstitucioFormData>({
@@ -177,13 +180,14 @@ export function SubstitucioForm({
             <>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Grup *</label>
-                <input
-                  type="text"
+                <select
                   value={data.Grup}
                   onChange={(e) => set('Grup', e.target.value)}
-                  placeholder="p.ex. 3r ESO A"
                   className="input w-full text-sm"
-                />
+                >
+                  <option value="">Tria un grup…</option>
+                  {opcionsDeGrup(grupsDelCentre, data.Grup).map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
               </div>
 
               <div>
