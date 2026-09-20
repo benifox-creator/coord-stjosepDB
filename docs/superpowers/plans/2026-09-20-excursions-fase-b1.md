@@ -203,6 +203,15 @@ describe('càlcul del preu', () => {
     expect(r.preu).toBe(8)
   })
 
+  it('no arrodoneix els esperats, que desquadraria el repartiment', () => {
+    // 89 × 0,75 = 66,75. Si s'arrodonís a 67, el cost per alumne baixaria i
+    // deixaria de coincidir amb el que el centre ha estat calculant. Ho vam
+    // comprovar contra quatre excursions reals abans d'escriure això.
+    const r = calculaPreu({ ...base, alumnes: 89, autocars: [959.2] }, { ...params, previsio: 0.75, ivaPct: 0 })
+    expect(r.esperats).toBeCloseTo(66.75, 6)
+    expect(r.costAlumne).toBeCloseTo(959.2 / 66.75, 6)
+  })
+
   it('l’activitat per alumne no es divideix', () => {
     const r = calculaPreu({ ...base, preuActivitat: 5, preuActivitatTipus: 'per_alumne' }, params)
     expect(r.costAlumne).toBeCloseTo(6.875 + 5, 6)
@@ -325,7 +334,11 @@ export function arrodoneixAmunt(valor: number, pas: number): number {
 }
 
 export function calculaPreu(c: CostosExcursio, p: ParametresPreu): ResultatPreu {
-  const esperats = Math.round(c.alumnes * p.previsio)
+  // **No s'arrodoneix.** Comprovat contra les excursions reals: amb 89 alumnes
+  // i una previsió de 0,75 l'Excel reparteix entre 66,75 i no entre 67, i
+  // arrodonir-ho aquí desquadra el preu. Els esperats s'arrodoneixen només en
+  // ensenyar-los per pantalla, que és on «66,75 alumnes» no vol dir res.
+  const esperats = c.alumnes * p.previsio
 
   // Si l'AMPA cobreix l'activitat, l'activitat val zero i tampoc no es resta
   // l'aportació: ja s'ha gastat aquí.
@@ -481,8 +494,13 @@ describe('els diners de les excursions', () => {
     await db.exec('reset role')
     await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
     await asUser('teacher@stjosep.org')
-    await db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,1) on conflict do nothing`,[id])
-      .catch(() => { /* tant se val si peta o si no escriu res: el que importa és que no hi entri */ })
+    // El savepoint va **abans** de la sentència que ha de fallar: a PostgreSQL
+    // un error avorta la transacció sencera, i sense això la resta de la prova
+    // petaria amb «current transaction is aborted» en comptes de comprovar res.
+    await db.exec('savepoint intent')
+    await db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,1)`,[id])
+      .catch(() => { /* tant se val si l'RLS peta o si simplement no escriu: el que importa és que no hi entri */ })
+    await db.exec('rollback to savepoint intent')
     await db.exec('reset role')
     expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(1)
   })
@@ -999,7 +1017,7 @@ export const FINANCES_BUIDES: Finances = {
 ```ts
 // src/modules/excursions/useFinances.ts
 import { create } from 'zustand'
-import { getAll, insertRow, updateRowById, deleteRowById, callRpc } from '../../services/db'
+import { getAll, insertRow, updateRowById, deleteRowById, callRpc, supabase } from '../../services/db'
 import type { Finances, Autocar } from './finances.types'
 import { FINANCES_BUIDES } from './finances.types'
 
@@ -1057,16 +1075,19 @@ export const useFinances = create<FinancesState>((set, get) => ({
   },
 
   async desa(excursioId, f) {
-    const camps = {
+    // `upsert` i no els ajudants de sempre: `updateRowById` filtra per una
+    // columna `id` fixa, i `excursio_finances` té `excursio_id` com a clau
+    // primària i cap columna `id`. Amb la clau primària, un sol `upsert` ja
+    // fa inserir-o-actualitzar.
+    const { error } = await supabase.from('excursio_finances').upsert({
+      excursio_id: excursioId,
       preu_activitat: f.PreuActivitat,
       preu_activitat_tipus: f.PreuActivitatTipus,
       ampa_import: f.AmpaImport,
       ampa_cobreix_activitat: f.AmpaCobreixActivitat,
       cost_acompanyants: f.CostAcompanyants,
-    }
-    const existents = await getAll<FinancesRow>('excursio_finances', 'excursio_id', { excursio_id: excursioId }, 'excursio_id')
-    if (existents.length) await updateRowById('excursio_finances', excursioId, camps, 'excursio_id')
-    else await insertRow('excursio_finances', { excursio_id: excursioId, ...camps })
+    })
+    if (error) throw new Error(`Error desant els costos: ${error.message}`)
 
     // Els autocars es posen al dia per diferència i no esborrant-ho tot: si una
     // escriptura falla, el que ja hi havia no s'ha perdut pel camí. És el mateix
@@ -1093,7 +1114,7 @@ export const useFinances = create<FinancesState>((set, get) => ({
 }))
 ```
 
-**Comprova la signatura de `updateRowById` i `getAll`** a `src/services/db.ts` abans d'escriure això: si no accepten el cinquè argument de clau primària, `excursio_finances` (que té `excursio_id` com a PK, no `id`) necessitarà una crida diferent. Ajusta-ho al que hi hagi, no al revés.
+Les firmes reals de `src/services/db.ts`, ja comprovades: `getAll(table, orderBy, filters, primaryKey)` accepta quatre arguments, però `updateRowById(table, id, data)` i `deleteRowById(table, id)` filtren per una columna `id` fixa. Per això els costos es desen amb `upsert` i els autocars —que sí que tenen `id`— amb els ajudants. **No toquis `updateRowById`**: el fa servir mig projecte.
 
 - [ ] **Step 6: Comprovar que compila i que res no s'ha trencat**
 
