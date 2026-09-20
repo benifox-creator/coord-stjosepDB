@@ -38,13 +38,20 @@ if (finalRows.length !== preuActivitatRows.length) {
   )
   process.exit(1)
 }
+// Només `lloc` no basta: "Can Montcau", "Casa Colònies" i "Museu de les
+// matemàtiques Can Mercader" hi apareixen repetits (cursos diferents, el
+// mateix lloc). Si es comparés només `lloc`, dues files reordenades amb el
+// mateix nom passarien per alineades i s'aparellaria l'activitat d'una
+// excursió amb el preu d'una altra sense cap error. `curs` desfà l'empat.
 for (let i = 0; i < finalRows.length; i++) {
   const llocFinal = String(finalRows[i][2])
+  const cursFinal = String(finalRows[i][4] ?? '')
   const llocPreuActivitat = String(preuActivitatRows[i][2])
-  if (llocFinal !== llocPreuActivitat) {
+  const cursPreuActivitat = String(preuActivitatRows[i][4] ?? '')
+  if (llocFinal !== llocPreuActivitat || cursFinal !== cursPreuActivitat) {
     console.error(
-      `Desalineació a la fila ${i}: 'Final' diu "${llocFinal}" i 'Preu Activitat' diu "${llocPreuActivitat}". ` +
-      `S'atura abans d'extreure dades incorrectes.`,
+      `Desalineació a la fila ${i}: 'Final' diu "${llocFinal}" (${cursFinal}) i 'Preu Activitat' diu ` +
+      `"${llocPreuActivitat}" (${cursPreuActivitat}). S'atura abans d'extreure dades incorrectes.`,
     )
     process.exit(1)
   }
@@ -71,7 +78,18 @@ for (let i = 0; i < finalRows.length; i++) {
   // Si 'Preu' i 'Preu + IVA' són el mateix número, és perquè cap dels dos
   // s'ha multiplicat pels alumnes: l'import és del grup sencer. Si no,
   // 'Preu + IVA' = 'Preu' × alumnes, és a dir, l'import és per alumne.
-  const preuActivitatTipus = Math.abs(preu - preuAmbIva) < 1e-9 ? 'total' : 'per_alumne'
+  //
+  // Amb preu 0 aquesta comparació sempre dona igualtat (0 == 0 × alumnes)
+  // sense que vulgui dir res: no hi ha manera de saber, només amb aquestes
+  // dues columnes, si una activitat gratuïta "era" per alumne o total. Es
+  // desempata cap a 'per_alumne' a posta i no perquè s'hagi comprovat cap
+  // fila real amb aquest cas (a hores d'ara, quan preu val 0 sempre hi val 0
+  // també l'AMPA d'aquell full): amb preu 0 el cost que en resulta és el
+  // mateix (0) es reparteixi com es reparteixi, i com que 'per_alumne' és la
+  // interpretació que ja triaria aquesta mateixa regla en qualsevol altre
+  // cas on 'Preu + IVA' no fos exactament 0 × alumnes, mantenir-la aquí és
+  // la tria que menys sorprèn qui llegeixi el codi.
+  const preuActivitatTipus = preu === 0 ? 'per_alumne' : Math.abs(preu - preuAmbIva) < 1e-9 ? 'total' : 'per_alumne'
 
   excursions.push({
     lloc: String(f[2]),
