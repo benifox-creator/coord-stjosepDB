@@ -12,7 +12,13 @@ import type { ParametresPreu } from './preu'
  * el que acabaria veient una família.
  */
 function num(config: Record<string, string[]>, clau: string, defecte: number): number {
-  const desat = Number(config[clau]?.[0])
+  // Number('') i Number('   ') donen 0, no NaN: un camp buidat al formulari
+  // de Configuració no és "zero", és "sense valor", i s'ha de tractar igual
+  // que una clau que no existeix. Sense aquest tall, un marge o una previsió
+  // buidats farien desaparèixer silenciosament el marge o el cost per
+  // alumne en lloc de mantenir el valor per defecte.
+  const brut = config[clau]?.[0]?.trim()
+  const desat = brut ? Number(brut) : NaN
   if (Number.isFinite(desat)) return desat
   const perDefecte = Number(CONFIG_DEFAULTS[clau]?.[0])
   return Number.isFinite(perDefecte) ? perDefecte : defecte

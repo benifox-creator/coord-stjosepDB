@@ -32,4 +32,19 @@ describe('paràmetres del preu de les excursions', () => {
   it('una etapa que no existeix no peta', () => {
     expect(Number.isFinite(parametresPreu({}, 'INVENTADA').previsio)).toBe(true)
   })
+
+  it('un camp buidat al formulari no posa el preu a zero', () => {
+    // Number('') és 0, no NaN: si algú buida el camp de previsió i prem Desar,
+    // sense aquesta comprovació sortiria "esperats = 0" i el preu per alumne
+    // quedaria a zero en lloc de mantenir el valor per defecte.
+    expect(parametresPreu({ 'excursions.previsio.EP': [''] }, 'EP').previsio).toBe(0.8)
+    expect(parametresPreu({ 'excursions.marge-pct.EP': [''] }, 'EP').margePct).toBe(12)
+  })
+
+  it('un camp amb només espais tampoc no posa el preu a zero', () => {
+    // Number(' ') també és 0: un espai en blanc no s'ha de distingir d'un
+    // camp buit, o l'error és el mateix però més difícil de detectar.
+    expect(parametresPreu({ 'excursions.previsio.EP': ['   '] }, 'EP').previsio).toBe(0.8)
+    expect(parametresPreu({ 'excursions.marge-pct.EP': ['   '] }, 'EP').margePct).toBe(12)
+  })
 })
