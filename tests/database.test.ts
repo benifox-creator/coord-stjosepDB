@@ -97,6 +97,45 @@ describe('privilegis', () => {
   })
 })
 
+describe('fre als esborrats massius', () => {
+  it('deixa esborrar un registre, com fa l’aplicació', async () => {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>("insert into public.reserves(espai,data,hora_inici,hora_fi) values('Biblioteca','2026-09-14','09:00','10:00') returning id")).rows[0].id
+    expect((await db.query('delete from public.reserves where id=$1 returning id',[id])).rows).toHaveLength(1)
+  })
+
+  it('atura un esborrat que s’emporti més d’una fila', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec(`insert into public.reserves(espai,data,hora_inici,hora_fi) values
+      ('Biblioteca','2026-09-14','09:00','10:00'),('Biblioteca','2026-09-14','11:00','12:00')`)
+    // Això és el que faria un error de programació que oblidés el filtre.
+    await expect(db.query('delete from public.reserves')).rejects.toThrow('Esborrat massiu aturat')
+  })
+
+  it('no trenca les cascades: esborrar una excursió s’emporta els seus grups', async () => {
+    await asUser('teacher@stjosep.org')
+    const id = (await db.query<{id:string}>(`insert into public.excursions(etapa,lloc,activitat)
+      values('EP','Can Montcau','Castanyada') returning id`)).rows[0].id
+    await db.exec(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values
+      ('${id}','EP-1 A',25),('${id}','EP-1 B',24),('${id}','EP-1 C',23)`)
+    expect((await db.query('delete from public.excursions where id=$1 returning id',[id])).rows).toHaveLength(1)
+    expect((await db.query('select * from public.excursio_grups')).rows).toHaveLength(0)
+  })
+
+  it('el rastre d’auditoria té dues barreres, i la primera és el permís', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec(`insert into public.reserves(espai,data,hora_inici,hora_fi) values
+      ('Biblioteca','2026-09-14','09:00','10:00'),('Biblioteca','2026-09-14','11:00','12:00')`)
+    // Des de l'aplicació ni tan sols s'hi arriba: authenticated només hi pot llegir.
+    await db.exec('savepoint sense_permis')
+    await expect(db.query('delete from public.audit_events')).rejects.toThrow('permission denied')
+    await db.exec('rollback to savepoint sense_permis')
+    // I amb una connexió privilegiada, que sí hi té permís, hi ha el fre.
+    await db.exec('reset role')
+    await expect(db.query('delete from public.audit_events')).rejects.toThrow('Esborrat massiu aturat')
+  })
+})
+
 describe('operational integrity', () => {
   it('keeps four-digit codes unique', async () => {
     expect((await db.query<{code:string}>("select public.format_code('SUB',1000) as code")).rows[0].code).toBe('SUB-1000')
