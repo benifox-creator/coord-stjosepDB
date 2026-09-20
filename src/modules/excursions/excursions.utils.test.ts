@@ -152,12 +152,12 @@ describe('valors inicials del formulari', () => {
 
 describe('nivells i línies', () => {
   const grups = [
-    'EI-3 A', 'EP-1r A', 'EP-1r B', 'EP-1r C',
+    'I3 A', 'I3 B', 'EP-1r A', 'EP-1r B', 'EP-1r C',
     '1r ESO A', '1r ESO B', 'GM',
   ]
 
   it('treu els nivells sense repetir-los i en l’ordre de la llista', () => {
-    expect(nivellsDeGrups(grups)).toEqual(['EI-3', 'EP-1r', '1r ESO', 'GM'])
+    expect(nivellsDeGrups(grups)).toEqual(['I3', 'EP-1r', '1r ESO', 'GM'])
   })
 
   it('dona totes les línies d’un nivell', () => {

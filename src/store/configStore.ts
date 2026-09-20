@@ -76,11 +76,11 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Visita mèdica', 'Assumptes propis', 'Baixa/malaltia', 'Formació', 'Altre',
   ],
   'reserves.espais-colors': [],
-  // El centre té tres línies. S'hi ha afegit la C a tots els nivells que ja
-  // tenien B; Infantil es deixa com estava i GM no té línies. Si això no
-  // quadra, la llista ara s'edita des de Configuració → Grups del centre.
+  // El centre té tres línies a tots els nivells excepte GM, que no en té.
+  // Infantil són I3, I4 i I5. Si algun dia canvia, la llista s'edita des de
+  // Configuració → Grups del centre.
   'substitucions.grups': [
-    'EI-3 A', 'EI-4 A', 'EI-5 A',
+    'I3 A', 'I3 B', 'I3 C', 'I4 A', 'I4 B', 'I4 C', 'I5 A', 'I5 B', 'I5 C',
     'EP-1r A', 'EP-1r B', 'EP-1r C', 'EP-2n A', 'EP-2n B', 'EP-2n C',
     'EP-3r A', 'EP-3r B', 'EP-3r C', 'EP-4t A', 'EP-4t B', 'EP-4t C',
     'EP-5è A', 'EP-5è B', 'EP-5è C', 'EP-6è A', 'EP-6è B', 'EP-6è C',
