@@ -8,8 +8,10 @@
       893.2
     ],
     "preuActivitat": 14.8,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 29.686666666666667
   },
   {
@@ -21,8 +23,10 @@
       959.2
     ],
     "preuActivitat": 8,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 22.37003745318352
   },
   {
@@ -34,8 +38,10 @@
       1258.4
     ],
     "preuActivitat": 4,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 21.477777777777778
   },
   {
@@ -47,8 +53,10 @@
       1237.5
     ],
     "preuActivitat": 7,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 25.96551724137931
   },
   {
@@ -60,8 +68,10 @@
       770
     ],
     "preuActivitat": 675,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 1.6,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 21.55705128205128
   },
   {
@@ -73,8 +83,10 @@
       1073.6
     ],
     "preuActivitat": 8,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 23.22836879432624
   },
   {
@@ -86,8 +98,10 @@
       809.6
     ],
     "preuActivitat": 750,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 25.993333333333332
   },
   {
@@ -99,8 +113,10 @@
       851.4
     ],
     "preuActivitat": 540,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 22.587662337662337
   },
   {
@@ -112,8 +128,10 @@
       814
     ],
     "preuActivitat": 8.6,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 21.98815789473684
   },
   {
@@ -125,8 +143,10 @@
       935
     ],
     "preuActivitat": 9.2,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 24.78333333333333
   },
   {
@@ -138,8 +158,10 @@
       935
     ],
     "preuActivitat": 12,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 27.583333333333336
   },
   {
@@ -151,8 +173,10 @@
       851.4
     ],
     "preuActivitat": 13.2,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 27.39
   },
   {
@@ -164,8 +188,10 @@
       809.6
     ],
     "preuActivitat": 561.6,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 22.853333333333335
   },
   {
@@ -175,8 +201,10 @@
     "acompanyants": 4,
     "autocars": [],
     "preuActivitat": 112.5,
+    "preuActivitatTipus": "total",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 1.7045454545454546
   },
   {
@@ -186,8 +214,10 @@
     "acompanyants": 4,
     "autocars": [],
     "preuActivitat": 480,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 3.594936708860759
   },
   {
@@ -197,8 +227,10 @@
     "acompanyants": 4,
     "autocars": [],
     "preuActivitat": 420,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 2.9078947368421044
   },
   {
@@ -210,8 +242,10 @@
       786.5
     ],
     "preuActivitat": 8.2,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 22.873507462686568
   },
   {
@@ -223,8 +257,10 @@
       742.5
     ],
     "preuActivitat": 6.949999999999999,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 19.840625
   },
   {
@@ -236,8 +272,10 @@
       742.5
     ],
     "preuActivitat": 390,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 6,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 12.875
   },
   {
@@ -249,8 +287,10 @@
       858
     ],
     "preuActivitat": 510,
+    "preuActivitatTipus": "total",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 15.49438202247191
   },
   {
@@ -262,8 +302,10 @@
       742.5
     ],
     "preuActivitat": 480,
+    "preuActivitatTipus": "total",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 12.340425531914892
   },
   {
@@ -275,8 +317,10 @@
       858
     ],
     "preuActivitat": 900,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 6,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 23.3
   },
   {
@@ -288,8 +332,10 @@
       858
     ],
     "preuActivitat": 9.2,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 23.5
   },
   {
@@ -299,8 +345,10 @@
     "acompanyants": 2,
     "autocars": [],
     "preuActivitat": 3.5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 2,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 3.5
   },
   {
@@ -312,8 +360,10 @@
       990
     ],
     "preuActivitat": 1.5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 15.25
   },
   {
@@ -325,8 +375,10 @@
       858
     ],
     "preuActivitat": 798,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 22.883116883116884
   },
   {
@@ -338,8 +390,10 @@
       456.5
     ],
     "preuActivitat": 1.5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 21.788888888888888
   },
   {
@@ -351,8 +405,10 @@
       715
     ],
     "preuActivitat": 165,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 9.924050632911392
   },
   {
@@ -362,8 +418,10 @@
     "acompanyants": 2,
     "autocars": [],
     "preuActivitat": 3.5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 2,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 3.5
   },
   {
@@ -375,8 +433,10 @@
       990
     ],
     "preuActivitat": -2.5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 9,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 12.5
   },
   {
@@ -386,8 +446,10 @@
     "acompanyants": 4,
     "autocars": [],
     "preuActivitat": 240,
+    "preuActivitatTipus": "total",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 1.4000000000000004
   },
   {
@@ -397,8 +459,10 @@
     "acompanyants": 2,
     "autocars": [],
     "preuActivitat": 10,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 10
   },
   {
@@ -410,8 +474,10 @@
       715
     ],
     "preuActivitat": 285,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 3,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 13.666666666666668
   },
   {
@@ -423,8 +489,10 @@
       858
     ],
     "preuActivitat": 747,
+    "preuActivitatTipus": "total",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": false,
     "preuExcel": 25.94402985074627
   },
   {
@@ -436,8 +504,10 @@
       1386
     ],
     "preuActivitat": 8,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 19.25
   },
   {
@@ -449,8 +519,10 @@
       616
     ],
     "preuActivitat": 3,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 20.855072463768117
   },
   {
@@ -460,8 +532,10 @@
     "acompanyants": 4,
     "autocars": [],
     "preuActivitat": 10,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 10
   },
   {
@@ -473,8 +547,10 @@
       1974.5
     ],
     "preuActivitat": 5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 19.38615664845173
   },
   {
@@ -486,8 +562,10 @@
       808.5
     ],
     "preuActivitat": -3,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 3,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 10.475
   },
   {
@@ -499,8 +577,10 @@
       858
     ],
     "preuActivitat": 9.95,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 23.878571428571426
   },
   {
@@ -512,8 +592,10 @@
       940.5
     ],
     "preuActivitat": 7,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 5,
+    "ampaExcel": 4,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 23.328125
   },
   {
@@ -525,8 +607,10 @@
       1386
     ],
     "preuActivitat": 9,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.8,
-    "ampaPerAlumne": 4.5,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 20.17741935483871
   },
   {
@@ -538,8 +622,10 @@
       495
     ],
     "preuActivitat": 1.5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 5,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 16.166666666666664
   },
   {
@@ -549,8 +635,10 @@
     "acompanyants": 5,
     "autocars": [],
     "preuActivitat": 9.5,
+    "preuActivitatTipus": "per_alumne",
     "previsio": 0.75,
-    "ampaPerAlumne": 4,
+    "ampaExcel": 0,
+    "ampaJaInclosaAlPreu": true,
     "preuExcel": 9.5
   }
 ]

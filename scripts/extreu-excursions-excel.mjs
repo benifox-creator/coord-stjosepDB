@@ -3,6 +3,14 @@
 // fixture de proves. L'Excel no és al repositori (conté dades del centre);
 // es passa per paràmetre.
 //
+// Cal creuar dos fulls perquè el full 'Final' només dona el preu final, sense
+// dir si l'import de l'activitat és per alumne o total del grup, ni quant hi
+// posa l'AMPA (el que semblava l'AMPA a la columna 20 de 'Final' no ho és:
+// no té capçalera i és un altre càlcul intern del full). La informació bona
+// és al full 'Preu Activitat': la columna 'Ampa', i el fet que la columna
+// 'Preu' i la columna 'Preu + IVA' coincideixin o no diu si l'import és total
+// (coincideixen) o per alumne (Preu + IVA = Preu × alumnes).
+//
 // Ús: node scripts/extreu-excursions-excel.mjs "<ruta a Excursió Curs.xlsm>"
 import * as XLSX from 'xlsx'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -12,7 +20,35 @@ if (!origen) { console.error('Cal la ruta de l\'Excel'); process.exit(1) }
 
 const buf = readFileSync(origen)
 const wb = XLSX.read(buf, { type: 'buffer' })
-const files = XLSX.utils.sheet_to_json(wb.Sheets['Final'], { header: 1, raw: true })
+
+// Mateix criteri de filtratge de files (títols i buides fora) als dos fulls,
+// perquè després es puguin aparellar per posició.
+const esFilaDeDades = (f) => typeof f[0] === 'number' && !!f[2]
+
+const finalRows = XLSX.utils.sheet_to_json(wb.Sheets['Final'], { header: 1, raw: true }).filter(esFilaDeDades)
+const preuActivitatRows = XLSX.utils.sheet_to_json(wb.Sheets['Preu Activitat'], { header: 1, raw: true }).filter(esFilaDeDades)
+
+// Els dos fulls haurien de portar les mateixes excursions, en el mateix
+// ordre. Si mai deixessin de coincidir, val més petar aquí que barrejar
+// l'AMPA d'una excursió amb el preu d'una altra sense adonar-se'n.
+if (finalRows.length !== preuActivitatRows.length) {
+  console.error(
+    `Els fulls 'Final' (${finalRows.length} files) i 'Preu Activitat' (${preuActivitatRows.length} files) ` +
+    `no tenen el mateix nombre de files. No es pot assumir que estan alineats.`,
+  )
+  process.exit(1)
+}
+for (let i = 0; i < finalRows.length; i++) {
+  const llocFinal = String(finalRows[i][2])
+  const llocPreuActivitat = String(preuActivitatRows[i][2])
+  if (llocFinal !== llocPreuActivitat) {
+    console.error(
+      `Desalineació a la fila ${i}: 'Final' diu "${llocFinal}" i 'Preu Activitat' diu "${llocPreuActivitat}". ` +
+      `S'atura abans d'extreure dades incorrectes.`,
+    )
+    process.exit(1)
+  }
+}
 
 // "75+5" vol dir 75 alumnes i 5 acompanyants. De vegades només hi ha el primer.
 function parteix(text) {
@@ -21,13 +57,22 @@ function parteix(text) {
 }
 
 const excursions = []
-for (const f of files) {
-  if (typeof f[0] !== 'number' || !f[2]) continue   // files de títol i buides
+for (let i = 0; i < finalRows.length; i++) {
+  const f = finalRows[i]
+  const p = preuActivitatRows[i]
   const { alumnes, acompanyants } = parteix(f[5])
   const preuExcel = Number(f[11])
   // Files amb dades mal registrades: sense alumnes o sense preu calculat no
   // es pot comprovar res. La spec ja comptava que n'hi hauria.
   if (!alumnes || !Number.isFinite(preuExcel) || preuExcel <= 0) continue
+
+  const preu = Number(p[10]) || 0
+  const preuAmbIva = Number(p[12]) || 0
+  // Si 'Preu' i 'Preu + IVA' són el mateix número, és perquè cap dels dos
+  // s'ha multiplicat pels alumnes: l'import és del grup sencer. Si no,
+  // 'Preu + IVA' = 'Preu' × alumnes, és a dir, l'import és per alumne.
+  const preuActivitatTipus = Math.abs(preu - preuAmbIva) < 1e-9 ? 'total' : 'per_alumne'
+
   excursions.push({
     lloc: String(f[2]),
     curs: String(f[4] ?? ''),
@@ -35,8 +80,14 @@ for (const f of files) {
     acompanyants,
     autocars: Number(f[9]) > 0 ? [Number(f[9])] : [],
     preuActivitat: Number(f[10]) || 0,
+    preuActivitatTipus,
     previsio: Number(f[19]) || 0.75,
-    ampaPerAlumne: Number(f[20]) || 0,
+    ampaExcel: Number(p[9]) || 0,
+    // Quirk del full de càlcul, no de com ha de funcionar el sistema nou:
+    // quan l'activitat és per alumne, el full 'Preu Activitat' ja resta
+    // l'AMPA abans que el número arribi a 'Final' (columna "Preu-Ampa").
+    // Quan és total del grup, no la resta enlloc.
+    ampaJaInclosaAlPreu: preuActivitatTipus === 'per_alumne',
     preuExcel,
   })
 }

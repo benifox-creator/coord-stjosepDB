@@ -31,7 +31,7 @@
 |---|---|
 | `supabase/migrations/202609210001_excursions_finances.sql` | Les dues taules, RLS, GRANTs, auditoria, fre d'esborrats |
 | `supabase/migrations/202609210002_confirmar_preu.sql` | Columnes de preu a `excursions` i la transició `confirmar_preu` |
-| `tests/fixtures/excursions-excel.json` | Les 43 excursions reals extretes de l'Excel (fixture de proves) |
+| `tests/fixtures/excursions-excel.json` | Les 44 excursions reals extretes de l'Excel (fixture de proves) |
 | `scripts/extreu-excursions-excel.mjs` | L'script que la va generar, perquè es pugui repetir |
 | `src/modules/excursions/preu.ts` | **El càlcul, funció pura.** Cap crida a xarxa, cap React |
 | `src/modules/excursions/preu.test.ts` | Proves del càlcul, incloses les 43 reals |
@@ -1355,6 +1355,20 @@ git commit -m "feat(excursions): el bloc de costos, amb el càlcul a la vista"
 ```
 
 ---
+
+## Correcció feta durant l'execució (2026-09-20)
+
+La Task 3 va fallar al primer intent —28 de 44— i el diagnòstic va destapar que el fixture de la Task 1 perdia informació que l'Excel sí que té, repartida en dos fulls. La fórmula del pla era correcta; el que faltava era com llegir les dades.
+
+Tres coses, totes verificades contra les 44 files:
+
+1. **La xifra d'activitat del full `Final` unes vegades és per alumne i unes altres és un total de grup**, i aquell full no ho marca. Es dedueix del full `Preu Activitat`: quan la columna `Preu` és igual a `Preu + IVA`, és un total (16 de 44); si no, és per alumne, i llavors `Preu + IVA` = `Preu` × alumnes.
+2. **L'aportació de l'AMPA és la columna `Ampa` del full `Preu Activitat`.** El que el pla feia desar com a `ampaPerAlumne` venia de la columna 20 del full `Final`, que no té capçalera i no és l'AMPA.
+3. **Quan l'activitat és per alumne, la xifra del full `Final` ja ve neta d'AMPA**; quan és un total, no. És una rareça de l'Excel i no una regla del sistema nou, on l'AMPA sempre es resta explícitament — per això la condició viu a la prova, comentada, i no dins el càlcul.
+
+Amb això, la fórmula reprodueix **44 de 44** al cèntim, que confirma el «43 de 43» del spec.
+
+El fixture porta, doncs, `preuActivitatTipus`, `ampaExcel` i `ampaJaInclosaAlPreu` en lloc del `ampaPerAlumne` original.
 
 ## Desplegament
 

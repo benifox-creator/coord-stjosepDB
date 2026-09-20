@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calculaPreu, arrodoneixAmunt, type CostosExcursio, type ParametresPreu } from './preu'
+import excursionsReals from '../../../tests/fixtures/excursions-excel.json'
 
 const params: ParametresPreu = { previsio: 0.8, margePct: 12, ivaPct: 10, arrodoniment: 0.5 }
 const base: CostosExcursio = {
@@ -105,5 +106,48 @@ describe('càlcul del preu', () => {
     const r = calculaPreu({ ...base, autocars: [], preuActivitat: 10, preuActivitatTipus: 'per_alumne' }, params)
     expect(r.base).toBeCloseTo(10, 6)
     expect(r.preu).toBe(arrodoneixAmunt(10 * 1.12, 0.5))
+  })
+})
+
+describe('contra les excursions reals del curs 2022-23', () => {
+  it('reprodueix el cost per alumne que va calcular l’Excel, al cèntim', () => {
+    // Es compara amb `r.base` (cost per alumne ja net d'AMPA) i no amb
+    // `r.costAlumne`: ara que l'AMPA es resta per a les excursions on
+    // l'Excel encara no ho havia fet (vegeu el comentari sobre
+    // `ampaJaInclosaAlPreu` més avall), el número que ha de coincidir amb
+    // l'Excel és el que ja té l'AMPA descomptada.
+    const desviades: string[] = []
+    for (const e of excursionsReals) {
+      const r = calculaPreu(
+        {
+          alumnes: e.alumnes, autocars: e.autocars,
+          preuActivitat: e.preuActivitat,
+          // El JSON només sap que és un string; el fixture el genera sempre
+          // com 'total' o 'per_alumne' (vegeu extreu-excursions-excel.mjs).
+          preuActivitatTipus: e.preuActivitatTipus as CostosExcursio['preuActivitatTipus'],
+          // Quirk del full de càlcul original, no del sistema nou: quan
+          // l'activitat es cobrava per alumne, l'Excel ja restava l'AMPA
+          // abans que el número arribés aquí (columna "Preu-Ampa" del full
+          // 'Preu Activitat'), així que tornar a restar-la la restaria dues
+          // vegades. Quan l'activitat era un import total del grup, l'Excel
+          // no la restava enlloc, i aquí sí que cal fer-ho per reproduir el
+          // preu final. Al sistema nou l'AMPA sempre es resta explícitament;
+          // aquest condicional només existeix per poder comparar-nos amb
+          // com ho feia l'Excel.
+          ampaImport: e.ampaJaInclosaAlPreu ? 0 : e.ampaExcel,
+          ampaCobreixActivitat: false, costAcompanyants: 0,
+        },
+        { previsio: e.previsio, margePct: 0, ivaPct: 0, arrodoniment: 0 },
+      )
+      if (Math.abs(r.base - e.preuExcel) > 0.01) {
+        desviades.push(`${e.lloc} (${e.curs}): surt ${r.base.toFixed(2)}, l'Excel deia ${e.preuExcel.toFixed(2)}`)
+      }
+    }
+    expect(desviades).toEqual([])
+  })
+
+  it('i n’hi ha prou com perquè la prova signifiqui alguna cosa', () => {
+    // Si el fixture es buidés, la prova anterior passaria sense comprovar res.
+    expect(excursionsReals.length).toBeGreaterThanOrEqual(40)
   })
 })
