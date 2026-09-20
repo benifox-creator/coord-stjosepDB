@@ -76,13 +76,17 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Visita mèdica', 'Assumptes propis', 'Baixa/malaltia', 'Formació', 'Altre',
   ],
   'reserves.espais-colors': [],
+  // El centre té tres línies. S'hi ha afegit la C a tots els nivells que ja
+  // tenien B; Infantil es deixa com estava i GM no té línies. Si això no
+  // quadra, la llista ara s'edita des de Configuració → Grups del centre.
   'substitucions.grups': [
     'EI-3 A', 'EI-4 A', 'EI-5 A',
-    'EP-1r A', 'EP-1r B', 'EP-2n A', 'EP-2n B', 'EP-3r A', 'EP-3r B',
-    'EP-4t A', 'EP-4t B', 'EP-5è A', 'EP-5è B', 'EP-6è A', 'EP-6è B',
-    '1r ESO A', '1r ESO B', '2n ESO A', '2n ESO B',
-    '3r ESO A', '3r ESO B', '4t ESO A', '4t ESO B',
-    '1r BATX A', '1r BATX B', '2n BATX A', '2n BATX B',
+    'EP-1r A', 'EP-1r B', 'EP-1r C', 'EP-2n A', 'EP-2n B', 'EP-2n C',
+    'EP-3r A', 'EP-3r B', 'EP-3r C', 'EP-4t A', 'EP-4t B', 'EP-4t C',
+    'EP-5è A', 'EP-5è B', 'EP-5è C', 'EP-6è A', 'EP-6è B', 'EP-6è C',
+    '1r ESO A', '1r ESO B', '1r ESO C', '2n ESO A', '2n ESO B', '2n ESO C',
+    '3r ESO A', '3r ESO B', '3r ESO C', '4t ESO A', '4t ESO B', '4t ESO C',
+    '1r BATX A', '1r BATX B', '1r BATX C', '2n BATX A', '2n BATX B', '2n BATX C',
     'GM',
   ],
   // Marcs horaris reals del centre (2026-2027). El pati és una franja més: qui el

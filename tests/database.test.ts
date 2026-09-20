@@ -458,6 +458,37 @@ describe('excursions', () => {
       .toBe('admin@stjosep.org')
   })
 
+  it('no deixa deixar una excursió reservada en un dia no lectiu', async () => {
+    const id = await aprovada()
+    await asUser('admin@stjosep.org')
+    await db.query("update public.excursions set estat='Reservada' where id=$1",[id])
+    // Sense canviar d'estat: només la data. Abans això passava sense validar-se.
+    await expect(db.query("update public.excursions set data='2026-10-17' where id=$1",[id]))
+      .rejects.toThrow('no és lectiu')
+  })
+
+  it('tampoc en un dia marcat com a no lectiu al calendari', async () => {
+    const id = await aprovada()
+    await asUser('admin@stjosep.org')
+    await db.query(`insert into public.config values('centre.dies-no-lectius','["2026-11-02"]')`)
+    await expect(db.query("update public.excursions set data='2026-11-02' where id=$1",[id]))
+      .rejects.toThrow('no és lectiu')
+  })
+
+  it('però un esborrany sí que pot tenir una data provisional dolenta', async () => {
+    const id = await completa()
+    expect((await db.query("update public.excursions set data='2026-10-17' where id=$1 returning id",[id])).rows).toHaveLength(1)
+  })
+
+  it('i sempre es pot cancel·lar, encara que la data fos dolenta', async () => {
+    const id = await completa()
+    await db.query("update public.excursions set data='2026-10-19' where id=$1",[id])
+    await db.query("update public.excursions set estat='Proposada' where id=$1",[id])
+    await asUser('admin@stjosep.org')
+    await db.query("update public.excursions set estat='Cancel·lada', motiu_cancellacio='Pluja' where id=$1",[id])
+    expect((await db.query<{estat:string}>('select estat from public.excursions where id=$1',[id])).rows[0].estat).toBe('Cancel·lada')
+  })
+
   it('deixa cancel·lar en qualsevol moment i avisa els acompanyants', async () => {
     // Els acompanyants s'afegeixen mentre encara és un esborrany: un cop
     // proposada, l'autor ja no pot tocar-ne les filles.
