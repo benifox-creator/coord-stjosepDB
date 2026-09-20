@@ -15,6 +15,11 @@ beforeAll(async () => {
     create function auth.jwt() returns jsonb language sql stable as $$
       select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb;
     $$; grant usage on schema auth to authenticated, anon;`)
+  // Supabase concedeix tots els privilegis a anon i authenticated a cada taula
+  // nova de public. Sense replicar-ho aquí, les proves de privilegis passarien
+  // encara que les migracions s'oblidessin de revocar-los.
+  await db.exec(`alter default privileges in schema public grant all on tables to anon, authenticated;
+    alter default privileges in schema public grant all on sequences to anon, authenticated;`)
   const schema = (await readFile('supabase/schema.sql', 'utf8')).replace('create extension if not exists "pgcrypto";', '')
   await db.exec(schema)
   for (const file of (await readdir('supabase/migrations')).filter(f => f.endsWith('.sql')).sort()) {
@@ -59,6 +64,36 @@ describe('database authorization', () => {
   it('denies convidat any write access', async () => {
     await asUser('guest@stjosep.org')
     await expect(db.exec("insert into public.reserves(espai,data,hora_inici,hora_fi) values('Biblioteca','2026-09-14','09:00','10:00')")).rejects.toThrow()
+  })
+})
+
+describe('privilegis', () => {
+  it('cap taula de public dona TRUNCATE ni REFERENCES a authenticated o anon', async () => {
+    // TRUNCATE se salta l'RLS i no dispara els triggers de fila: buidaria una
+    // taula sencera sense deixar rastre a l'auditoria. Ningú l'ha de tenir.
+    const sobrants = (await db.query<{taula:string;qui:string;permis:string}>(`
+      select table_name as taula, grantee as qui, privilege_type as permis
+      from information_schema.role_table_grants
+      where table_schema='public' and grantee in ('authenticated','anon')
+        and privilege_type in ('TRUNCATE','REFERENCES')`)).rows
+    expect(sobrants.map(r => `${r.qui} ${r.permis} on ${r.taula}`)).toEqual([])
+  })
+
+  it('anon no té cap privilegi sobre cap taula', async () => {
+    const seus = (await db.query(`
+      select 1 from information_schema.role_table_grants
+      where table_schema='public' and grantee='anon'`)).rows
+    expect(seus).toHaveLength(0)
+  })
+
+  it('conserva el permís per columna de prestecs', async () => {
+    // authenticated només pot actualitzar `notes`: revocar en bloc ho hauria
+    // pogut esborrar sense que es notés.
+    const cols = (await db.query<{column_name:string}>(`
+      select column_name from information_schema.column_privileges
+      where table_schema='public' and table_name='prestecs'
+        and grantee='authenticated' and privilege_type='UPDATE'`)).rows
+    expect(cols.map(c => c.column_name)).toEqual(['notes'])
   })
 })
 
