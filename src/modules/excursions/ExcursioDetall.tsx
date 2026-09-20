@@ -1,13 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Loader2, Pencil } from 'lucide-react'
 import type { Excursio, EstatExcursio } from './types'
 import { ESTAT_COLORS, TRANSPORT_LABELS } from './types'
+import type { Finances } from './finances.types'
+import type { ParametresPreu } from './preu'
+import { useFinances } from './useFinances'
+import { BlocEconomic } from './BlocEconomic'
 
 interface Props {
   excursio: Excursio
   potAprovar: boolean
   potGestionar: boolean
   potEditar: boolean
+  // Ve calculat de fora, amb el mateix criteri que potAprovar/potGestionar:
+  // el rol i les caselles de l'usuari ja s'han mirat allà on hi ha accés als
+  // stores, i aquí només arriba la decisió, no les dades de qui l'ha presa.
+  potVeureCostos: boolean
+  parametres: ParametresPreu
   onCanviarEstat: (estat: EstatExcursio, motiu?: string) => Promise<void>
   onEditar: () => void
   onClose: () => void
@@ -22,9 +31,40 @@ function Dada({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   )
 }
 
-export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEditar, onCanviarEstat, onEditar, onClose }: Props) {
+const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', currency: 'EUR' })
+
+export function ExcursioDetall({
+  excursio: e, potAprovar, potGestionar, potEditar, potVeureCostos, parametres, onCanviarEstat, onEditar, onClose,
+}: Props) {
   const [ocupat, setOcupat] = useState(false)
   const [error, setError] = useState('')
+
+  // L'edició es fa sobre una còpia local perquè "Desa els costos" pugui ser
+  // una acció explícita i no cada tecla premuda. Es llegeix del store amb
+  // getState() després de cada `carrega`/`desa` —no amb un selector que
+  // n'observi el camp— perquè copiar-ho en un efecte cada cop que el store
+  // canvia xocaria amb l'edició que l'usuari encara no ha desat.
+  const carregaFinances = useFinances((s) => s.carrega)
+  const desaFinances = useFinances((s) => s.desa)
+  const confirmaPreu = useFinances((s) => s.confirma)
+  const [finances, setFinances] = useState<Finances | null>(null)
+
+  useEffect(() => {
+    // Sense accés als diners, `carrega` tornaria zero files igualment (l'RLS
+    // ho talla al servidor), però demanar-ho és una crida de xarxa de franc.
+    if (!potVeureCostos) return
+    let activa = true
+    void carregaFinances(e.id).then(() => {
+      if (activa) setFinances(useFinances.getState().finances)
+    })
+    return () => { activa = false }
+  }, [potVeureCostos, e.id, carregaFinances])
+
+  async function desaICarregaFinances() {
+    if (!finances) return
+    await desaFinances(e.id, finances)
+    setFinances(useFinances.getState().finances)
+  }
 
   async function canvia(estat: EstatExcursio, motiu?: string) {
     setOcupat(true)
@@ -78,6 +118,9 @@ export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEdita
             />
             <Dada etiqueta="Responsable" valor={e.Responsable} />
             <Dada etiqueta="Alumnes previstos" valor={String(alumnes)} />
+            {/* El preu confirmat surt a la circular que reben les famílies:
+                amagar-lo no té sentit encara que qui mira no vegi el desglossament. */}
+            {e.PreuAlumne !== null && <Dada etiqueta="Preu per alumne" valor={eur(e.PreuAlumne)} />}
           </div>
 
           <div>
@@ -98,6 +141,21 @@ export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEdita
               {e.AcompanyantsExterns > 0 && ` · ${e.AcompanyantsExterns} externs`}
             </p>
           </div>
+
+          {potVeureCostos && finances && (
+            <BlocEconomic
+              finances={finances}
+              parametres={parametres}
+              alumnes={alumnes}
+              acompanyants={e.Acompanyants.length + e.AcompanyantsExterns}
+              preuConfirmat={e.PreuAlumne}
+              confirmatPer={e.PreuConfirmatPer}
+              potConfirmar={e.Estat === 'Aprovada' || e.Estat === 'Reservada'}
+              onCanvia={setFinances}
+              onDesa={desaICarregaFinances}
+              onConfirma={(preu) => confirmaPreu(e.id, preu)}
+            />
+          )}
 
           {e.Observacions && <Dada etiqueta="Observacions" valor={e.Observacions} />}
 

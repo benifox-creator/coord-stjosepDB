@@ -4,10 +4,12 @@ import { ExcursioForm } from '../../modules/excursions/ExcursioForm'
 import { ExcursioDetall } from '../../modules/excursions/ExcursioDetall'
 import { CopiarCursAnterior } from '../../modules/excursions/CopiarCursAnterior'
 import { useExcursions } from '../../modules/excursions/useExcursions'
-import { potAprovar, potGestionar, potEditar } from '../../modules/excursions/permisos'
+import { potAprovar, potGestionar, potEditar, potVeureCostos } from '../../modules/excursions/permisos'
+import { parametresPreu } from '../../modules/excursions/parametres'
 import type { Excursio, ExcursioFormData } from '../../modules/excursions/types'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
+import { useConfigStore } from '../../store/configStore'
 import { schoolYear } from '../../utils/schoolCalendar'
 
 export default function ExcursionsWrapper() {
@@ -16,6 +18,7 @@ export default function ExcursionsWrapper() {
   const usuaris = useUsuarisStore((s) => s.usuaris)
   const email = (useAuthStore((s) => s.user?.email) ?? '').toLowerCase()
   const jo = usuaris.find((u) => u.Email.toLowerCase() === email) ?? null
+  const config = useConfigStore((s) => s.config)
 
   const [formObert, setFormObert] = useState(false)
   const [editant, setEditant] = useState<Excursio | null>(null)
@@ -61,6 +64,8 @@ export default function ExcursionsWrapper() {
           potAprovar={potAprovar(rol)}
           potGestionar={potGestionar(rol, jo)}
           potEditar={potEditar(oberta, email, rol, jo)}
+          potVeureCostos={potVeureCostos(rol, jo)}
+          parametres={parametresPreu(config, oberta.Etapa)}
           onCanviarEstat={async (estat, motiu) => {
             await canviarEstat(oberta.id, estat, motiu)
             await load()

@@ -57,6 +57,17 @@ describe('qui veu els costos', () => {
   it('i els tres rols de sempre', () => {
     expect(potVeureCostos('direccio', usuari({ Rol: 'direccio' }))).toBe(true)
   })
+  it('un docent amb la gestió activada organitza, però no veu diners', () => {
+    // És la distinció per la qual hi ha dos permisos i no un. Si algun dia
+    // algú els unifica, aquesta prova ho ha d'aturar.
+    const docent = usuari({ PotGestionarExcursions: true, PotGestionarCostosExcursions: false })
+    expect(potGestionar('professorat', docent)).toBe(true)
+    expect(potVeureCostos('professorat', docent)).toBe(false)
+  })
+  it('Secretaria veu els diners encara que no sigui un càrrec', () => {
+    const secretaria = usuari({ PotGestionarExcursions: false, PotGestionarCostosExcursions: true })
+    expect(potVeureCostos('professorat', secretaria)).toBe(true)
+  })
 })
 
 describe('qui pot editar una excursió', () => {
