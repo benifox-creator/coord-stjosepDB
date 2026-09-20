@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   AlertTriangle,
   MapPin,
+  Send,
   Package,
   Archive,
   Smartphone,
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { to: '/material-infantil', label: 'Material Infantil', icon: Boxes, visKey: 'material-infantil' },
   { to: '/horaris', label: 'Horaris', icon: Clock, visKey: 'horaris' },
   { to: '/excursions', label: 'Excursions', icon: MapPin, visKey: 'excursions' },
+  { to: '/notificacions', label: 'Correus', icon: Send, visKey: 'notificacions' },
 ]
 
 const NAV_SETTINGS = [

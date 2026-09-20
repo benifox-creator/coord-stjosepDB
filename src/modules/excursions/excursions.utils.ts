@@ -125,3 +125,29 @@ export function formDataDe(e: Excursio | undefined, jo: string): ExcursioFormDat
     Acompanyants: [...e.Acompanyants],
   }
 }
+
+/**
+ * El nivell d'un grup: el nom sense la lletra de línia final. "EP-1r C" és del
+ * nivell "EP-1r"; "GM", que no té línia, és el seu propi nivell.
+ *
+ * Es dedueix del nom en comptes de mantenir una segona llista de nivells
+ * perquè no tots en tenen les mateixes línies (Infantil i GM no segueixen el
+ * patró), i dues llistes amb excepcions surten més cares de mantenir que una.
+ */
+export function nivellDeGrup(grup: string): string {
+  const tall = grup.lastIndexOf(' ')
+  if (tall === -1) return grup
+  const ultim = grup.slice(tall + 1)
+  // Només compta com a línia una lletra sola: "Aula Oberta" no s'ha de partir.
+  return ultim.length === 1 && /\p{Lu}/u.test(ultim) ? grup.slice(0, tall) : grup
+}
+
+/** Els nivells que hi ha a una llista de grups, sense repetits i en el mateix ordre. */
+export function nivellsDeGrups(grups: string[]): string[] {
+  return [...new Set(grups.map(nivellDeGrup))]
+}
+
+/** Totes les línies d'un nivell. */
+export function grupsDelNivell(grups: string[], nivell: string): string[] {
+  return grups.filter((g) => nivellDeGrup(g) === nivell)
+}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, Loader2, Plus, Trash2 } from 'lucide-react'
 import type { Excursio, ExcursioFormData, Transport } from './types'
 import { ETAPES_EXCURSIO, TRANSPORTS, TRANSPORT_LABELS } from './types'
-import { campsQueFalten, esDiaLectiu, grupsTriables, formDataDe } from './excursions.utils'
+import { campsQueFalten, esDiaLectiu, grupsTriables, formDataDe, nivellsDeGrups, grupsDelNivell } from './excursions.utils'
 import { useConfigStore } from '../../store/configStore'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
@@ -21,12 +21,15 @@ export function ExcursioForm({ inicial, onDesar, onClose }: Props) {
   const usuaris = useUsuarisStore((s) => s.usuaris)
 
   const [d, setD] = useState<ExcursioFormData>(() => formDataDe(inicial, jo))
+  const [nivell, setNivell] = useState('')
   const [desant, setDesant] = useState(false)
   const [error, setError] = useState('')
 
   const falten = campsQueFalten(d)
   const dataNoLectiva = d.Data !== '' && !esDiaLectiu(d.Data, diesNoLectius)
   const potEnviar = falten.length === 0 && !dataNoLectiva
+  // Una excursió ja proposada o reservada no es 'desa com a esborrany'.
+  const esEsborrany = !inicial || inicial.Estat === 'Esborrany'
 
   function canvia<K extends keyof ExcursioFormData>(camp: K, valor: ExcursioFormData[K]) {
     setD((x) => ({ ...x, [camp]: valor }))
@@ -150,13 +153,36 @@ export function ExcursioForm({ inicial, onDesar, onClose }: Props) {
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => canvia('Grups', [...d.Grups, { Grup: '', AlumnesPrevistos: 0 }])}
-              className="mt-2 flex items-center gap-1 text-xs font-medium text-primary"
-            >
-              <Plus size={13} /> Afegeix un grup
-            </button>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => canvia('Grups', [...d.Grups, { Grup: '', AlumnesPrevistos: 0 }])}
+                className="flex items-center gap-1 text-xs font-medium text-primary"
+              >
+                <Plus size={13} /> Afegeix un grup
+              </button>
+              <span className="text-xs text-gray-300">o</span>
+              <select
+                className="px-2 py-1 text-xs border border-gray-200 rounded-lg"
+                aria-label="Afegeix totes les línies d'un nivell"
+                value={nivell}
+                onChange={(e) => {
+                  const triat = e.target.value
+                  setNivell('')
+                  if (!triat) return
+                  // Les sortides es planifiquen per nivell i hi van totes les
+                  // línies: això estalvia triar-les una a una al setembre.
+                  const jaHi = d.Grups.map((g) => g.Grup)
+                  const nous = grupsDelNivell(grupsDisponibles, triat)
+                    .filter((g) => !jaHi.includes(g))
+                    .map((g) => ({ Grup: g, AlumnesPrevistos: 0 }))
+                  canvia('Grups', [...d.Grups.filter((g) => g.Grup), ...nous])
+                }}
+              >
+                <option value="">afegeix tot un nivell…</option>
+                {nivellsDeGrups(grupsDisponibles).map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
           </fieldset>
 
           <div className="grid grid-cols-2 gap-3">
@@ -202,7 +228,12 @@ export function ExcursioForm({ inicial, onDesar, onClose }: Props) {
           </div>
 
           {error && <p className="text-xs text-red-600">{error}</p>}
-          {dataNoLectiva && <p className="text-xs text-red-600">Aquell dia no és lectiu.</p>}
+          {dataNoLectiva && (
+            <p className="text-xs text-red-600">
+              Aquell dia no és lectiu.
+              {!esEsborrany && ' El servidor no deixarà desar aquest canvi.'}
+            </p>
+          )}
           {falten.length > 0 && (
             <p className="text-xs text-amber-700">Per enviar-la falten: {falten.join(', ')}.</p>
           )}
@@ -218,9 +249,9 @@ export function ExcursioForm({ inicial, onDesar, onClose }: Props) {
             disabled={desant}
             className="px-4 py-2 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 disabled:opacity-50"
           >
-            Desa l’esborrany
+            {esEsborrany ? 'Desa l’esborrany' : 'Desa els canvis'}
           </button>
-          <button
+          {esEsborrany && <button
             type="button"
             onClick={() => desa(true)}
             disabled={desant || !potEnviar}
@@ -229,7 +260,7 @@ export function ExcursioForm({ inicial, onDesar, onClose }: Props) {
           >
             {desant && <Loader2 size={15} className="animate-spin" />}
             Envia la proposta
-          </button>
+          </button>}
         </div>
       </div>
     </div>

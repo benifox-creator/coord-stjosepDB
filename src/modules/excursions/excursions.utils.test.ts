@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { campsQueFalten, esDiaLectiu, dataTrasladada, grupsTriables, formDataDe } from './excursions.utils'
+import { campsQueFalten, esDiaLectiu, dataTrasladada, grupsTriables, formDataDe, nivellsDeGrups, grupsDelNivell } from './excursions.utils'
 import type { Excursio, ExcursioFormData } from './types'
 
 const excursioDesada: Excursio = {
@@ -147,5 +147,33 @@ describe('valors inicials del formulari', () => {
     const d = formDataDe(original, 'jo@stjosep.org')
     d.Acompanyants.push('b@stjosep.org')
     expect(original.Acompanyants).toEqual(['a@stjosep.org'])
+  })
+})
+
+describe('nivells i línies', () => {
+  const grups = [
+    'I3 A', 'I3 B', 'EP-1r A', 'EP-1r B', 'EP-1r C',
+    '1r ESO A', '1r ESO B', 'GM',
+  ]
+
+  it('treu els nivells sense repetir-los i en l’ordre de la llista', () => {
+    expect(nivellsDeGrups(grups)).toEqual(['I3', 'EP-1r', '1r ESO', 'GM'])
+  })
+
+  it('dona totes les línies d’un nivell', () => {
+    expect(grupsDelNivell(grups, 'EP-1r')).toEqual(['EP-1r A', 'EP-1r B', 'EP-1r C'])
+  })
+
+  it('tracta un grup sense línia com un nivell d’una sola classe', () => {
+    expect(grupsDelNivell(grups, 'GM')).toEqual(['GM'])
+  })
+
+  it('no confon un nivell amb un altre que comenci igual', () => {
+    const amb = ['EP-1r A', 'EP-1r B', 'EP-10è A']
+    expect(grupsDelNivell(amb, 'EP-1r')).toEqual(['EP-1r A', 'EP-1r B'])
+  })
+
+  it('no parteix noms que acaben en una paraula i no en una lletra solta', () => {
+    expect(nivellsDeGrups(['Aula Oberta', 'GM'])).toEqual(['Aula Oberta', 'GM'])
   })
 })

@@ -15,6 +15,11 @@ beforeAll(async () => {
     create function auth.jwt() returns jsonb language sql stable as $$
       select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb;
     $$; grant usage on schema auth to authenticated, anon;`)
+  // Supabase concedeix tots els privilegis a anon i authenticated a cada taula
+  // nova de public. Sense replicar-ho aquí, les proves de privilegis passarien
+  // encara que les migracions s'oblidessin de revocar-los.
+  await db.exec(`alter default privileges in schema public grant all on tables to anon, authenticated;
+    alter default privileges in schema public grant all on sequences to anon, authenticated;`)
   const schema = (await readFile('supabase/schema.sql', 'utf8')).replace('create extension if not exists "pgcrypto";', '')
   await db.exec(schema)
   for (const file of (await readdir('supabase/migrations')).filter(f => f.endsWith('.sql')).sort()) {
@@ -59,6 +64,153 @@ describe('database authorization', () => {
   it('denies convidat any write access', async () => {
     await asUser('guest@stjosep.org')
     await expect(db.exec("insert into public.reserves(espai,data,hora_inici,hora_fi) values('Biblioteca','2026-09-14','09:00','10:00')")).rejects.toThrow()
+  })
+})
+
+describe('privilegis', () => {
+  it('cap taula de public dona TRUNCATE ni REFERENCES a authenticated o anon', async () => {
+    // TRUNCATE se salta l'RLS i no dispara els triggers de fila: buidaria una
+    // taula sencera sense deixar rastre a l'auditoria. Ningú l'ha de tenir.
+    const sobrants = (await db.query<{taula:string;qui:string;permis:string}>(`
+      select table_name as taula, grantee as qui, privilege_type as permis
+      from information_schema.role_table_grants
+      where table_schema='public' and grantee in ('authenticated','anon')
+        and privilege_type in ('TRUNCATE','REFERENCES')`)).rows
+    expect(sobrants.map(r => `${r.qui} ${r.permis} on ${r.taula}`)).toEqual([])
+  })
+
+  it('anon no té cap privilegi sobre cap taula', async () => {
+    const seus = (await db.query(`
+      select 1 from information_schema.role_table_grants
+      where table_schema='public' and grantee='anon'`)).rows
+    expect(seus).toHaveLength(0)
+  })
+
+  it('conserva el permís per columna de prestecs', async () => {
+    // authenticated només pot actualitzar `notes`: revocar en bloc ho hauria
+    // pogut esborrar sense que es notés.
+    const cols = (await db.query<{column_name:string}>(`
+      select column_name from information_schema.column_privileges
+      where table_schema='public' and table_name='prestecs'
+        and grantee='authenticated' and privilege_type='UPDATE'`)).rows
+    expect(cols.map(c => c.column_name)).toEqual(['notes'])
+  })
+})
+
+describe('cancel·lar una notificació', () => {
+  async function notificacio(autor = 'teacher@stjosep.org') {
+    await asUser(autor)
+    await db.query("select public.queue_email('other@stjosep.org','Prova','Cos')")
+    return (await db.query<{id:string}>("select id from public.notifications order by created_at desc limit 1")).rows[0].id
+  }
+
+  it('la treu de la cua sense esborrar-la', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    const n = (await db.query<{status:string}>('select status from public.notifications where id=$1',[id])).rows[0]
+    expect(n.status).toBe('cancel·lada')
+  })
+
+  it('i així el worker ja no la recull', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await db.exec('reset role')
+    const reclamades = (await db.query<{id:string}>('select id from public.claim_notifications()')).rows
+    expect(reclamades.map(r => r.id)).not.toContain(id)
+  })
+
+  it('no deixa cancel·lar la d’un altre', async () => {
+    const id = await notificacio()
+    await asUser('other@stjosep.org')
+    await expect(db.query('select public.cancel_notification($1)',[id]))
+      .rejects.toThrow('no es pot cancel·lar')
+  })
+
+  it('però la coordinació sí', async () => {
+    const id = await notificacio()
+    await asUser('admin@stjosep.org')
+    await db.query('select public.cancel_notification($1)',[id])
+    expect((await db.query<{status:string}>('select status from public.notifications where id=$1',[id])).rows[0].status).toBe('cancel·lada')
+  })
+
+  it('no en cancel·la una ja enviada', async () => {
+    const id = await notificacio()
+    await db.exec('reset role')
+    await db.query("update public.notifications set status='sent' where id=$1",[id])
+    await asUser('teacher@stjosep.org')
+    await expect(db.query('select public.cancel_notification($1)',[id]))
+      .rejects.toThrow('no es pot cancel·lar')
+  })
+
+  // Cancel·lar ha de ser reversible. Si no ho fos, una cancel·lació per error
+  // no tindria remei: la clau de l'esdeveniment queda ocupada per la fila
+  // cancel·lada i `enqueue` fa `on conflict do nothing`, així que el mateix
+  // avís ja no es podria tornar a encuar aquell dia.
+  it('es pot desfer una cancel·lació', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await db.query('select public.retry_notification($1)',[id])
+    const n = (await db.query<{status:string,attempts:number,last_error:string|null}>(
+      'select status,attempts,last_error from public.notifications where id=$1',[id])).rows[0]
+    expect(n.status).toBe('pending')
+    expect(n.attempts).toBe(0)
+    expect(n.last_error).toBeNull()
+  })
+
+  it('i el worker la torna a recollir', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await db.query('select public.retry_notification($1)',[id])
+    await db.exec('reset role')
+    const reclamades = (await db.query<{id:string}>('select id from public.claim_notifications()')).rows
+    expect(reclamades.map(r => r.id)).toContain(id)
+  })
+
+  it('però desfer la cancel·lació d’un altre continua sense poder-se', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await asUser('other@stjosep.org')
+    await expect(db.query('select public.retry_notification($1)',[id]))
+      .rejects.toThrow('no es pot reintentar')
+  })
+})
+
+describe('fre als esborrats massius', () => {
+  it('deixa esborrar un registre, com fa l’aplicació', async () => {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>("insert into public.reserves(espai,data,hora_inici,hora_fi) values('Biblioteca','2026-09-14','09:00','10:00') returning id")).rows[0].id
+    expect((await db.query('delete from public.reserves where id=$1 returning id',[id])).rows).toHaveLength(1)
+  })
+
+  it('atura un esborrat que s’emporti més d’una fila', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec(`insert into public.reserves(espai,data,hora_inici,hora_fi) values
+      ('Biblioteca','2026-09-14','09:00','10:00'),('Biblioteca','2026-09-14','11:00','12:00')`)
+    // Això és el que faria un error de programació que oblidés el filtre.
+    await expect(db.query('delete from public.reserves')).rejects.toThrow('Esborrat massiu aturat')
+  })
+
+  it('no trenca les cascades: esborrar una excursió s’emporta els seus grups', async () => {
+    await asUser('teacher@stjosep.org')
+    const id = (await db.query<{id:string}>(`insert into public.excursions(etapa,lloc,activitat)
+      values('EP','Can Montcau','Castanyada') returning id`)).rows[0].id
+    await db.exec(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values
+      ('${id}','EP-1 A',25),('${id}','EP-1 B',24),('${id}','EP-1 C',23)`)
+    expect((await db.query('delete from public.excursions where id=$1 returning id',[id])).rows).toHaveLength(1)
+    expect((await db.query('select * from public.excursio_grups')).rows).toHaveLength(0)
+  })
+
+  it('el rastre d’auditoria té dues barreres, i la primera és el permís', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec(`insert into public.reserves(espai,data,hora_inici,hora_fi) values
+      ('Biblioteca','2026-09-14','09:00','10:00'),('Biblioteca','2026-09-14','11:00','12:00')`)
+    // Des de l'aplicació ni tan sols s'hi arriba: authenticated només hi pot llegir.
+    await db.exec('savepoint sense_permis')
+    await expect(db.query('delete from public.audit_events')).rejects.toThrow('permission denied')
+    await db.exec('rollback to savepoint sense_permis')
+    // I amb una connexió privilegiada, que sí hi té permís, hi ha el fre.
+    await db.exec('reset role')
+    await expect(db.query('delete from public.audit_events')).rejects.toThrow('Esborrat massiu aturat')
   })
 })
 
@@ -456,6 +608,37 @@ describe('excursions', () => {
     await db.query("update public.excursions set estat='Reservada' where id=$1",[id])
     expect((await db.query<{reservada_per:string}>('select reservada_per from public.excursions where id=$1',[id])).rows[0].reservada_per)
       .toBe('admin@stjosep.org')
+  })
+
+  it('no deixa deixar una excursió reservada en un dia no lectiu', async () => {
+    const id = await aprovada()
+    await asUser('admin@stjosep.org')
+    await db.query("update public.excursions set estat='Reservada' where id=$1",[id])
+    // Sense canviar d'estat: només la data. Abans això passava sense validar-se.
+    await expect(db.query("update public.excursions set data='2026-10-17' where id=$1",[id]))
+      .rejects.toThrow('no és lectiu')
+  })
+
+  it('tampoc en un dia marcat com a no lectiu al calendari', async () => {
+    const id = await aprovada()
+    await asUser('admin@stjosep.org')
+    await db.query(`insert into public.config values('centre.dies-no-lectius','["2026-11-02"]')`)
+    await expect(db.query("update public.excursions set data='2026-11-02' where id=$1",[id]))
+      .rejects.toThrow('no és lectiu')
+  })
+
+  it('però un esborrany sí que pot tenir una data provisional dolenta', async () => {
+    const id = await completa()
+    expect((await db.query("update public.excursions set data='2026-10-17' where id=$1 returning id",[id])).rows).toHaveLength(1)
+  })
+
+  it('i sempre es pot cancel·lar, encara que la data fos dolenta', async () => {
+    const id = await completa()
+    await db.query("update public.excursions set data='2026-10-19' where id=$1",[id])
+    await db.query("update public.excursions set estat='Proposada' where id=$1",[id])
+    await asUser('admin@stjosep.org')
+    await db.query("update public.excursions set estat='Cancel·lada', motiu_cancellacio='Pluja' where id=$1",[id])
+    expect((await db.query<{estat:string}>('select estat from public.excursions where id=$1',[id])).rows[0].estat).toBe('Cancel·lada')
   })
 
   it('deixa cancel·lar en qualsevol moment i avisa els acompanyants', async () => {

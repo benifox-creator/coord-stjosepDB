@@ -4,6 +4,7 @@ import { X, Loader2, Trash2 } from 'lucide-react'
 import type { DiaSetmana, Horari, HorariFormData, TipusPeriode } from './types'
 import type { EtapaSubstitucio } from '../substitucions/types'
 import { useConfigStore } from '../../store/configStore'
+import { opcionsDeGrup } from '../../utils/grups'
 
 interface Props {
   cursEscolar: string
@@ -18,6 +19,7 @@ interface Props {
 
 export function HorariSlotForm({ cursEscolar, diaSetmana, etapa, franja, horariExistent, onDesar, onEliminar, onCancel }: Props) {
   const tipusNoLectiva = useConfigStore((s) => s.getValues('horaris.tipus-no-lectiva'))
+  const grupsDelCentre = useConfigStore((s) => s.getValues('substitucions.grups'))
 
   const [tipus, setTipus] = useState<TipusPeriode>(horariExistent?.Tipus ?? 'Lectiva')
   const [grup, setGrup] = useState(horariExistent?.Grup ?? '')
@@ -84,11 +86,13 @@ export function HorariSlotForm({ cursEscolar, diaSetmana, etapa, franja, horariE
             <>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Grup</label>
-                <input
-                  type="text" value={grup} onChange={(e) => setGrup(e.target.value)}
-                  placeholder="p.ex. EP-3r A"
+                <select
+                  value={grup} onChange={(e) => setGrup(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
+                >
+                  <option value="">Tria un grup…</option>
+                  {opcionsDeGrup(grupsDelCentre, grup).map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Matèria</label>

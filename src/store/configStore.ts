@@ -17,6 +17,7 @@ export const MODULS_VISIBILITAT = [
   { key: 'material-infantil', label: 'Material Infantil' },
   { key: 'horaris', label: 'Horaris' },
   { key: 'excursions', label: 'Excursions' },
+  { key: 'notificacions', label: 'Correus' },
 ] as const
 
 export const ROLS_VISIBILITAT = ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'] as const
@@ -76,15 +77,20 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Visita mèdica', 'Assumptes propis', 'Baixa/malaltia', 'Formació', 'Altre',
   ],
   'reserves.espais-colors': [],
+  // Nomenclatura unificada ETAPA-nivell + línia. Abans convivien tres
+  // convencions ('I3 A', 'EP-1r A', '1r ESO A') i això ja havia produït
+  // registres on el grup i l'etapa es contradeien. La llista s'edita des de
+  // Configuració → Grups del centre.
   'substitucions.grups': [
-    'EI-3 A', 'EI-4 A', 'EI-5 A',
-    'EP-1r A', 'EP-1r B', 'EP-2n A', 'EP-2n B', 'EP-3r A', 'EP-3r B',
-    'EP-4t A', 'EP-4t B', 'EP-5è A', 'EP-5è B', 'EP-6è A', 'EP-6è B',
-    '1r ESO A', '1r ESO B', '2n ESO A', '2n ESO B',
-    '3r ESO A', '3r ESO B', '4t ESO A', '4t ESO B',
-    '1r BATX A', '1r BATX B', '2n BATX A', '2n BATX B',
-    'GM',
+    'EI-3 A', 'EI-3 B', 'EI-3 C', 'EI-4 A', 'EI-4 B', 'EI-4 C', 'EI-5 A', 'EI-5 B', 'EI-5 C',
+    'EP-1 A', 'EP-1 B', 'EP-1 C', 'EP-2 A', 'EP-2 B', 'EP-2 C', 'EP-3 A', 'EP-3 B', 'EP-3 C',
+    'EP-4 A', 'EP-4 B', 'EP-4 C', 'EP-5 A', 'EP-5 B', 'EP-5 C', 'EP-6 A', 'EP-6 B', 'EP-6 C',
+    'ESO-1 A', 'ESO-1 B', 'ESO-1 C', 'ESO-2 A', 'ESO-2 B', 'ESO-2 C',
+    'ESO-3 A', 'ESO-3 B', 'ESO-3 C', 'ESO-4 A', 'ESO-4 B', 'ESO-4 C',
+    'BATX-1 A', 'BATX-1 B', 'BATX-2 A', 'BATX-2 B',
+    'CFGM-1', 'CFGM-2',
   ],
+
   // Marcs horaris reals del centre (2026-2027). El pati és una franja més: qui el
   // té el marca al seu horari com a "No lectiva → Pati" i ja genera cobertura.
   'substitucions.franges.EI':    ['9:00-9:45', '9:45-10:30', '10:30-11:00', '11:00-12:00', '12:00-13:00', '15:00-15:45', '15:45-16:30', '16:30-17:00'],
@@ -119,6 +125,9 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'visibilitat.material-infantil': ['direccio', 'titular', 'cap_estudis'],
   // El convidat no hi és: no ha de veure el pla del curs.
   'visibilitat.excursions': ['direccio', 'titular', 'cap_estudis', 'professorat'],
+  // Pantalla operativa: cadascú només veu els correus que ha generat ell,
+  // i la coordinació els veu tots. Per defecte, només els càrrecs.
+  'visibilitat.notificacions': ['direccio', 'titular', 'cap_estudis'],
   'visibilitat.horaris': ['direccio', 'titular', 'cap_estudis', 'professorat'],
 }
 

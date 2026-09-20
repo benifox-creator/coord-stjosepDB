@@ -77,6 +77,13 @@ const GRUPS: GrupConfig[] = [
     ],
   },
   {
+    modul: 'Grups del centre',
+    color: '#0891b2',
+    llistes: [
+      { clau: 'substitucions.grups', label: 'Grups', descripcio: 'Les classes del centre, una per entrada. Es fan servir per dir quins grups van a cada excursió. Fins ara aquesta llista no es podia editar des d\'aquí.' },
+    ],
+  },
+  {
     modul: 'Horaris',
     color: '#861414',
     llistes: [
