@@ -1,0 +1,556 @@
+[
+  {
+    "lloc": "Can Montcau",
+    "curs": "1r EP",
+    "alumnes": 75,
+    "acompanyants": 5,
+    "autocars": [
+      893.2
+    ],
+    "preuActivitat": 14.8,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 29.686666666666667
+  },
+  {
+    "lloc": "Casa Colònies",
+    "curs": "1r ESO",
+    "alumnes": 89,
+    "acompanyants": 4,
+    "autocars": [
+      959.2
+    ],
+    "preuActivitat": 8,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 22.37003745318352
+  },
+  {
+    "lloc": "La Fageda",
+    "curs": "3r ESO",
+    "alumnes": 96,
+    "acompanyants": 5,
+    "autocars": [
+      1258.4
+    ],
+    "preuActivitat": 4,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 21.477777777777778
+  },
+  {
+    "lloc": "Besalú",
+    "curs": "4t ESO",
+    "alumnes": 87,
+    "acompanyants": 4,
+    "autocars": [
+      1237.5
+    ],
+    "preuActivitat": 7,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 25.96551724137931
+  },
+  {
+    "lloc": "Poble Espanyol",
+    "curs": "2n EP",
+    "alumnes": 78,
+    "acompanyants": 5,
+    "autocars": [
+      770
+    ],
+    "preuActivitat": 675,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 21.55705128205128
+  },
+  {
+    "lloc": "Casa Colònies",
+    "curs": "2n ESO",
+    "alumnes": 94,
+    "acompanyants": 4,
+    "autocars": [
+      1073.6
+    ],
+    "preuActivitat": 8,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 23.22836879432624
+  },
+  {
+    "lloc": "CRAM I Parc Nou",
+    "curs": "P5 EI",
+    "alumnes": 75,
+    "acompanyants": 7,
+    "autocars": [
+      809.6
+    ],
+    "preuActivitat": 750,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 25.993333333333332
+  },
+  {
+    "lloc": "Espai Natura",
+    "curs": "5è EP",
+    "alumnes": 77,
+    "acompanyants": 4,
+    "autocars": [
+      851.4
+    ],
+    "preuActivitat": 540,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 22.587662337662337
+  },
+  {
+    "lloc": "Mines Prehistòriques Gavà",
+    "curs": "4t EP",
+    "alumnes": 76,
+    "acompanyants": 5,
+    "autocars": [
+      814
+    ],
+    "preuActivitat": 8.6,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 21.98815789473684
+  },
+  {
+    "lloc": "El Montseny",
+    "curs": "6è EP",
+    "alumnes": 75,
+    "acompanyants": 4,
+    "autocars": [
+      935
+    ],
+    "preuActivitat": 9.2,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 24.78333333333333
+  },
+  {
+    "lloc": "Can Pou",
+    "curs": "P3 EI",
+    "alumnes": 75,
+    "acompanyants": 7,
+    "autocars": [
+      935
+    ],
+    "preuActivitat": 12,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 27.583333333333336
+  },
+  {
+    "lloc": "Can Rigol",
+    "curs": "3r EP",
+    "alumnes": 75,
+    "acompanyants": 5,
+    "autocars": [
+      851.4
+    ],
+    "preuActivitat": 13.2,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 27.39
+  },
+  {
+    "lloc": "ZOO",
+    "curs": "P4 EI",
+    "alumnes": 75,
+    "acompanyants": 7,
+    "autocars": [
+      809.6
+    ],
+    "preuActivitat": 561.6,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 22.853333333333335
+  },
+  {
+    "lloc": "La Sagrada Família",
+    "curs": "4t ESO",
+    "alumnes": 88,
+    "acompanyants": 4,
+    "autocars": [],
+    "preuActivitat": 112.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 1.7045454545454546
+  },
+  {
+    "lloc": "Museu de les matemàtiques Can Mercader",
+    "curs": "5è EP",
+    "alumnes": 79,
+    "acompanyants": 4,
+    "autocars": [],
+    "preuActivitat": 480,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 3.594936708860759
+  },
+  {
+    "lloc": "Museu de les matemàtiques Can Mercader",
+    "curs": "6è EP",
+    "alumnes": 76,
+    "acompanyants": 4,
+    "autocars": [],
+    "preuActivitat": 420,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 2.9078947368421044
+  },
+  {
+    "lloc": "Can Rigol,",
+    "curs": "P3 EI",
+    "alumnes": 67,
+    "acompanyants": 7,
+    "autocars": [
+      786.5
+    ],
+    "preuActivitat": 8.2,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 22.873507462686568
+  },
+  {
+    "lloc": "Can Mas",
+    "curs": "P5 EI",
+    "alumnes": 72,
+    "acompanyants": 7,
+    "autocars": [
+      742.5
+    ],
+    "preuActivitat": 6.949999999999999,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 19.840625
+  },
+  {
+    "lloc": "Delta del Llobregat i Parc Nou del Prat",
+    "curs": "3r EP",
+    "alumnes": 75,
+    "acompanyants": 4,
+    "autocars": [
+      742.5
+    ],
+    "preuActivitat": 390,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 12.875
+  },
+  {
+    "lloc": "Espai natural el Remolar-Filipines, Delta del Llobregat",
+    "curs": "1r ESO",
+    "alumnes": 89,
+    "acompanyants": 4,
+    "autocars": [
+      858
+    ],
+    "preuActivitat": 510,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 15.49438202247191
+  },
+  {
+    "lloc": "La Colònia Güell",
+    "curs": "2n ESO",
+    "alumnes": 94,
+    "acompanyants": 4,
+    "autocars": [
+      742.5
+    ],
+    "preuActivitat": 480,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 12.340425531914892
+  },
+  {
+    "lloc": "Parc de les Olors",
+    "curs": "P4 EI",
+    "alumnes": 75,
+    "acompanyants": 7,
+    "autocars": [
+      858
+    ],
+    "preuActivitat": 900,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 23.3
+  },
+  {
+    "lloc": "Espai de natura i lleure El cabriol",
+    "curs": "1r EP",
+    "alumnes": 75,
+    "acompanyants": 5,
+    "autocars": [
+      858
+    ],
+    "preuActivitat": 9.2,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 23.5
+  },
+  {
+    "lloc": "Saló de l'ensenyament",
+    "curs": "1r Batx",
+    "alumnes": 46,
+    "acompanyants": 2,
+    "autocars": [],
+    "preuActivitat": 3.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 3.5
+  },
+  {
+    "lloc": "Casa de colònies Mogent",
+    "curs": "3r ESO",
+    "alumnes": 96,
+    "acompanyants": 4,
+    "autocars": [
+      990
+    ],
+    "preuActivitat": 1.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 15.25
+  },
+  {
+    "lloc": "L'Espai Montseny",
+    "curs": "4t EP",
+    "alumnes": 77,
+    "acompanyants": 5,
+    "autocars": [
+      858
+    ],
+    "preuActivitat": 798,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 22.883116883116884
+  },
+  {
+    "lloc": "CasaColònies",
+    "curs": "2n Batx",
+    "alumnes": 30,
+    "acompanyants": 3,
+    "autocars": [
+      456.5
+    ],
+    "preuActivitat": 1.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 21.788888888888888
+  },
+  {
+    "lloc": "Jardí Botànic i Can Mercader",
+    "curs": "2n EP",
+    "alumnes": 79,
+    "acompanyants": 5,
+    "autocars": [
+      715
+    ],
+    "preuActivitat": 165,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 9.924050632911392
+  },
+  {
+    "lloc": "Saló de l'ensenyament",
+    "curs": "2n Gest",
+    "alumnes": 25,
+    "acompanyants": 2,
+    "autocars": [],
+    "preuActivitat": 3.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 3.5
+  },
+  {
+    "lloc": "Casa Mogent",
+    "curs": "4t ESO",
+    "alumnes": 88,
+    "acompanyants": 4,
+    "autocars": [
+      990
+    ],
+    "preuActivitat": -2.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 12.5
+  },
+  {
+    "lloc": "Empresa Damm",
+    "curs": "1r i 2n Gest",
+    "alumnes": 50,
+    "acompanyants": 4,
+    "autocars": [],
+    "preuActivitat": 240,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 1.4000000000000004
+  },
+  {
+    "lloc": "Canal Olímpic",
+    "curs": "2n Batx",
+    "alumnes": 30,
+    "acompanyants": 2,
+    "autocars": [],
+    "preuActivitat": 10,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 10
+  },
+  {
+    "lloc": "Fundació Miró i Parc l'Escorxador",
+    "curs": "P4 EI",
+    "alumnes": 75,
+    "acompanyants": 7,
+    "autocars": [
+      715
+    ],
+    "preuActivitat": 285,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 13.666666666666668
+  },
+  {
+    "lloc": "Can Mas Pasqual",
+    "curs": "P3 EI",
+    "alumnes": 67,
+    "acompanyants": 7,
+    "autocars": [
+      858
+    ],
+    "preuActivitat": 747,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 25.94402985074627
+  },
+  {
+    "lloc": "Can Ribas de Montbui",
+    "curs": "1r i 2n EP",
+    "alumnes": 154,
+    "acompanyants": 9,
+    "autocars": [
+      1386
+    ],
+    "preuActivitat": 8,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 19.25
+  },
+  {
+    "lloc": "Tarragona",
+    "curs": "1r Batx",
+    "alumnes": 46,
+    "acompanyants": 2,
+    "autocars": [
+      616
+    ],
+    "preuActivitat": 3,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 20.855072463768117
+  },
+  {
+    "lloc": "Canal Olímpic.",
+    "curs": "3r ESO",
+    "alumnes": 79,
+    "acompanyants": 4,
+    "autocars": [],
+    "preuActivitat": 10,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 10
+  },
+  {
+    "lloc": "Marineland",
+    "curs": "1r i 2n ESO",
+    "alumnes": 183,
+    "acompanyants": 8,
+    "autocars": [
+      1974.5
+    ],
+    "preuActivitat": 5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 19.38615664845173
+  },
+  {
+    "lloc": "Platja de Castelldefels i Parc Nou del Prat",
+    "curs": "3r EP",
+    "alumnes": 75,
+    "acompanyants": 4,
+    "autocars": [
+      808.5
+    ],
+    "preuActivitat": -3,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 10.475
+  },
+  {
+    "lloc": "La Granja",
+    "curs": "4t EP",
+    "alumnes": 77,
+    "acompanyants": 5,
+    "autocars": [
+      858
+    ],
+    "preuActivitat": 9.95,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 23.878571428571426
+  },
+  {
+    "lloc": "Circ a les Feixes - Copons",
+    "curs": "P5 EI",
+    "alumnes": 72,
+    "acompanyants": 7,
+    "autocars": [
+      940.5
+    ],
+    "preuActivitat": 7,
+    "previsio": 0.8,
+    "ampaPerAlumne": 5,
+    "preuExcel": 23.328125
+  },
+  {
+    "lloc": "Can Montcau",
+    "curs": "5è i 6è EP",
+    "alumnes": 155,
+    "acompanyants": 8,
+    "autocars": [
+      1386
+    ],
+    "preuActivitat": 9,
+    "previsio": 0.8,
+    "ampaPerAlumne": 4.5,
+    "preuExcel": 20.17741935483871
+  },
+  {
+    "lloc": "Casa Colonies",
+    "curs": "1r Batx",
+    "alumnes": 45,
+    "acompanyants": 5,
+    "autocars": [
+      495
+    ],
+    "preuActivitat": 1.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 16.166666666666664
+  },
+  {
+    "lloc": "JumpYard",
+    "curs": "4t ESO",
+    "alumnes": 90,
+    "acompanyants": 5,
+    "autocars": [],
+    "preuActivitat": 9.5,
+    "previsio": 0.75,
+    "ampaPerAlumne": 4,
+    "preuExcel": 9.5
+  }
+]
