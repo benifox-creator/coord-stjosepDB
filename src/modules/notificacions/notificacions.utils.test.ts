@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { potReintentar, potCancellar, quan, rowToNotificacio } from './notificacions.utils'
+import { potReintentar, potCancellar, etiquetaReintent, quan, rowToNotificacio } from './notificacions.utils'
 import type { Notificacio } from './types'
 
 const base: Notificacio = {
@@ -9,11 +9,20 @@ const base: Notificacio = {
 }
 
 describe('què es pot fer amb una notificació', () => {
-  it('només es reintenta el que ha fallat', () => {
+  it('torna a la cua el que ha fallat i el que es va cancel·lar', () => {
     expect(potReintentar({ ...base, Estat: 'failed' })).toBe(true)
-    for (const e of ['pending', 'sending', 'sent', 'cancel·lada'] as const) {
+    // Cancel·lar ha de ser reversible: la fila cancel·lada ocupa la clau de
+    // l'esdeveniment, i sense desfer-ho aquell avís ja no es podria tornar
+    // a encuar.
+    expect(potReintentar({ ...base, Estat: 'cancel·lada' })).toBe(true)
+    for (const e of ['pending', 'sending', 'sent'] as const) {
       expect(potReintentar({ ...base, Estat: e }), e).toBe(false)
     }
+  })
+
+  it('el botó diu què farà, que no és el mateix en els dos casos', () => {
+    expect(etiquetaReintent({ ...base, Estat: 'failed' })).toBe('Reintenta')
+    expect(etiquetaReintent({ ...base, Estat: 'cancel·lada' })).toBe('Torna a la cua')
   })
 
   it('només es cancel·la el que encara no ha sortit', () => {

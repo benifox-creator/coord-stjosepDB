@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { RefreshCw, RotateCcw, Ban, ChevronDown } from 'lucide-react'
 import type { Notificacio } from './types'
 import { ESTATS_NOTIFICACIO, ESTAT_LABELS, ESTAT_COLORS } from './types'
-import { potReintentar, potCancellar, quan } from './notificacions.utils'
+import { potReintentar, potCancellar, etiquetaReintent, quan } from './notificacions.utils'
 
 interface Props {
   notificacions: Notificacio[]
@@ -104,7 +104,7 @@ export function NotificacionsPage({ notificacions, loading, error, onRefresh, on
                     disabled={ocupat === n.id}
                     className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg disabled:opacity-50"
                   >
-                    <RotateCcw size={12} /> Reintenta
+                    <RotateCcw size={12} /> {etiquetaReintent(n)}
                   </button>
                 )}
                 {potCancellar(n) && (

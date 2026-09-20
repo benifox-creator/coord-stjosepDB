@@ -141,6 +141,38 @@ describe('cancel·lar una notificació', () => {
     await expect(db.query('select public.cancel_notification($1)',[id]))
       .rejects.toThrow('no es pot cancel·lar')
   })
+
+  // Cancel·lar ha de ser reversible. Si no ho fos, una cancel·lació per error
+  // no tindria remei: la clau de l'esdeveniment queda ocupada per la fila
+  // cancel·lada i `enqueue` fa `on conflict do nothing`, així que el mateix
+  // avís ja no es podria tornar a encuar aquell dia.
+  it('es pot desfer una cancel·lació', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await db.query('select public.retry_notification($1)',[id])
+    const n = (await db.query<{status:string,attempts:number,last_error:string|null}>(
+      'select status,attempts,last_error from public.notifications where id=$1',[id])).rows[0]
+    expect(n.status).toBe('pending')
+    expect(n.attempts).toBe(0)
+    expect(n.last_error).toBeNull()
+  })
+
+  it('i el worker la torna a recollir', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await db.query('select public.retry_notification($1)',[id])
+    await db.exec('reset role')
+    const reclamades = (await db.query<{id:string}>('select id from public.claim_notifications()')).rows
+    expect(reclamades.map(r => r.id)).toContain(id)
+  })
+
+  it('però desfer la cancel·lació d’un altre continua sense poder-se', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await asUser('other@stjosep.org')
+    await expect(db.query('select public.retry_notification($1)',[id]))
+      .rejects.toThrow('no es pot reintentar')
+  })
 })
 
 describe('fre als esborrats massius', () => {

@@ -25,12 +25,22 @@ export function rowToNotificacio(r: NotificacioRow): Notificacio {
   }
 }
 
-/** Només es pot reintentar el que ha fallat; cancel·lar, el que encara no ha sortit. */
+/**
+ * Torna a la cua el que ha fallat i també el que es va cancel·lar: la fila
+ * cancel·lada ocupa la clau de l'esdeveniment, i sense poder desfer-ho aquell
+ * avís ja no es podria tornar a encuar mai. Cancel·lar, en canvi, només val
+ * per al que encara no ha sortit.
+ */
 export function potReintentar(n: Notificacio): boolean {
-  return n.Estat === 'failed'
+  return n.Estat === 'failed' || n.Estat === 'cancel·lada'
 }
 export function potCancellar(n: Notificacio): boolean {
   return n.Estat === 'pending' || n.Estat === 'failed'
+}
+
+/** Les dues accions acaben igual, però el botó ha de dir què farà. */
+export function etiquetaReintent(n: Notificacio): string {
+  return n.Estat === 'cancel·lada' ? 'Torna a la cua' : 'Reintenta'
 }
 
 /** Data i hora curtes, en el format que fa servir la resta de l'aplicació. */
