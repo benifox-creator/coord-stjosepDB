@@ -654,6 +654,56 @@ describe('excursions', () => {
   })
 })
 
+describe('congelar el preu', () => {
+  async function aprovada() {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    return id
+  }
+
+  it('desa el preu i qui el va confirmar', async () => {
+    const id = await aprovada()
+    await db.query('select public.confirmar_preu($1,$2)',[id, 12.5])
+    const e = (await db.query<{preu_alumne:string,preu_confirmat_per:string}>(
+      'select preu_alumne,preu_confirmat_per from public.excursions where id=$1',[id])).rows[0]
+    expect(Number(e.preu_alumne)).toBe(12.5)
+    expect(e.preu_confirmat_per).toBe('admin@stjosep.org')
+  })
+
+  it('un docent amb gestió no el pot confirmar: no veu els números que l’han donat', async () => {
+    const id = await aprovada()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    await expect(db.query('select public.confirmar_preu($1,$2)',[id, 12.5])).rejects.toThrow('No autoritzat')
+  })
+
+  it('no es confirma el preu d’una excursió que encara no s’ha aprovat', async () => {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
+    await expect(db.query('select public.confirmar_preu($1,$2)',[id, 12.5])).rejects.toThrow()
+  })
+
+  it('un preu negatiu no s’accepta', async () => {
+    const id = await aprovada()
+    await expect(db.query('select public.confirmar_preu($1,$2)',[id, -3])).rejects.toThrow()
+  })
+
+  it('es pot refer mentre no s’hagi enviat la circular', async () => {
+    const id = await aprovada()
+    await db.query('select public.confirmar_preu($1,$2)',[id, 12.5])
+    await db.query('select public.confirmar_preu($1,$2)',[id, 14])
+    expect(Number((await db.query<{preu_alumne:string}>('select preu_alumne from public.excursions where id=$1',[id])).rows[0].preu_alumne)).toBe(14)
+  })
+})
+
 describe('els diners de les excursions', () => {
   async function excursioAmbCostos() {
     await asUser('admin@stjosep.org')
