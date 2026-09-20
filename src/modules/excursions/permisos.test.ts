@@ -17,6 +17,7 @@ const excursio: Excursio = {
   Transport: 'autocar', TransportDetall: '', AcompanyantsExterns: 0, Observacions: '',
   Responsable: '', MotiuRebuig: null, MotiuCancellacio: null, ProposadaPer: null,
   AprovadaPer: null, ReservadaPer: null, Creat_per: 'autor@stjosep.org',
+  PreuAlumne: null, PreuConfirmatPer: null,
   Grups: [], Acompanyants: [],
 }
 

@@ -53,6 +53,8 @@ export interface Excursio {
   AprovadaPer: string | null
   ReservadaPer: string | null
   Creat_per: string
+  PreuAlumne: number | null
+  PreuConfirmatPer: string | null
   Grups: ExcursioGrup[]
   Acompanyants: string[]
 }

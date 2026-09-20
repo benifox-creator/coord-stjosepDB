@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { campsQueFalten, esDiaLectiu, dataTrasladada, grupsTriables, formDataDe, nivellsDeGrups, grupsDelNivell } from './excursions.utils'
+import { campsQueFalten, esDiaLectiu, dataTrasladada, grupsTriables, formDataDe, nivellsDeGrups, grupsDelNivell, rowToExcursio, type ExcursioRow } from './excursions.utils'
 import type { Excursio, ExcursioFormData } from './types'
+
+// Fila mínima tal com la torna Supabase, per a les proves de rowToExcursio.
+// No hi havia cap fixture de fila (a diferència de `excursioDesada`, que ja
+// és el resultat convertit): se n'ha creat una de nova amb aquest nom.
+const filaBuida: ExcursioRow = {
+  id: 'e1', codi: 'EXC-001', curs_escolar: '2026-2027', estat: 'Esborrany', etapa: 'EP',
+  lloc: 'Can Montcau', poblacio: 'La Roca', activitat: 'Castanyada', data: '2026-10-19',
+  hora_sortida: '9:00', hora_tornada: '17:00', transport: 'autocar', transport_detall: '',
+  acompanyants_externs: 0, observacions: '', responsable: 'a@stjosep.org',
+  motiu_rebuig: null, motiu_cancellacio: null, proposada_per: null,
+  aprovada_per: null, reservada_per: null, creat_per: 'a@stjosep.org',
+  preu_alumne: null, preu_confirmat_per: null,
+}
 
 const excursioDesada: Excursio = {
   id: 'e1', Codi: 'EXC-001', CursEscolar: '2026-2027', Estat: 'Esborrany', Etapa: 'EP',
@@ -9,6 +22,7 @@ const excursioDesada: Excursio = {
   AcompanyantsExterns: 0, Observacions: '', Responsable: 'a@stjosep.org',
   MotiuRebuig: null, MotiuCancellacio: null, ProposadaPer: null,
   AprovadaPer: null, ReservadaPer: null, Creat_per: 'a@stjosep.org',
+  PreuAlumne: null, PreuConfirmatPer: null,
   Grups: [{ id: 'g1', Grup: 'EP-1r A', AlumnesPrevistos: 25, AlumnesFinals: null }],
   Acompanyants: [],
 }
@@ -147,6 +161,23 @@ describe('valors inicials del formulari', () => {
     const d = formDataDe(original, 'jo@stjosep.org')
     d.Acompanyants.push('b@stjosep.org')
     expect(original.Acompanyants).toEqual(['a@stjosep.org'])
+  })
+})
+
+describe('rowToExcursio', () => {
+  it('converteix el preu a número, que PostgreSQL el torna com a text', () => {
+    // `numeric` arriba com a cadena. Sense convertir-lo, 12.50 + 12.50 faria
+    // "12.5012.50" i el total de la pantalla seria absurd.
+    const e = rowToExcursio({ ...filaBuida, preu_alumne: '12.50', preu_confirmat_per: 'a@stjosep.org' })
+    expect(e.PreuAlumne).toBe(12.5)
+    expect(e.PreuConfirmatPer).toBe('a@stjosep.org')
+  })
+
+  it('una excursió sense preu confirmat el deixa buit, no a zero', () => {
+    // Zero vol dir "gratuïta"; buit vol dir "encara no s'ha decidit".
+    // Confondre-ho faria que la fitxa digués que una excursió no costa res.
+    const e = rowToExcursio({ ...filaBuida, preu_alumne: null, preu_confirmat_per: null })
+    expect(e.PreuAlumne).toBeNull()
   })
 })
 

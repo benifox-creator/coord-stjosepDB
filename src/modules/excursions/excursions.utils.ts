@@ -26,6 +26,8 @@ export interface ExcursioRow {
   aprovada_per: string | null
   reservada_per: string | null
   creat_per: string
+  preu_alumne: string | number | null
+  preu_confirmat_per: string | null
 }
 
 export function rowToExcursio(row: ExcursioRow): Excursio {
@@ -39,7 +41,12 @@ export function rowToExcursio(row: ExcursioRow): Excursio {
     Responsable: row.responsable, MotiuRebuig: row.motiu_rebuig,
     MotiuCancellacio: row.motiu_cancellacio, ProposadaPer: row.proposada_per,
     AprovadaPer: row.aprovada_per, ReservadaPer: row.reservada_per,
-    Creat_per: row.creat_per, Grups: [], Acompanyants: [],
+    Creat_per: row.creat_per,
+    // `numeric` torna com a cadena per PostgREST: cal convertir-lo o una
+    // suma de preus faria concatenació de text en comptes d'aritmètica.
+    PreuAlumne: row.preu_alumne == null ? null : Number(row.preu_alumne),
+    PreuConfirmatPer: row.preu_confirmat_per ?? null,
+    Grups: [], Acompanyants: [],
   }
 }
 
