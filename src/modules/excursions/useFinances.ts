@@ -22,18 +22,27 @@ interface FinancesState {
   confirma: (excursioId: string, preu: number) => Promise<void>
 }
 
+// Si es demanen els costos de dues excursions seguides (per exemple, en obrir
+// la fitxa d'una i tot seguit una altra abans que la primera resposta arribi),
+// només val la darrera: si no, una resposta lenta de la primera excursió
+// podria pisar la de la que s'està mirant ara i la fitxa ensenyaria el preu
+// d'una altra excursió. Mateix criteri que `generacio` a `useExcursions.load`.
+let generacio = 0
+
 export const useFinances = create<FinancesState>((set, get) => ({
   finances: null,
   loading: false,
   error: null,
 
   async carrega(excursioId) {
+    const meva = ++generacio
     set({ loading: true, error: null })
     try {
       const [files, autocars] = await Promise.all([
         getAll<FinancesRow>('excursio_finances', 'excursio_id', { excursio_id: excursioId }, 'excursio_id'),
         getAll<AutocarRow>('excursio_autocars', 'id', { excursio_id: excursioId }),
       ])
+      if (meva !== generacio) return
       // Zero files no és cap error: o bé encara no s'hi ha entrat res, o bé
       // qui mira no té accés als diners i l'RLS no li'n dona cap. En tots dos
       // casos la pantalla ha d'ensenyar el formulari buit, no un error vermell.
@@ -50,9 +59,9 @@ export const useFinances = create<FinancesState>((set, get) => ({
         Autocars: autocars.map((a): Autocar => ({ id: a.id, Places: a.places, Preu: Number(a.preu) })),
       } })
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Error carregant els costos' })
+      if (meva === generacio) set({ error: err instanceof Error ? err.message : 'Error carregant els costos' })
     } finally {
-      set({ loading: false })
+      if (meva === generacio) set({ loading: false })
     }
   },
 
@@ -72,8 +81,10 @@ export const useFinances = create<FinancesState>((set, get) => ({
     if (error) throw new Error(`Error desant els costos: ${error.message}`)
 
     // Els autocars es posen al dia per diferència i no esborrant-ho tot: si una
-    // escriptura falla, el que ja hi havia no s'ha perdut pel camí. És el mateix
-    // criteri que `sincronitzaFilles` a `useExcursions`.
+    // escriptura falla, el que ja hi havia no s'ha perdut pel camí. Mateixa idea
+    // que `sincronitzaFilles` a `useExcursions`, però no idèntica: allà els grups
+    // es comparen pel seu nom (la seva clau natural), mentre que un autocar no en
+    // té cap, així que aquí la comparació és per `id`.
     const actuals = await getAll<AutocarRow>('excursio_autocars', 'id', { excursio_id: excursioId })
     for (const a of actuals) {
       const volgut = f.Autocars.find((v) => v.id === a.id)

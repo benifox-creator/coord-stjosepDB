@@ -179,6 +179,16 @@ describe('rowToExcursio', () => {
     const e = rowToExcursio({ ...filaBuida, preu_alumne: null, preu_confirmat_per: null })
     expect(e.PreuAlumne).toBeNull()
   })
+
+  it('una excursió gratuïta manté el preu a zero, no el confon amb "no decidit"', () => {
+    // Una condició com `r.preu_alumne ? Number(...) : null` passaria les dues
+    // proves de dalt igualment, però convertiria un 0 (gratuïta) en null (no
+    // decidit): exactament la confusió que aquest camp ha d'evitar.
+    // PostgreSQL sempre l'envia com a cadena, però es comprova també com a
+    // número per si mai arriba ja convertit.
+    expect(rowToExcursio({ ...filaBuida, preu_alumne: '0', preu_confirmat_per: 'a@stjosep.org' }).PreuAlumne).toBe(0)
+    expect(rowToExcursio({ ...filaBuida, preu_alumne: 0, preu_confirmat_per: 'a@stjosep.org' }).PreuAlumne).toBe(0)
+  })
 })
 
 describe('nivells i línies', () => {
