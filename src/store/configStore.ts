@@ -17,6 +17,7 @@ export const MODULS_VISIBILITAT = [
   { key: 'material-infantil', label: 'Material Infantil' },
   { key: 'horaris', label: 'Horaris' },
   { key: 'excursions', label: 'Excursions' },
+  { key: 'notificacions', label: 'Correus' },
 ] as const
 
 export const ROLS_VISIBILITAT = ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'] as const
@@ -124,6 +125,9 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'visibilitat.material-infantil': ['direccio', 'titular', 'cap_estudis'],
   // El convidat no hi és: no ha de veure el pla del curs.
   'visibilitat.excursions': ['direccio', 'titular', 'cap_estudis', 'professorat'],
+  // Pantalla operativa: cadascú només veu els correus que ha generat ell,
+  // i la coordinació els veu tots. Per defecte, només els càrrecs.
+  'visibilitat.notificacions': ['direccio', 'titular', 'cap_estudis'],
   'visibilitat.horaris': ['direccio', 'titular', 'cap_estudis', 'professorat'],
 }
 

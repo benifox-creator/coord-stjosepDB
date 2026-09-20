@@ -97,6 +97,52 @@ describe('privilegis', () => {
   })
 })
 
+describe('cancel·lar una notificació', () => {
+  async function notificacio(autor = 'teacher@stjosep.org') {
+    await asUser(autor)
+    await db.query("select public.queue_email('other@stjosep.org','Prova','Cos')")
+    return (await db.query<{id:string}>("select id from public.notifications order by created_at desc limit 1")).rows[0].id
+  }
+
+  it('la treu de la cua sense esborrar-la', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    const n = (await db.query<{status:string}>('select status from public.notifications where id=$1',[id])).rows[0]
+    expect(n.status).toBe('cancel·lada')
+  })
+
+  it('i així el worker ja no la recull', async () => {
+    const id = await notificacio()
+    await db.query('select public.cancel_notification($1)',[id])
+    await db.exec('reset role')
+    const reclamades = (await db.query<{id:string}>('select id from public.claim_notifications()')).rows
+    expect(reclamades.map(r => r.id)).not.toContain(id)
+  })
+
+  it('no deixa cancel·lar la d’un altre', async () => {
+    const id = await notificacio()
+    await asUser('other@stjosep.org')
+    await expect(db.query('select public.cancel_notification($1)',[id]))
+      .rejects.toThrow('no es pot cancel·lar')
+  })
+
+  it('però la coordinació sí', async () => {
+    const id = await notificacio()
+    await asUser('admin@stjosep.org')
+    await db.query('select public.cancel_notification($1)',[id])
+    expect((await db.query<{status:string}>('select status from public.notifications where id=$1',[id])).rows[0].status).toBe('cancel·lada')
+  })
+
+  it('no en cancel·la una ja enviada', async () => {
+    const id = await notificacio()
+    await db.exec('reset role')
+    await db.query("update public.notifications set status='sent' where id=$1",[id])
+    await asUser('teacher@stjosep.org')
+    await expect(db.query('select public.cancel_notification($1)',[id]))
+      .rejects.toThrow('no es pot cancel·lar')
+  })
+})
+
 describe('fre als esborrats massius', () => {
   it('deixa esborrar un registre, com fa l’aplicació', async () => {
     await asUser('admin@stjosep.org')
