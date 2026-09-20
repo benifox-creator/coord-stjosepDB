@@ -688,12 +688,12 @@ describe('congelar el preu', () => {
     const id = (await db.query<{id:string}>(`
       insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
       values('EP','Prova','Prova','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
-    await expect(db.query('select public.confirmar_preu($1,$2)',[id, 12.5])).rejects.toThrow()
+    await expect(db.query('select public.confirmar_preu($1,$2)',[id, 12.5])).rejects.toThrow('Només es confirma')
   })
 
   it('un preu negatiu no s’accepta', async () => {
     const id = await aprovada()
-    await expect(db.query('select public.confirmar_preu($1,$2)',[id, -3])).rejects.toThrow()
+    await expect(db.query('select public.confirmar_preu($1,$2)',[id, -3])).rejects.toThrow('El preu no pot ser negatiu')
   })
 
   it('es pot refer mentre no s’hagi enviat la circular', async () => {
