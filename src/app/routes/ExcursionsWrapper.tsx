@@ -4,10 +4,13 @@ import { ExcursioForm } from '../../modules/excursions/ExcursioForm'
 import { ExcursioDetall } from '../../modules/excursions/ExcursioDetall'
 import { CopiarCursAnterior } from '../../modules/excursions/CopiarCursAnterior'
 import { useExcursions } from '../../modules/excursions/useExcursions'
-import { potAprovar, potGestionar, potEditar } from '../../modules/excursions/permisos'
+import { useFinances } from '../../modules/excursions/useFinances'
+import { potAprovar, potGestionar, potEditar, potVeureCostos } from '../../modules/excursions/permisos'
+import { parametresPreu } from '../../modules/excursions/parametres'
 import type { Excursio, ExcursioFormData } from '../../modules/excursions/types'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
+import { useConfigStore } from '../../store/configStore'
 import { schoolYear } from '../../utils/schoolCalendar'
 
 export default function ExcursionsWrapper() {
@@ -16,6 +19,8 @@ export default function ExcursionsWrapper() {
   const usuaris = useUsuarisStore((s) => s.usuaris)
   const email = (useAuthStore((s) => s.user?.email) ?? '').toLowerCase()
   const jo = usuaris.find((u) => u.Email.toLowerCase() === email) ?? null
+  const config = useConfigStore((s) => s.config)
+  const confirmaPreu = useFinances((s) => s.confirma)
 
   const [formObert, setFormObert] = useState(false)
   const [editant, setEditant] = useState<Excursio | null>(null)
@@ -61,9 +66,24 @@ export default function ExcursionsWrapper() {
           potAprovar={potAprovar(rol)}
           potGestionar={potGestionar(rol, jo)}
           potEditar={potEditar(oberta, email, rol, jo)}
+          potVeureCostos={potVeureCostos(rol, jo)}
+          parametres={parametresPreu(config, oberta.Etapa)}
           onCanviarEstat={async (estat, motiu) => {
             await canviarEstat(oberta.id, estat, motiu)
             await load()
+          }}
+          onConfirmaPreu={async (preu, finances) => {
+            // Els mateixos paràmetres amb què `BlocEconomic` ha calculat
+            // `preu`, perquè `confirmar_preu` els congeli amb el preu: si es
+            // recalculessin aquí, una configuració canviada entremig faria
+            // que el preu confirmat i els paràmetres desats no coincidissin.
+            await confirmaPreu(oberta.id, preu, finances, parametresPreu(config, oberta.Etapa))
+            // Mateixa ruta que onCanviarEstat: recarregar la llista i, d'aquí,
+            // agafar la fila fresca. Però aquí no es tanca la fitxa (onClose)
+            // en acabar: qui acaba de confirmar un preu vol veure'l sense
+            // haver de tornar a obrir la targeta.
+            await load()
+            setOberta((actual) => (actual && useExcursions.getState().excursions.find((x) => x.id === actual.id)) || actual)
           }}
           onEditar={() => { setEditant(oberta); setOberta(null) }}
           onClose={() => setOberta(null)}

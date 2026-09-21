@@ -17,6 +17,7 @@ const fila = {
   acompanyants_externs: 0, observacions: '', responsable: 'a@stjosep.org',
   motiu_rebuig: null, motiu_cancellacio: null, proposada_per: null,
   aprovada_per: null, reservada_per: null, creat_per: 'a@stjosep.org',
+  preu_alumne: null, preu_confirmat_per: null,
 }
 
 const dades: ExcursioFormData = {

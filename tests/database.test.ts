@@ -653,3 +653,191 @@ describe('excursions', () => {
     expect(n.map(x=>x.recipient).sort()).toEqual(['other@stjosep.org','teacher@stjosep.org'])
   })
 })
+
+describe('congelar el preu', () => {
+  async function aprovada() {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    return id
+  }
+
+  it('desa el preu i qui el va confirmar', async () => {
+    const id = await aprovada()
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id, 12.5, 0.75, 12, 10])
+    const e = (await db.query<{preu_alumne:string,preu_confirmat_per:string}>(
+      'select preu_alumne,preu_confirmat_per from public.excursions where id=$1',[id])).rows[0]
+    expect(Number(e.preu_alumne)).toBe(12.5)
+    expect(e.preu_confirmat_per).toBe('admin@stjosep.org')
+  })
+
+  it('desa també els paràmetres amb què s’ha calculat, perquè el preu es pugui reconstruir', async () => {
+    // Sense això, si algú disputa un càrrec mesos després —quan el marge o la
+    // previsió ja s'han retocat a Configuració—, no hi ha manera de refer el
+    // número que la família té a les mans.
+    const id = await aprovada()
+    await db.query(`insert into public.excursio_finances(excursio_id) values($1)`,[id])
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id, 12.5, 0.8, 15, 21])
+    const f = (await db.query<{previsio_usada:string,marge_pct_usat:string,iva_pct_usat:string}>(
+      'select previsio_usada,marge_pct_usat,iva_pct_usat from public.excursio_finances where excursio_id=$1',[id])).rows[0]
+    expect(Number(f.previsio_usada)).toBe(0.8)
+    expect(Number(f.marge_pct_usat)).toBe(15)
+    expect(Number(f.iva_pct_usat)).toBe(21)
+  })
+
+  it('un docent amb gestió no el pot confirmar: no veu els números que l’han donat', async () => {
+    const id = await aprovada()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    await expect(db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id, 12.5, 0.75, 12, 10])).rejects.toThrow('No autoritzat')
+  })
+
+  it('no es confirma el preu d’una excursió que encara no s’ha aprovat', async () => {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
+    await expect(db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id, 12.5, 0.75, 12, 10])).rejects.toThrow('Només es confirma')
+  })
+
+  it('un preu negatiu no s’accepta', async () => {
+    const id = await aprovada()
+    await expect(db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id, -3, 0.75, 12, 10])).rejects.toThrow('El preu no pot ser negatiu')
+  })
+
+  it('es pot refer mentre no s’hagi enviat la circular', async () => {
+    const id = await aprovada()
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id, 12.5, 0.75, 12, 10])
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id, 14, 0.75, 12, 10])
+    expect(Number((await db.query<{preu_alumne:string}>('select preu_alumne from public.excursions where id=$1',[id])).rows[0].preu_alumne)).toBe(14)
+  })
+})
+
+describe('els diners de les excursions', () => {
+  async function excursioSenseCostos() {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
+    return id
+  }
+  async function excursioAmbCostos() {
+    const id = await excursioSenseCostos()
+    await db.query(`insert into public.excursio_finances(excursio_id,preu_activitat) values($1,12)`,[id])
+    await db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,406)`,[id])
+    return id
+  }
+  async function comLogisticaSenseDiners() {
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+  }
+
+  it('un docent normal no en veu res', async () => {
+    await excursioAmbCostos()
+    await asUser('teacher@stjosep.org')
+    // L'RLS no dona error: simplement no retorna files. Això és el que volem.
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(0)
+  })
+
+  it('ni un docent a qui s’ha activat la gestió: ajuda a organitzar, no veu diners', async () => {
+    await excursioAmbCostos()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(0)
+  })
+
+  it('però Secretaria sí, que és qui els negocia', async () => {
+    await excursioAmbCostos()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_costos_excursions=true where email='other@stjosep.org'`)
+    await asUser('other@stjosep.org')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(1)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(1)
+  })
+
+  it('i la direcció també', async () => {
+    await excursioAmbCostos()
+    await asUser('director@stjosep.org')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(1)
+  })
+
+  it('un docent amb gestió tampoc no en pot escriure', async () => {
+    // Prova reproduïda contra `using (true) with check (true)` a la migració
+    // 202609210001: amb la política real (`app_private.excursions_costos()`)
+    // aquest INSERT llança perquè el WITH CHECK el rebutja; amb la política
+    // permissiva, l'`INSERT` s'executa i aquest `.rejects.toThrow()` falla —
+    // que és exactament el que la versió anterior de la prova no detectava
+    // (feia servir `savepoint`+`rollback`+`.catch()`, que desfà l'escriptura
+    // tant si RLS l'ha bloquejat com si no, i s'empassava el rebuig).
+    const id = await excursioSenseCostos()
+    await comLogisticaSenseDiners()
+    // El savepoint va **abans** de la sentència que ha de fallar: a PostgreSQL
+    // un error avorta la transacció sencera, i sense això la resta de la prova
+    // petaria amb «current transaction is aborted» en comptes de comprovar res.
+    // Aquí només serveix per poder seguir usant la mateixa connexió després
+    // d'un error esperat, no per amagar si hi ha hagut error.
+    await db.exec('savepoint intent_autocars')
+    await expect(db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,1)`,[id]))
+      .rejects.toThrow()
+    await db.exec('rollback to savepoint intent_autocars')
+
+    await db.exec('savepoint intent_finances')
+    await expect(db.query(`insert into public.excursio_finances(excursio_id,preu_activitat) values($1,1)`,[id]))
+      .rejects.toThrow()
+    await db.exec('rollback to savepoint intent_finances')
+
+    await db.exec('reset role')
+    expect((await db.query('select * from public.excursio_autocars where excursio_id=$1',[id])).rows).toHaveLength(0)
+    expect((await db.query('select * from public.excursio_finances where excursio_id=$1',[id])).rows).toHaveLength(0)
+  })
+
+  it('un docent amb gestió tampoc no en pot actualitzar', async () => {
+    // Complementa la prova anterior: aquesta cobreix UPDATE, que no llança
+    // (RLS el filtra amb el USING com un WHERE més, sense error — igual que
+    // «no deixa que un altre docent editi una proposta que no és seva» més
+    // amunt) i que una política d'INSERT permissiva no detectaria per si sola:
+    // per això es comprova per separat i no es dona per fet que totes dues
+    // taules es comporten igual només perquè les polítiques es diuen semblant.
+    const id = await excursioAmbCostos()
+    const autocar = (await db.query<{id:string}>('select id from public.excursio_autocars where excursio_id=$1',[id])).rows[0]
+    await comLogisticaSenseDiners()
+
+    expect((await db.query(
+      `update public.excursio_finances set preu_activitat=999 where excursio_id=$1 returning excursio_id`,[id],
+    )).rows).toHaveLength(0)
+    expect((await db.query(
+      `update public.excursio_autocars set preu=999 where id=$1 returning id`,[autocar.id],
+    )).rows).toHaveLength(0)
+
+    await db.exec('reset role')
+    const f = (await db.query<{preu_activitat:string}>('select preu_activitat from public.excursio_finances where excursio_id=$1',[id])).rows[0]
+    const a = (await db.query<{preu:string}>('select preu from public.excursio_autocars where id=$1',[autocar.id])).rows[0]
+    expect(Number(f.preu_activitat)).toBe(12)
+    expect(Number(a.preu)).toBe(406)
+  })
+
+  it('cada autocar és una fila, i per això tres autocars ja no trenquen res', async () => {
+    const id = await excursioAmbCostos()
+    await asUser('admin@stjosep.org')
+    await db.query(`insert into public.excursio_autocars(excursio_id,places,preu) values($1,55,406),($1,55,406)`,[id])
+    expect((await db.query('select * from public.excursio_autocars where excursio_id=$1',[id])).rows).toHaveLength(3)
+  })
+
+  it('esborrar l’excursió s’emporta els seus costos', async () => {
+    const id = await excursioAmbCostos()
+    await asUser('admin@stjosep.org')
+    await db.query('delete from public.excursions where id=$1',[id])
+    await db.exec('reset role')
+    expect((await db.query('select * from public.excursio_finances')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(0)
+  })
+})

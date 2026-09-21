@@ -1,14 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Loader2, Pencil } from 'lucide-react'
 import type { Excursio, EstatExcursio } from './types'
 import { ESTAT_COLORS, TRANSPORT_LABELS } from './types'
+import type { Finances } from './finances.types'
+import type { ParametresPreu } from './preu'
+import { useFinances } from './useFinances'
+import { BlocEconomic } from './BlocEconomic'
 
 interface Props {
   excursio: Excursio
   potAprovar: boolean
   potGestionar: boolean
   potEditar: boolean
+  // Ve calculat de fora, amb el mateix criteri que potAprovar/potGestionar:
+  // el rol i les caselles de l'usuari ja s'han mirat allà on hi ha accés als
+  // stores, i aquí només arriba la decisió, no les dades de qui l'ha presa.
+  potVeureCostos: boolean
+  parametres: ParametresPreu
   onCanviarEstat: (estat: EstatExcursio, motiu?: string) => Promise<void>
+  // Fa la crida RPC i recarrega la llista (mateixa ruta que onCanviarEstat),
+  // però sense tancar la fitxa: qui confirma un preu vol veure'l sense haver
+  // de tornar a obrir la targeta. Es passa `finances` perquè qui gestiona
+  // l'store (el Wrapper) no té la còpia local encara no desada del formulari:
+  // sense passar-la, es podria confirmar un preu calculat amb dades que
+  // encara no han arribat al servidor.
+  onConfirmaPreu: (preu: number, finances: Finances) => Promise<void>
   onEditar: () => void
   onClose: () => void
 }
@@ -22,9 +38,50 @@ function Dada({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   )
 }
 
-export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEditar, onCanviarEstat, onEditar, onClose }: Props) {
+const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', currency: 'EUR' })
+
+export function ExcursioDetall({
+  excursio: e, potAprovar, potGestionar, potEditar, potVeureCostos, parametres,
+  onCanviarEstat, onConfirmaPreu, onEditar, onClose,
+}: Props) {
   const [ocupat, setOcupat] = useState(false)
   const [error, setError] = useState('')
+
+  // L'edició es fa sobre una còpia local perquè "Desa els costos" pugui ser
+  // una acció explícita i no cada tecla premuda. Es llegeix del store amb
+  // getState() després de cada `carrega`/`desa` —no amb un selector que
+  // n'observi el camp— perquè copiar-ho en un efecte cada cop que el store
+  // canvia xocaria amb l'edició que l'usuari encara no ha desat.
+  const carregaFinances = useFinances((s) => s.carrega)
+  const desaFinances = useFinances((s) => s.desa)
+  // Es llegeix amb un selector (i no amb getState(), com `finances`) perquè
+  // aquí sí que interessa que la fitxa es torni a pintar quan canviï: és
+  // l'únic lloc que l'ensenya, i abans d'aquest camp res ho feia.
+  const financesError = useFinances((s) => s.error)
+  const [finances, setFinances] = useState<Finances | null>(null)
+
+  useEffect(() => {
+    // Sense accés als diners, `carrega` tornaria zero files igualment (l'RLS
+    // ho talla al servidor), però demanar-ho és una crida de xarxa de franc.
+    if (!potVeureCostos) return
+    let activa = true
+    void carregaFinances(e.id).then(() => {
+      if (!activa) return
+      const carregades = useFinances.getState()
+      // Si la càrrega ha fallat, `carregades.finances` ja és `null` (el
+      // `catch` de `carrega` l'esborra), però es comprova l'error i no només
+      // `finances`: copiar un `null` real seria igual de correcte, però fiar-
+      // se'n aquí duplicaria la mateixa suposició en dos llocs.
+      if (!carregades.error) setFinances(carregades.finances)
+    })
+    return () => { activa = false }
+  }, [potVeureCostos, e.id, carregaFinances])
+
+  async function desaICarregaFinances() {
+    if (!finances) return
+    await desaFinances(e.id, finances)
+    setFinances(useFinances.getState().finances)
+  }
 
   async function canvia(estat: EstatExcursio, motiu?: string) {
     setOcupat(true)
@@ -34,6 +91,40 @@ export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEdita
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No s’ha pogut fer el canvi.')
+      setOcupat(false)
+    }
+  }
+
+  // Mateix patró que `canvia`: sense això, un desament o una confirmació que
+  // falla (RLS, xarxa) no es distingia en pantalla d'un que ha anat bé —
+  // ni tan sols quedava constància que encara s'estava fent la crida.
+  async function desarCostos() {
+    setOcupat(true)
+    setError('')
+    try {
+      await desaICarregaFinances()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No s’han pogut desar els costos.')
+    } finally {
+      setOcupat(false)
+    }
+  }
+
+  async function confirmarPreu(preu: number) {
+    // `finances` no pot ser null aquí: aquesta funció només s'invoca des del
+    // botó de `BlocEconomic`, que només es pinta quan `finances` ja existeix
+    // (vegeu més avall, `potVeureCostos && finances &&`).
+    if (!finances) return
+    setOcupat(true)
+    setError('')
+    try {
+      await onConfirmaPreu(preu, finances)
+      // Igual que `desaICarregaFinances`: `confirma` també desa per sota, i
+      // els autocars nous hi reben l'id real del servidor.
+      setFinances(useFinances.getState().finances)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No s’ha pogut confirmar el preu.')
+    } finally {
       setOcupat(false)
     }
   }
@@ -78,6 +169,9 @@ export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEdita
             />
             <Dada etiqueta="Responsable" valor={e.Responsable} />
             <Dada etiqueta="Alumnes previstos" valor={String(alumnes)} />
+            {/* El preu confirmat surt a la circular que reben les famílies:
+                amagar-lo no té sentit encara que qui mira no vegi el desglossament. */}
+            {e.PreuAlumne !== null && <Dada etiqueta="Preu per alumne" valor={eur(e.PreuAlumne)} />}
           </div>
 
           <div>
@@ -99,6 +193,22 @@ export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEdita
             </p>
           </div>
 
+          {potVeureCostos && finances && (
+            <BlocEconomic
+              finances={finances}
+              parametres={parametres}
+              alumnes={alumnes}
+              acompanyants={e.Acompanyants.length + e.AcompanyantsExterns}
+              preuConfirmat={e.PreuAlumne}
+              confirmatPer={e.PreuConfirmatPer}
+              potConfirmar={e.Estat === 'Aprovada' || e.Estat === 'Reservada'}
+              ocupat={ocupat}
+              onCanvia={setFinances}
+              onDesa={desarCostos}
+              onConfirma={confirmarPreu}
+            />
+          )}
+
           {e.Observacions && <Dada etiqueta="Observacions" valor={e.Observacions} />}
 
           <div className="border-t border-gray-100 pt-4 space-y-1 text-xs text-gray-500">
@@ -116,6 +226,13 @@ export function ExcursioDetall({ excursio: e, potAprovar, potGestionar, potEdita
             </p>
           )}
 
+          {/* `financesError` és el de `useFinances` (una càrrega de costos que
+              ha fallat en obert); `error` és el d'una acció d'aquesta fitxa
+              (canviar d'estat, desar, confirmar). Cap dels dos té prioritat
+              fixa: es mostren tots dos si passa que coincideixen. */}
+          {financesError && potVeureCostos && (
+            <p className="text-xs text-red-600">No s’han pogut carregar els costos: {financesError}</p>
+          )}
           {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
 
