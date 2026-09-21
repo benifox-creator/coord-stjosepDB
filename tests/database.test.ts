@@ -841,3 +841,104 @@ describe('els diners de les excursions', () => {
     expect((await db.query('select * from public.excursio_autocars')).rows).toHaveLength(0)
   })
 })
+
+describe("què diuen els correus d'excursions", () => {
+  async function excursioProposada() {
+    await asUser('teacher@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Can Montcau','Visita','2026-10-20','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    return id
+  }
+  // Es busca per la clau de l'esdeveniment i no pel més recent: dins d'una
+  // transacció `now()` val el mateix per a tots, així que ordenar per data de
+  // creació no distingeix dos correus adreçats a la mateixa persona.
+  async function correu(destinatari: string, clau: string) {
+    await db.exec('reset role')
+    return (await db.query<{subject:string;body:string}>(
+      `select subject,body from public.notifications
+        where recipient=$1 and event_key like $2 || '%' limit 1`, [destinatari, clau])).rows[0]
+  }
+
+  it("escriu la data en català, apostrofada quan toca", async () => {
+    // Postgres la donaria en anglès («Tuesday, October 20»), i la preposició
+    // s'apostrofa davant de vocal. Les dues coses es llegeixen com una falta
+    // en un correu que surt del col·legi.
+    const r = (await db.query<{a:string;b:string}>(
+      `select app_private.data_llarga('2026-10-20') as a, app_private.data_llarga('2026-09-30') as b`)).rows[0]
+    expect(r.a).toBe("Dimarts, 20 d'octubre de 2026")
+    expect(r.b).toBe('Dimecres, 30 de setembre de 2026')
+  })
+
+  it("diu alguna cosa quan no hi ha data", async () => {
+    expect((await db.query<{d:string}>('select app_private.data_llarga(null) as d')).rows[0].d).toBe('sense data')
+  })
+
+  it("l'avís als aprovadors no diu quantes n'hi ha", async () => {
+    // S'encua un sol cop al dia: un número quedaria desfasat de seguida i
+    // diria una cosa falsa a qui l'obrís a la tarda.
+    await excursioProposada()
+    const c = await correu('admin@stjosep.org', 'excursions-pendents')
+    expect(c.body).toContain('Hi ha propostes')
+    expect(c.body).not.toMatch(/\d+ propostes/)
+    expect(c.body).toContain('#/excursions')
+  })
+
+  it("el d'aprovació diu quina excursió és, no només que sí", async () => {
+    const id = await excursioProposada()
+    await asUser('admin@stjosep.org')
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    const c = await correu('teacher@stjosep.org', 'excursio-resolta')
+    expect(c.subject).toContain('aprovada')
+    expect(c.subject).toContain('Can Montcau')
+    expect(c.body).toContain("Dimarts, 20 d'octubre de 2026")
+    expect(c.body).toContain('Ja es pot reservar')
+  })
+
+  it('el de rebuig porta el motiu i diu què fer', async () => {
+    const id = await excursioProposada()
+    await asUser('admin@stjosep.org')
+    await db.query(`update public.excursions set estat='Esborrany', motiu_rebuig='falta l''hora de tornada' where id=$1`,[id])
+    const c = await correu('teacher@stjosep.org', 'excursio-resolta')
+    expect(c.subject).toContain('torna a esborrany')
+    expect(c.body).toContain("Motiu: falta l'hora de tornada")
+    expect(c.body).toContain('tornar a enviar')
+  })
+
+  it('el de cancel·lació avisa dels diners quan el preu ja estava confirmat', async () => {
+    // És el cas més delicat: hi ha circulars a casa i famílies que potser han
+    // pagat. Callar-ho faria veure que està resolt, i no ho està.
+    const id = await excursioProposada()
+    await asUser('admin@stjosep.org')
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id,12.5,0.8,12,10])
+    await db.query(`update public.excursions set estat='Cancel·lada', motiu_cancellacio='previsió de pluja' where id=$1`,[id])
+    const c = await correu('teacher@stjosep.org', 'excursio-cancellada')
+    expect(c.subject).toContain('cancel·lada')
+    expect(c.body).toContain('previsió de pluja')
+    expect(c.body).toContain('12,50 € per alumne')
+    expect(c.body).toContain("s'han de gestionar a part")
+  })
+
+  it('i no en parla quan no hi havia preu confirmat', async () => {
+    const id = await excursioProposada()
+    await asUser('admin@stjosep.org')
+    await db.query(`update public.excursions set estat='Cancel·lada', motiu_cancellacio='es posposa' where id=$1`,[id])
+    const c = await correu('teacher@stjosep.org', 'excursio-cancellada')
+    // La part positiva no és decoració: sense ella, la prova passaria també
+    // amb el text antic, que tampoc no parlava de diners perquè no deia res.
+    expect(c.body).toContain("Aquesta excursió s'ha cancel·lat")
+    expect(c.body).toContain('es posposa')
+    expect(c.body).not.toContain('per alumne')
+  })
+
+  it('sense motiu, ho diu en comptes de deixar la línia coixa', async () => {
+    const id = await excursioProposada()
+    await asUser('admin@stjosep.org')
+    await db.query(`update public.excursions set estat='Cancel·lada' where id=$1`,[id])
+    const c = await correu('teacher@stjosep.org', 'excursio-cancellada')
+    expect(c.body).toContain("no se n'ha indicat cap")
+  })
+})
