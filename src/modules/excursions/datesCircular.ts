@@ -25,9 +25,10 @@ function mou(iso: string, dies: number): string {
 function fins_a_lectiu(iso: string, pas: -1 | 1, diesNoLectius: string[]): string {
   let d = iso
   // Un mes de marge: si en trenta intents no n'hi ha cap de lectiu, alguna
-  // cosa està molt malament a la configuració i val més tornar el que hi ha
-  // que girar per sempre.
+  // cosa està molt malament a la configuració. Val més tornar una cadena buida
+  // que imprimir una data festiu a la circular.
   for (let i = 0; i < 30 && !esDiaLectiu(d, diesNoLectius); i++) d = mou(d, pas)
+  if (!esDiaLectiu(d, diesNoLectius)) return ''
   return d
 }
 
@@ -38,13 +39,22 @@ export function proposaDates(
   diesAbansTermini = 8,
 ): DatesCircular {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dataExcursio)) return { circular: '', pagament: '', resguard: '' }
+  // Una data que passa el regex pot seguir sense ser vàlida (2026-02-30, 2026-13-01).
+  // Si la data no és vàlida, JavaScript la roda silenciosament a una altra, o llança error. Rebutjar-la.
+  try {
+    if (new Date(`${dataExcursio}T00:00:00Z`).toISOString().slice(0, 10) !== dataExcursio) {
+      return { circular: '', pagament: '', resguard: '' }
+    }
+  } catch {
+    return { circular: '', pagament: '', resguard: '' }
+  }
 
   const circular = mou(dataExcursio, -diesAbansCircular)
   // El termini es mou **enrere**: endarrerir-lo acostaria el cobrament al dia
   // de la sortida, que és el que no es vol.
   const pagament = fins_a_lectiu(mou(dataExcursio, -diesAbansTermini), -1, diesNoLectius)
   // El resguard es lliura al tutor, i en dissabte no hi ha ningú a qui donar-lo.
-  const resguard = fins_a_lectiu(mou(pagament, 1), 1, diesNoLectius)
+  const resguard = pagament === '' ? '' : fins_a_lectiu(mou(pagament, 1), 1, diesNoLectius)
 
   return { circular, pagament, resguard }
 }

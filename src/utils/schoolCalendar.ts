@@ -32,10 +32,11 @@ export function overlaps(a: string, b: string): boolean {
 }
 
 /**
- * Si un dia té classe. Fins ara cada pantalla s'ho mirava pel seu compte
- * (`ExcursioForm`, `AbsenciaForm`, el tauler); aquí queda en un sol lloc
- * perquè les dates de la circular hi depenen i no poden dir una cosa
- * diferent de la resta de l'aplicació.
+ * Si un dia té classe. Es fa servir aquí per calcular les dates de la circular.
+ * Nota: `src/modules/excursions/excursions.utils.ts` té la seva pròpia còpia,
+ * que s'usa a `ExcursioForm`. Les dues usuen fórmules equivalents (sama dia de
+ * la setmana en tots els casos provats), però són independents. Qui canviï una
+ * ha de mirar l'altra.
  */
 export function esDiaLectiu(iso: string, diesNoLectius: string[]): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false
