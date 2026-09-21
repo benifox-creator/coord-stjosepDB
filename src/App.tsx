@@ -6,6 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './services/firebase'
 import { clearSessionData } from './services/session'
 import { useAuthStore } from './store/authStore'
+import { esChunkCaducat, recarregaSiCal } from './utils/desplegamentNou'
 import { LoginPage } from './pages/LoginPage'
 import { NoAutoritzatPage } from './pages/NoAutoritzatPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -125,13 +126,30 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     this.state = { error: null }
   }
   static getDerivedStateFromError(error: Error) { return { error } }
-  componentDidCatch(error: Error, info: ErrorInfo) { console.error('[ErrorBoundary]', error, info) }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // Si el que ha fallat és carregar un mòdul, l'aplicació no està trencada:
+    // és aquesta pestanya, que es va obrir abans de l'últim desplegament i
+    // demana fitxers que ja no existeixen. Recarregar-la ho arregla, i és
+    // millor que ensenyar-li a un professor un missatge en anglès que no diu
+    // què ha de fer.
+    if (esChunkCaducat(error) && recarregaSiCal()) return
+    console.error('[ErrorBoundary]', error, info)
+  }
   render() {
     if (this.state.error) {
+      // Si hem arribat aquí amb un error de mòdul, vol dir que recarregar ja
+      // no és una opció (ho acabem de provar). Val més dir-ho clar.
+      const caducat = esChunkCaducat(this.state.error)
       return (
         <div className="flex flex-col items-center justify-center h-screen gap-4 p-8 text-center">
-          <p className="text-lg font-semibold text-red-700">Error inesperat</p>
-          <p className="text-sm text-gray-600 max-w-md font-mono">{this.state.error.message}</p>
+          <p className="text-lg font-semibold text-red-700">
+            {caducat ? 'Cal recarregar la pàgina' : 'Error inesperat'}
+          </p>
+          <p className="text-sm text-gray-600 max-w-md">
+            {caducat
+              ? 'Hi ha una versió nova de l’aplicació i aquesta pestanya s’ha quedat enrere. Tanca-la i torna a entrar.'
+              : <span className="font-mono">{this.state.error.message}</span>}
+          </p>
           <button onClick={() => this.setState({ error: null })} className="px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">
             Tornar a intentar
           </button>
