@@ -140,21 +140,21 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     "Cal transferir l'import des de qualsevol caixer automàtic de «la Caixa», amb targeta o llibreta de «la Caixa» o amb targeta d'altres entitats. No els cobraran comissió.",
   ],
   'excursions.passos-pagament': [
-    '1. Introducció de la targeta del banc.',
-    '2. En l'opció de pagaments, triar el de codi de barres.',
-    '3. Apareixerà, a mà dreta, el lector de codis.',
-    '4. Passar les barres de la targeta que els hem lliurat per l'esmentat lector.',
-    '5. Complimentar les dades que es demanin: quantitat, concepte, nom de l'alumne...',
-    '6. Retirar la targeta del caixer i guardar la targeta de barres per a fer-la servir en tots els pagaments de les diferents sortides que realitzin els alumnes.',
+    'Introducció de la targeta del banc.',
+    "En l'opció de pagaments, triar el de codi de barres.",
+    'Apareixerà, a mà dreta, el lector de codis.',
+    "Passar les barres de la targeta que els hem lliurat per l'esmentat lector.",
+    "Complimentar les dades que es demanin: quantitat, concepte, nom de l'alumne...",
+    'Retirar la targeta del caixer i guardar la targeta de barres per a fer-la servir en tots els pagaments de les diferents sortides que realitzin els alumnes.',
   ],
-  'excursions.text-ampa': ['L'AMPA col·labora en el pagament d'aquesta activitat cultural.'],
+  'excursions.text-ampa': ["L'AMPA col·labora en el pagament d'aquesta activitat cultural."],
   // El text antic lligava la devolució al pagament fora de termini i no
   // s'entenia. El centre va confirmar (2026-09-18) que és per a qui avisa a
   // última hora que no hi anirà.
   'excursions.text-devolucions': [
     'Si un alumne no assisteix i s’avisa fora de termini, es retornarà el 75 % de l’import; el 25 % restant cobreix despeses ja compromeses.',
   ],
-  'excursions.text-resguard': ['En el resguard que la «Caixa» lliurarà hi ha de constar el nom, els cognoms i el curs de l'alumne. S'ha de lliurar al tutor o tutora.'],
+  'excursions.text-resguard': ["En el resguard que la «Caixa» lliurarà hi ha de constar el nom, els cognoms i el curs de l'alumne. S'ha de lliurar al tutor o tutora."],
   // Visibilitat per defecte: tots els rols veuen tots els mòduls
   'visibilitat.incidencies':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.inventari':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
