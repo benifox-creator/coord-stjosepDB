@@ -31,3 +31,16 @@ export function overlaps(a: string, b: string): boolean {
   return a0 < b1 && b0 < a1
 }
 
+/**
+ * Si un dia té classe. Fins ara cada pantalla s'ho mirava pel seu compte
+ * (`ExcursioForm`, `AbsenciaForm`, el tauler); aquí queda en un sol lloc
+ * perquè les dates de la circular hi depenen i no poden dir una cosa
+ * diferent de la resta de l'aplicació.
+ */
+export function esDiaLectiu(iso: string, diesNoLectius: string[]): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false
+  const dia = new Date(`${iso}T00:00:00Z`).getUTCDay()
+  if (Number.isNaN(dia)) return false
+  if (dia === 0 || dia === 6) return false
+  return !diesNoLectius.includes(iso)
+}
