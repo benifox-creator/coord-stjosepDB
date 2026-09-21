@@ -20,8 +20,11 @@ interface Props {
   onCanviarEstat: (estat: EstatExcursio, motiu?: string) => Promise<void>
   // Fa la crida RPC i recarrega la llista (mateixa ruta que onCanviarEstat),
   // però sense tancar la fitxa: qui confirma un preu vol veure'l sense haver
-  // de tornar a obrir la targeta.
-  onConfirmaPreu: (preu: number) => Promise<void>
+  // de tornar a obrir la targeta. Es passa `finances` perquè qui gestiona
+  // l'store (el Wrapper) no té la còpia local encara no desada del formulari:
+  // sense passar-la, es podria confirmar un preu calculat amb dades que
+  // encara no han arribat al servidor.
+  onConfirmaPreu: (preu: number, finances: Finances) => Promise<void>
   onEditar: () => void
   onClose: () => void
 }
@@ -51,6 +54,10 @@ export function ExcursioDetall({
   // canvia xocaria amb l'edició que l'usuari encara no ha desat.
   const carregaFinances = useFinances((s) => s.carrega)
   const desaFinances = useFinances((s) => s.desa)
+  // Es llegeix amb un selector (i no amb getState(), com `finances`) perquè
+  // aquí sí que interessa que la fitxa es torni a pintar quan canviï: és
+  // l'únic lloc que l'ensenya, i abans d'aquest camp res ho feia.
+  const financesError = useFinances((s) => s.error)
   const [finances, setFinances] = useState<Finances | null>(null)
 
   useEffect(() => {
@@ -59,7 +66,13 @@ export function ExcursioDetall({
     if (!potVeureCostos) return
     let activa = true
     void carregaFinances(e.id).then(() => {
-      if (activa) setFinances(useFinances.getState().finances)
+      if (!activa) return
+      const carregades = useFinances.getState()
+      // Si la càrrega ha fallat, `carregades.finances` ja és `null` (el
+      // `catch` de `carrega` l'esborra), però es comprova l'error i no només
+      // `finances`: copiar un `null` real seria igual de correcte, però fiar-
+      // se'n aquí duplicaria la mateixa suposició en dos llocs.
+      if (!carregades.error) setFinances(carregades.finances)
     })
     return () => { activa = false }
   }, [potVeureCostos, e.id, carregaFinances])
@@ -98,10 +111,17 @@ export function ExcursioDetall({
   }
 
   async function confirmarPreu(preu: number) {
+    // `finances` no pot ser null aquí: aquesta funció només s'invoca des del
+    // botó de `BlocEconomic`, que només es pinta quan `finances` ja existeix
+    // (vegeu més avall, `potVeureCostos && finances &&`).
+    if (!finances) return
     setOcupat(true)
     setError('')
     try {
-      await onConfirmaPreu(preu)
+      await onConfirmaPreu(preu, finances)
+      // Igual que `desaICarregaFinances`: `confirma` també desa per sota, i
+      // els autocars nous hi reben l'id real del servidor.
+      setFinances(useFinances.getState().finances)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No s’ha pogut confirmar el preu.')
     } finally {
@@ -206,6 +226,13 @@ export function ExcursioDetall({
             </p>
           )}
 
+          {/* `financesError` és el de `useFinances` (una càrrega de costos que
+              ha fallat en obert); `error` és el d'una acció d'aquesta fitxa
+              (canviar d'estat, desar, confirmar). Cap dels dos té prioritat
+              fixa: es mostren tots dos si passa que coincideixen. */}
+          {financesError && potVeureCostos && (
+            <p className="text-xs text-red-600">No s’han pogut carregar els costos: {financesError}</p>
+          )}
           {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
 

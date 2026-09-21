@@ -44,17 +44,27 @@ export function BlocEconomic({
       <h3 className="text-sm font-semibold text-text-main">Costos i preu</h3>
 
       <div className="space-y-2">
-        <p className="text-xs text-gray-400">Autocars — un per vehicle, preu sense IVA</p>
+        <p className="text-xs text-gray-500">
+          Autocars — un per vehicle. El preu que es demana és{' '}
+          <strong className="font-semibold text-text-main">sense IVA</strong>: en el càlcul se li
+          aplicarà el {parametres.ivaPct} % configurat.
+        </p>
         {f.Autocars.map((a) => (
-          <div key={a.id} className="flex items-center gap-2">
-            <input type="number" min={0} value={a.Places} aria-label="Places"
-              onChange={(e) => autocar(a.id, { Places: Number(e.target.value) })}
-              className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg" />
-            <input type="number" min={0} step="0.01" value={a.Preu} aria-label="Preu de l’autocar"
-              onChange={(e) => autocar(a.id, { Preu: Number(e.target.value) })}
-              className="w-32 px-2 py-1 text-sm border border-gray-200 rounded-lg" />
+          <div key={a.id} className="flex items-end gap-2">
+            <label className="flex flex-col gap-0.5 text-xs text-gray-500">
+              Places
+              <input type="number" min={0} value={a.Places} aria-label="Places"
+                onChange={(e) => autocar(a.id, { Places: Number(e.target.value) })}
+                className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg" />
+            </label>
+            <label className="flex flex-col gap-0.5 text-xs font-medium text-text-main">
+              Preu sense IVA
+              <input type="number" min={0} step="0.01" value={a.Preu} aria-label="Preu de l’autocar, sense IVA"
+                onChange={(e) => autocar(a.id, { Preu: Number(e.target.value) })}
+                className="w-32 px-2 py-1 text-sm border border-gray-200 rounded-lg" />
+            </label>
             <button onClick={() => onCanvia({ ...f, Autocars: f.Autocars.filter((x) => x.id !== a.id) })}
-              aria-label="Treu l’autocar" className="p-1 text-gray-300 hover:text-red-600">
+              aria-label="Treu l’autocar" className="p-1 mb-1.5 text-gray-300 hover:text-red-600">
               <Trash2 size={14} />
             </button>
           </div>

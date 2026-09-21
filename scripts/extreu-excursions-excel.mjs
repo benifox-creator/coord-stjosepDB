@@ -18,6 +18,9 @@ import { readFileSync, writeFileSync } from 'node:fs'
 const origen = process.argv[2]
 if (!origen) { console.error('Cal la ruta de l\'Excel'); process.exit(1) }
 
+// readFileSync + XLSX.read, i no XLSX.readFile: el nom del fitxer del centre
+// porta un accent ("Excursió Curs.xlsm") i XLSX.readFile hi peta en alguns
+// entorns. No és una redundància per "simplificar".
 const buf = readFileSync(origen)
 const wb = XLSX.read(buf, { type: 'buffer' })
 
@@ -96,6 +99,15 @@ for (let i = 0; i < finalRows.length; i++) {
     curs: String(f[4] ?? ''),
     alumnes,
     acompanyants,
+    // Advertència per a qui reutilitzi aquest fixture: la columna 'Autocar'
+    // de l'Excel és el preu **amb IVA** (el pressupost tal com l'envia el
+    // transportista); les 35 files amb autocar d'aquest fixture divideixen
+    // totes exactament per 1,1. `CostosExcursio.autocars` a preu.ts, en
+    // canvi, es documenta "sense IVA". `preu.test.ts` ho compensa passant
+    // `ivaPct: 0` a la prova que compara amb les excursions reals — això fa
+    // la comparació honesta, però no comprova que el personal de Secretaria
+    // escrigui de debò el preu sense IVA a `BlocEconomic`: si hi enganxen el
+    // pressupost tal qual, el preu final surt un 10 % per sobre i res ho detecta.
     autocars: Number(f[9]) > 0 ? [Number(f[9])] : [],
     preuActivitat: Number(f[10]) || 0,
     preuActivitatTipus,

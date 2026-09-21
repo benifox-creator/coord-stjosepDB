@@ -105,11 +105,24 @@ describe('càlcul del preu', () => {
     // això deixa de caler: ja escala sol.
     const r = calculaPreu({ ...base, autocars: [], preuActivitat: 10, preuActivitatTipus: 'per_alumne' }, params)
     expect(r.base).toBeCloseTo(10, 6)
-    expect(r.preu).toBe(arrodoneixAmunt(10 * 1.12, 0.5))
+    // Literal i no `arrodoneixAmunt(10 * 1.12, 0.5)`: calcular l'esperat amb
+    // la mateixa funció que es prova la faria passar encara que l'arrodoniment
+    // es convertís en la identitat.
+    expect(r.preu).toBe(11.5)
   })
 })
 
 describe('contra les excursions reals del curs 2022-23', () => {
+  // Avís per a qui llegeixi això buscant "proves que el preu funciona amb
+  // dades reals": el preu de cada autocar al fixture (`excursions-excel.json`)
+  // és el que hi havia a la columna 'Autocar' de l'Excel, i és **amb IVA**
+  // (les 35 files amb autocar hi divideixen exactament per 1,1) — mentre que
+  // `CostosExcursio.autocars` es documenta "sense IVA". Es passa `ivaPct: 0`
+  // més avall precisament per neutralitzar aquesta diferència i poder
+  // comparar amb el que l'Excel deia. Això fa que la comparació sigui
+  // honesta, però vol dir que aquesta prova NO comprova que qui escriu el
+  // preu a `BlocEconomic` hi posi de debò l'import sense IVA: només que el
+  // càlcul reprodueix l'Excel si se li dona el número que ell esperava.
   it('reprodueix el cost per alumne que va calcular l’Excel, al cèntim', () => {
     // Es compara amb `r.base` (cost per alumne ja net d'AMPA) i no amb
     // `r.costAlumne`: ara que l'AMPA es resta per a les excursions on

@@ -47,6 +47,25 @@ describe('carregar els costos', () => {
     expect(useFinances.getState().loading).toBe(false)
   })
 
+  it('en petar just després d’haver-ne carregat una altra, no deixa les seves dades a la vista', async () => {
+    // Reprodueix el cas real: s'obre l'excursió A (es carrega bé), es tanca,
+    // s'obre la B i la seva càrrega falla. Sense esborrar `finances` al catch,
+    // `ExcursioDetall` seguiria ensenyant —i "Desa els costos" escriuria— els
+    // autocars i l'AMPA de l'excursió A sota el nom de la B, sense cap avís
+    // en pantalla perquè res subscrivia `error`.
+    taules({ finances: [{
+      excursio_id: 'excursio-A', preu_activitat: '10', preu_activitat_tipus: 'per_alumne',
+      ampa_import: '0', ampa_cobreix_activitat: false, cost_acompanyants: '0',
+    }] })
+    await useFinances.getState().carrega('excursio-A')
+    expect(useFinances.getState().finances?.PreuActivitat).toBe(10)
+
+    vi.mocked(db.getAll).mockRejectedValue(new Error('sense connexió'))
+    await useFinances.getState().carrega('excursio-B')
+    expect(useFinances.getState().finances).toBeNull()
+    expect(useFinances.getState().error).toBe('sense connexió')
+  })
+
   it('ignora la resposta d’una càrrega que ja ha quedat enrere', async () => {
     let resolLenta: (v: unknown) => void = () => {}
     const lenta = new Promise((r) => { resolLenta = r })
@@ -91,9 +110,28 @@ describe('desar els costos', () => {
 })
 
 describe('confirmar el preu', () => {
-  it('crida la RPC confirmar_preu amb p_id i p_preu', async () => {
+  it('desa els costos abans de cridar la RPC, amb els mateixos paràmetres amb què s’ha calculat', async () => {
+    taules({ autocars: [] })
+    const upsert = mockUpsert()
     vi.mocked(db.callRpc).mockResolvedValue(undefined as never)
-    await useFinances.getState().confirma('e1', 12.5)
-    expect(vi.mocked(db.callRpc)).toHaveBeenCalledWith('confirmar_preu', { p_id: 'e1', p_preu: 12.5 })
+    const f: Finances = { ...FINANCES_BUIDES, PreuActivitat: 20 }
+    await useFinances.getState().confirma('e1', 12.5, f, { previsio: 0.8, margePct: 15, ivaPct: 21, arrodoniment: 0.5 })
+    // `desa` (i per tant l'upsert) s'ha de cridar: si el preu es confirma
+    // sense desar primer, la fila de costos pot descriure una altra cosa que
+    // el preu que s'acaba de congelar.
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ excursio_id: 'e1', preu_activitat: 20 }))
+    expect(vi.mocked(db.callRpc)).toHaveBeenCalledWith('confirmar_preu', {
+      p_id: 'e1', p_preu: 12.5, p_previsio: 0.8, p_marge_pct: 15, p_iva_pct: 21,
+    })
+  })
+
+  it('si desar els costos falla, no arriba a confirmar el preu', async () => {
+    taules({ autocars: [] })
+    mockUpsert({ message: 'sense connexió' })
+    vi.mocked(db.callRpc).mockResolvedValue(undefined as never)
+    await expect(
+      useFinances.getState().confirma('e1', 12.5, FINANCES_BUIDES, { previsio: 0.8, margePct: 15, ivaPct: 21, arrodoniment: 0.5 }),
+    ).rejects.toThrow('sense connexió')
+    expect(vi.mocked(db.callRpc)).not.toHaveBeenCalled()
   })
 })

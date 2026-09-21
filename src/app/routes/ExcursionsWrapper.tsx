@@ -72,8 +72,12 @@ export default function ExcursionsWrapper() {
             await canviarEstat(oberta.id, estat, motiu)
             await load()
           }}
-          onConfirmaPreu={async (preu) => {
-            await confirmaPreu(oberta.id, preu)
+          onConfirmaPreu={async (preu, finances) => {
+            // Els mateixos paràmetres amb què `BlocEconomic` ha calculat
+            // `preu`, perquè `confirmar_preu` els congeli amb el preu: si es
+            // recalculessin aquí, una configuració canviada entremig faria
+            // que el preu confirmat i els paràmetres desats no coincidissin.
+            await confirmaPreu(oberta.id, preu, finances, parametresPreu(config, oberta.Etapa))
             // Mateixa ruta que onCanviarEstat: recarregar la llista i, d'aquí,
             // agafar la fila fresca. Però aquí no es tanca la fitxa (onClose)
             // en acabar: qui acaba de confirmar un preu vol veure'l sense

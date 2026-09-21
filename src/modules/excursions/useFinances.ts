@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { getAll, insertRow, updateRowById, deleteRowById, callRpc, supabase } from '../../services/db'
 import type { Finances, Autocar } from './finances.types'
 import { FINANCES_BUIDES } from './finances.types'
+import type { ParametresPreu } from './preu'
 
 interface FinancesRow {
   excursio_id: string
@@ -19,7 +20,7 @@ interface FinancesState {
   error: string | null
   carrega: (excursioId: string) => Promise<void>
   desa: (excursioId: string, f: Finances) => Promise<void>
-  confirma: (excursioId: string, preu: number) => Promise<void>
+  confirma: (excursioId: string, preu: number, f: Finances, parametres: ParametresPreu) => Promise<void>
 }
 
 // Si es demanen els costos de dues excursions seguides (per exemple, en obrir
@@ -59,7 +60,13 @@ export const useFinances = create<FinancesState>((set, get) => ({
         Autocars: autocars.map((a): Autocar => ({ id: a.id, Places: a.places, Preu: Number(a.preu) })),
       } })
     } catch (err) {
-      if (meva === generacio) set({ error: err instanceof Error ? err.message : 'Error carregant els costos' })
+      // `finances` també s'esborra i no només `error`: si es deixés la còpia
+      // de l'excursió anterior, qui truqui després (`ExcursioDetall`) no té
+      // manera de distingir "són els costos d'aquesta excursió" de "són els
+      // que hi havia abans i la càrrega ha fallat" — i sense distingir-ho,
+      // "Desa els costos" escriuria els números d'una excursió a la fila
+      // d'una altra.
+      if (meva === generacio) set({ error: err instanceof Error ? err.message : 'Error carregant els costos', finances: null })
     } finally {
       if (meva === generacio) set({ loading: false })
     }
@@ -101,7 +108,16 @@ export const useFinances = create<FinancesState>((set, get) => ({
     await get().carrega(excursioId)
   },
 
-  async confirma(excursioId, preu) {
-    await callRpc('confirmar_preu', { p_id: excursioId, p_preu: preu })
+  async confirma(excursioId, preu, f, parametres) {
+    // Es desen els costos abans de congelar el preu, i amb la mateixa `f` amb
+    // què `BlocEconomic` ha calculat `preu`: sense això, un preu es podia
+    // confirmar amb l'estat del formulari encara no desat, i la fila de
+    // costos guardada podia acabar descrivint una altra cosa que el preu
+    // congelat. Així els dos surten sempre de la mateixa dada.
+    await get().desa(excursioId, f)
+    await callRpc('confirmar_preu', {
+      p_id: excursioId, p_preu: preu,
+      p_previsio: parametres.previsio, p_marge_pct: parametres.margePct, p_iva_pct: parametres.ivaPct,
+    })
   },
 }))
