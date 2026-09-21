@@ -7,19 +7,34 @@ import { useExcursions } from '../../modules/excursions/useExcursions'
 import { useFinances } from '../../modules/excursions/useFinances'
 import { potAprovar, potGestionar, potEditar, potVeureCostos } from '../../modules/excursions/permisos'
 import { parametresPreu } from '../../modules/excursions/parametres'
+import { proposaDates } from '../../modules/excursions/datesCircular'
+import { textosCircular } from '../../modules/excursions/circular/textos'
 import type { Excursio, ExcursioFormData } from '../../modules/excursions/types'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
 import { useConfigStore } from '../../store/configStore'
 import { schoolYear } from '../../utils/schoolCalendar'
 
+/**
+ * Un nombre de dies de la configuració. Si el valor desat no s'entén —algú hi
+ * va escriure "dues setmanes"— val més la proposta de sempre que una data en
+ * «Invalid Date» a la circular. Mateix criteri que `parametresPreu`.
+ */
+function dies(valors: string[], defecte: number): number {
+  const desat = Number(valors[0]?.trim())
+  return Number.isFinite(desat) && desat > 0 ? desat : defecte
+}
+
 export default function ExcursionsWrapper() {
-  const { excursions, loading, error, load, crear, editar, canviarEstat, copiarDelCurs } = useExcursions()
+  const { excursions, loading, error, load, crear, editar, canviarEstat, copiarDelCurs, enviarCircular } = useExcursions()
   const rol = useUsuarisStore((s) => s.rol)
   const usuaris = useUsuarisStore((s) => s.usuaris)
   const email = (useAuthStore((s) => s.user?.email) ?? '').toLowerCase()
   const jo = usuaris.find((u) => u.Email.toLowerCase() === email) ?? null
   const config = useConfigStore((s) => s.config)
+  const diesNoLectius = useConfigStore((s) => s.getValues('centre.dies-no-lectius'))
+  const diesAbansCircular = useConfigStore((s) => dies(s.getValues('excursions.dies-abans-circular'), 15))
+  const diesAbansTermini = useConfigStore((s) => dies(s.getValues('excursions.dies-abans-termini'), 8))
   const confirmaPreu = useFinances((s) => s.confirma)
 
   const [formObert, setFormObert] = useState(false)
@@ -68,6 +83,17 @@ export default function ExcursionsWrapper() {
           potEditar={potEditar(oberta, email, rol, jo)}
           potVeureCostos={potVeureCostos(rol, jo)}
           parametres={parametresPreu(config, oberta.Etapa)}
+          datesCircular={proposaDates(oberta.Data ?? '', diesNoLectius, diesAbansCircular, diesAbansTermini)}
+          textosCircular={textosCircular(config)}
+          diesNoLectius={diesNoLectius}
+          onEnviarCircular={async (dates) => {
+            await enviarCircular(oberta.id, dates)
+            // Mateixa ruta que onConfirmaPreu: es recarrega i es torna a agafar
+            // la fila fresca sense tancar la fitxa, perquè qui l'envia hi vegi
+            // l'estat nou i qui hi consta com a remitent.
+            await load()
+            setOberta((actual) => (actual && useExcursions.getState().excursions.find((x) => x.id === actual.id)) || actual)
+          }}
           onCanviarEstat={async (estat, motiu) => {
             await canviarEstat(oberta.id, estat, motiu)
             await load()

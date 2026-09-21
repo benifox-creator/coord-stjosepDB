@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
+import { getAll, insertRow, updateRowById, deleteRowById, callRpc } from '../../services/db'
 import { schoolYear } from '../../utils/schoolCalendar'
 import type { Excursio, ExcursioFormData, EstatExcursio } from './types'
+import type { DatesCircular } from './datesCircular'
 import { TAULA_EXCURSIONS, rowToExcursio, excursioToInsert, dataTrasladada, type ExcursioRow } from './excursions.utils'
 
 interface GrupRow { id: string; excursio_id: string; grup: string; alumnes_previstos: number; alumnes_finals: number | null }
@@ -16,6 +17,7 @@ interface ExcursionsState {
   editar: (id: string, data: ExcursioFormData) => Promise<void>
   eliminar: (id: string) => Promise<void>
   canviarEstat: (id: string, estat: EstatExcursio, motiu?: string) => Promise<void>
+  enviarCircular: (id: string, dates: DatesCircular) => Promise<void>
   copiarDelCurs: (cursOrigen: string, ids: string[]) => Promise<void>
 }
 
@@ -79,6 +81,24 @@ export const useExcursions = create<ExcursionsState>((set, get) => ({
       // torna el servidor no els porta.
       e.id === id ? { ...rowToExcursio(fila), Grups: e.Grups, Acompanyants: e.Acompanyants } : e
     )) }))
+  },
+
+  /**
+   * Enviar la circular no és un canvi d'estat qualsevol: desa les tres dates,
+   * comprova que el preu ja estigui congelat i avisa els acompanyants. Tot
+   * això passa dins `enviar_circular`, i per això aquí no hi ha cap `update`
+   * —un `update` directe es saltaria les comprovacions i el correu.
+   *
+   * No es recarrega la llista des d'aquí, com tampoc ho fa `useFinances.confirma`:
+   * qui ho crida ja ho fa, i així no es demana el curs sencer dues vegades.
+   */
+  async enviarCircular(id, dates) {
+    await callRpc('enviar_circular', {
+      p_id: id,
+      p_circular: dates.circular,
+      p_pagament: dates.pagament,
+      p_resguard: dates.resguard,
+    })
   },
 
   async copiarDelCurs(cursOrigen, ids) {
