@@ -11,8 +11,10 @@ describe('textos de la circular', () => {
     expect(CONFIG_DEFAULTS['excursions.text-devolucions'][0]).toContain('75')
   })
 
-  it('els passos del pagament són una llista, no un paràgraf', () => {
-    expect(CONFIG_DEFAULTS['excursions.passos-pagament'].length).toBeGreaterThan(1)
+  it('els passos del pagament són sis i comencen per la introducció de targeta', () => {
+    const passos = CONFIG_DEFAULTS['excursions.passos-pagament']
+    expect(passos.length).toBe(6)
+    expect(passos[0]).toContain('Introducció de la targeta')
   })
 
   it('els llegeix de la configuració quan n’hi ha', () => {
