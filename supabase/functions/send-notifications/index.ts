@@ -18,7 +18,10 @@ async function gmailToken() {
   const signed = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,new TextEncoder().encode(unsigned)))
   const assertion = `${unsigned}.${base64(signed).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}`
   const response = await fetch('https://oauth2.googleapis.com/token',{method:'POST',signal:AbortSignal.timeout(15000),body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion})})
-  if (!response.ok) throw new Error(`Google authorization failed (${response.status})`)
+  // El cos de la resposta de Google diu **per què** ha fallat (delegació no
+  // autoritzada, abast que no hi és, bústia remitent que no existeix). Sense
+  // això, un 400 no es distingeix d'un altre i no hi ha per on començar.
+  if (!response.ok) throw new Error(`Google authorization failed (${response.status}): ${(await response.text()).slice(0,300)}`)
   return (await response.json() as {access_token:string}).access_token
 }
 async function rpc(name:string,args:Record<string,unknown>={}) {
@@ -41,10 +44,18 @@ Deno.serve(async request => {
           `Subject: =?UTF-8?B?${base64(new TextEncoder().encode(n.subject))}?=`,
           'MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','',n.body].join('\r\n')
         const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',signal:AbortSignal.timeout(20000),headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({raw:b64url(mime)})})
-        if (!response.ok) throw new Error(`Gmail delivery failed (${response.status})`)
+        if (!response.ok) throw new Error(`Gmail delivery failed (${response.status}): ${(await response.text()).slice(0,200)}`)
       } catch (error) { failure=error instanceof Error ? error.message : 'Delivery failed' }
       await rpc('finish_notification',{p_id:n.id,p_claim:n.claim_token,p_error:failure})
     }))
     return Response.json({processed:batch.length})
-  } catch { return new Response('Notification service unavailable',{status:503}) }
+  } catch (error) {
+    // El cos de la resposta es queda opac a propòsit —qui la crida no ha de
+    // saber com està muntat això— però el motiu ha d'anar al registre: sense
+    // ell, un 503 no diu si falta un secret, si la delegació no s'ha
+    // autoritzat o si la bústia remitent no existeix, i són arreglos ben
+    // diferents. Va a `console.error`, que no surt mai al navegador.
+    console.error('[send-notifications]', error instanceof Error ? error.message : error)
+    return new Response('Notification service unavailable',{status:503})
+  }
 })

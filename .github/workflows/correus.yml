@@ -1,0 +1,62 @@
+# Buida la cua de correus.
+#
+# La cua viu a la base de dades i el que els envia és una funció edge de
+# Supabase, que no s'executa sola: algú l'ha de cridar. Aquest és aquell algú.
+#
+# Va aquí i no a `pg_cron` dins de Supabase per dues raons: els errors es veuen
+# a la pestanya Actions sense haver d'entrar enlloc, i si algun dia es canvia
+# de base de dades el disparador segueix servint.
+name: Envia els correus pendents
+
+on:
+  schedule:
+    # Cada deu minuts. GitHub no ho compleix al segon i pot endarrerir-se quan
+    # va carregat; per a avisos que no són urgents, n'hi ha prou.
+    - cron: '*/10 * * * *'
+  # Per poder-lo llançar a mà des de la pestanya Actions quan es vulgui
+  # comprovar alguna cosa sense esperar.
+  workflow_dispatch:
+
+# Si una execució encara no ha acabat, no se n'encavalca una altra: la funció
+# ja marca els correus com a "sending" mentre els envia, però dues crides
+# alhora només serien feina repetida.
+concurrency:
+  group: correus
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Crida el worker
+        env:
+          URL: ${{ secrets.NOTIFICATION_FUNCTION_URL }}
+          SECRET: ${{ secrets.NOTIFICATION_SCHEDULER_SECRET }}
+        run: |
+          set -euo pipefail
+          # Mentre no s'hagi configurat, no falla: un workflow que es queixa
+          # cada deu minuts s'acaba ignorant, i llavors ja no avisa de res.
+          if [ -z "${URL:-}" ] || [ -z "${SECRET:-}" ]; then
+            echo "Encara no configurat: falten els secrets NOTIFICATION_FUNCTION_URL i/o"
+            echo "NOTIFICATION_SCHEDULER_SECRET. No hi ha res a fer."
+            exit 0
+          fi
+
+          codi=$(curl -sS --max-time 60 -o resposta.json -w '%{http_code}' \
+            -X POST "$URL" \
+            -H "x-scheduler-secret: $SECRET" \
+            -H 'Content-Type: application/json')
+
+          echo "HTTP $codi"
+          cat resposta.json || true
+          echo
+
+          # 401 vol dir que el secret no coincideix amb el que té la funció;
+          # 503, que la funció no ha pogut arrencar (sovint, un secret que hi
+          # falta). Val la pena distingir-ho al registre: són arreglos diferents.
+          case "$codi" in
+            200) ;;
+            401) echo "::error::El secret del disparador no coincideix amb el de la funció." ; exit 1 ;;
+            503) echo "::error::La funció no ha pogut arrencar. Revisa'n els secrets a Supabase." ; exit 1 ;;
+            *)   echo "::error::Resposta inesperada del worker ($codi)." ; exit 1 ;;
+          esac
