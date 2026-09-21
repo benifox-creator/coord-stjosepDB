@@ -18,6 +18,8 @@ const excursio: Excursio = {
   Responsable: '', MotiuRebuig: null, MotiuCancellacio: null, ProposadaPer: null,
   AprovadaPer: null, ReservadaPer: null, Creat_per: 'autor@stjosep.org',
   PreuAlumne: null, PreuConfirmatPer: null,
+  DataCircular: null, DataLimitPagament: null, DataLimitResguard: null,
+  CircularEnviadaPer: null, AmpaCollabora: false,
   Grups: [], Acompanyants: [],
 }
 

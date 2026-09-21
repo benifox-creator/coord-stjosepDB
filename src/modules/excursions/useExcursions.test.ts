@@ -18,6 +18,8 @@ const fila = {
   motiu_rebuig: null, motiu_cancellacio: null, proposada_per: null,
   aprovada_per: null, reservada_per: null, creat_per: 'a@stjosep.org',
   preu_alumne: null, preu_confirmat_per: null,
+  data_circular: null, data_limit_pagament: null, data_limit_resguard: null,
+  circular_enviada_per: null, ampa_collabora: false,
 }
 
 const dades: ExcursioFormData = {

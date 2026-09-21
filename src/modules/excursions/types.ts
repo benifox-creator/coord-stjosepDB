@@ -55,6 +55,13 @@ export interface Excursio {
   Creat_per: string
   PreuAlumne: number | null
   PreuConfirmatPer: string | null
+  DataCircular: string | null
+  DataLimitPagament: string | null
+  DataLimitResguard: string | null
+  CircularEnviadaPer: string | null
+  // Un sí o no públic, sense import: qui gestiona la circular pot no poder
+  // llegir `excursio_finances` (vegeu `confirmar_preu` a la migració).
+  AmpaCollabora: boolean
   Grups: ExcursioGrup[]
   Acompanyants: string[]
 }

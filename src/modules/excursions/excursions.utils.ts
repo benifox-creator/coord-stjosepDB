@@ -28,6 +28,11 @@ export interface ExcursioRow {
   creat_per: string
   preu_alumne: string | number | null
   preu_confirmat_per: string | null
+  data_circular: string | null
+  data_limit_pagament: string | null
+  data_limit_resguard: string | null
+  circular_enviada_per: string | null
+  ampa_collabora: boolean
 }
 
 export function rowToExcursio(row: ExcursioRow): Excursio {
@@ -46,6 +51,12 @@ export function rowToExcursio(row: ExcursioRow): Excursio {
     // suma de preus faria concatenació de text en comptes d'aritmètica.
     PreuAlumne: row.preu_alumne == null ? null : Number(row.preu_alumne),
     PreuConfirmatPer: row.preu_confirmat_per ?? null,
+    DataCircular: row.data_circular ?? null,
+    DataLimitPagament: row.data_limit_pagament ?? null,
+    DataLimitResguard: row.data_limit_resguard ?? null,
+    CircularEnviadaPer: row.circular_enviada_per ?? null,
+    // Booleà: mai `null`, encara que la fila arribés incompleta.
+    AmpaCollabora: row.ampa_collabora ?? false,
     Grups: [], Acompanyants: [],
   }
 }

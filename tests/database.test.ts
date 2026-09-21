@@ -942,3 +942,98 @@ describe("què diuen els correus d'excursions", () => {
     expect(c.body).toContain("no se n'ha indicat cap")
   })
 })
+
+describe('enviar la circular', () => {
+  async function ambPreu() {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Can Montcau','Visita','2026-11-18','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    await db.query(`insert into public.excursio_finances(excursio_id) values($1)`,[id])
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id,12.5,0.8,12,10])
+    return id
+  }
+
+  it('desa les tres dates i deixa l’excursió en circular enviada', async () => {
+    const id = await ambPreu()
+    await db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09'])
+    // `::text` i no la columna crua: PGlite torna `date` com a `Date` de JS
+    // (mitjanit UTC), i `String(...)` en dona el format local llarg
+    // ("Fri Nov 06 2026…"), no l'ISO que `toContain` espera.
+    const e = (await db.query<{estat:string;data_circular:string;data_limit_pagament:string;data_limit_resguard:string;circular_enviada_per:string}>(
+      `select estat,data_circular::text,data_limit_pagament::text,data_limit_resguard::text,circular_enviada_per
+         from public.excursions where id=$1`,[id])).rows[0]
+    expect(e.estat).toBe('Circular enviada')
+    expect(e.circular_enviada_per).toBe('admin@stjosep.org')
+    expect(String(e.data_limit_pagament)).toContain('2026-11-06')
+    expect(String(e.data_limit_resguard)).toContain('2026-11-09')
+  })
+
+  it('no es pot enviar sense preu confirmat', async () => {
+    // Una circular sense import no serveix de res: és justament el número que
+    // les famílies han de veure.
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-11-18','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    await expect(db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09']))
+      .rejects.toThrow('preu')
+  })
+
+  it('un docent normal no la pot enviar', async () => {
+    const id = await ambPreu()
+    await asUser('teacher@stjosep.org')
+    await expect(db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09']))
+      .rejects.toThrow('No autoritzat')
+  })
+
+  it('avisa qui la va proposar', async () => {
+    const id = await ambPreu()
+    await db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09'])
+    await db.exec('reset role')
+    const n = (await db.query<{subject:string;body:string}>(
+      `select subject,body from public.notifications where event_key like 'circular-enviada:%' limit 1`)).rows
+    expect(n).toHaveLength(1)
+    expect(n[0].body).toContain('Can Montcau')
+  })
+
+  it('marca si l’AMPA hi col·labora, sense dir quant', async () => {
+    // Qui genera la circular pot ser un docent amb la casella de logística,
+    // que no pot llegir els costos. El camp li diu que surti la frase; l'import
+    // no li arriba mai.
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-11-18','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    await db.query(`insert into public.excursio_finances(excursio_id,ampa_import) values($1,4)`,[id])
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id,12.5,0.8,12,10])
+    expect((await db.query<{ampa_collabora:boolean}>(
+      'select ampa_collabora from public.excursions where id=$1',[id])).rows[0].ampa_collabora).toBe(true)
+  })
+
+  it('i el deixa a fals quan l’AMPA no hi posa res', async () => {
+    const id = await ambPreu()   // `ambPreu` crea les finances sense aportació
+    expect((await db.query<{ampa_collabora:boolean}>(
+      'select ampa_collabora from public.excursions where id=$1',[id])).rows[0].ampa_collabora).toBe(false)
+  })
+
+  // La guarda que més importa de tota la tasca.
+  it('un cop enviada, el preu ja no es pot tornar a confirmar', async () => {
+    // Les famílies tenen a casa un paper amb un import. Si el preu es pogués
+    // canviar després, el paper i el sistema dirien coses diferents i ningú
+    // se n'adonaria.
+    const id = await ambPreu()
+    await db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09'])
+    await expect(db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id,99,0.8,12,10]))
+      .rejects.toThrow('Només es confirma')
+  })
+})
