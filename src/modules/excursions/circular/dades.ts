@@ -40,12 +40,26 @@ export interface DadesCircular {
 
 const hora = (h: string) => (h ? `${h.replace(/^0/, '')} h` : '')
 
+/**
+ * Uneix una llista com ho fa el català: comes entre tots els elements
+ * menys els dos darrers, que van amb « i ». Amb un sol element, tal qual.
+ *
+ * No és un detall menor: el centre té tres línies (A, B, C) per curs, així
+ * que una excursió de tot un curs dona exactament tres grups — el cas
+ * normal, no l'excepció. Un simple `.join(' i ')` hi escriuria
+ * «EP-1 A i EP-1 B i EP-1 C», que cap família llegiria com a català correcte.
+ */
+function llistaCatalana(elements: string[]): string {
+  if (elements.length <= 2) return elements.join(' i ')
+  return `${elements.slice(0, -1).join(', ')} i ${elements[elements.length - 1]}`
+}
+
 export function dadesCircular(
   e: Excursio, dates: DatesCircular, textos: TextosCircular, nota: string,
 ): DadesCircular {
   return {
     // El curs, i no l'etapa: la família ha de llegir el curs del seu fill.
-    curs: e.Grups.map((g) => g.Grup).join(' i '),
+    curs: llistaCatalana(e.Grups.map((g) => g.Grup)),
     cursEscolar: e.CursEscolar,
     lloc: e.Lloc,
     poblacio: e.Poblacio,
