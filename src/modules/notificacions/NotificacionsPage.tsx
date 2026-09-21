@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { RefreshCw, RotateCcw, Ban, ChevronDown } from 'lucide-react'
 import type { Notificacio } from './types'
 import { ESTATS_NOTIFICACIO, ESTAT_LABELS, ESTAT_COLORS } from './types'
-import { potReintentar, potCancellar, etiquetaReintent, quan } from './notificacions.utils'
+import { potReintentar, potCancellar, etiquetaReintent, dinsDelRang, quan } from './notificacions.utils'
 
 interface Props {
   notificacions: Notificacio[]
@@ -15,13 +15,17 @@ interface Props {
 
 export function NotificacionsPage({ notificacions, loading, error, onRefresh, onReintentar, onCancellar }: Props) {
   const [estat, setEstat] = useState('')
+  const [desDe, setDesDe] = useState('')
+  const [finsA, setFinsA] = useState('')
   const [obert, setObert] = useState<string | null>(null)
   const [ocupat, setOcupat] = useState<string | null>(null)
   const [errorAccio, setErrorAccio] = useState('')
 
   const visibles = useMemo(
-    () => notificacions.filter((n) => !estat || n.Estat === estat),
-    [notificacions, estat],
+    () => notificacions.filter(
+      (n) => (!estat || n.Estat === estat) && dinsDelRang(n.CreatEl, desDe, finsA),
+    ),
+    [notificacions, estat, desDe, finsA],
   )
 
   const resum = useMemo(() => {
@@ -72,6 +76,30 @@ export function NotificacionsPage({ notificacions, loading, error, onRefresh, on
               <option key={e} value={e}>{ESTAT_LABELS[e]}{resum[e] ? ` (${resum[e]})` : ''}</option>
             ))}
           </select>
+
+          {/* Els dos límits són opcionals i van per separat: sovint el que es
+              vol saber és «què ha sortit des de dilluns», sense cap final. */}
+          <label className="flex items-center gap-1.5 text-xs text-gray-400">
+            Des de
+            <input type="date" value={desDe} max={finsA || undefined} aria-label="Des de quina data"
+              onChange={(e) => setDesDe(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg" />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-gray-400">
+            Fins a
+            <input type="date" value={finsA} min={desDe || undefined} aria-label="Fins a quina data"
+              onChange={(e) => setFinsA(e.target.value)}
+              className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg" />
+          </label>
+
+          {(estat || desDe || finsA) && (
+            <button
+              onClick={() => { setEstat(''); setDesDe(''); setFinsA('') }}
+              className="px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Treu els filtres
+            </button>
+          )}
         </div>
       </div>
 

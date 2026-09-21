@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { potReintentar, potCancellar, etiquetaReintent, quan, rowToNotificacio } from './notificacions.utils'
+import { potReintentar, potCancellar, etiquetaReintent, dinsDelRang, quan, rowToNotificacio } from './notificacions.utils'
 import type { Notificacio } from './types'
 
 const base: Notificacio = {
@@ -31,6 +31,38 @@ describe('què es pot fer amb una notificació', () => {
     // Un correu ja enviat no es pot desfer: cancel·lar-lo seria mentir.
     expect(potCancellar({ ...base, Estat: 'sent' })).toBe(false)
     expect(potCancellar({ ...base, Estat: 'sending' })).toBe(false)
+  })
+})
+
+describe('filtrar per dates', () => {
+  const correu = '2026-09-21T19:30:00Z'
+
+  it('sense límits, no filtra res', () => {
+    expect(dinsDelRang(correu, '', '')).toBe(true)
+  })
+
+  it('inclou els dos extrems', () => {
+    // Un correu del mateix dia «fins a» hi ha d'entrar encara que sigui de les
+    // set de la tarda: qui escriu una data pensa en el dia sencer, no en la
+    // mitjanit.
+    expect(dinsDelRang(correu, '2026-09-21', '2026-09-21')).toBe(true)
+  })
+
+  it('deixa fora el que queda abans o després', () => {
+    expect(dinsDelRang(correu, '2026-09-22', '')).toBe(false)
+    expect(dinsDelRang(correu, '', '2026-09-20')).toBe(false)
+  })
+
+  it('cada límit funciona sol', () => {
+    expect(dinsDelRang(correu, '2026-09-01', '')).toBe(true)
+    expect(dinsDelRang(correu, '', '2026-12-31')).toBe(true)
+  })
+
+  it('una data que no s’entén no s’amaga', () => {
+    // Val més ensenyar un correu amb la data rara que fer-lo desaparèixer
+    // de la pantalla sense que ningú sàpiga que hi era.
+    expect(dinsDelRang('', '2026-09-01', '2026-09-30')).toBe(true)
+    expect(dinsDelRang('ahir', '2026-09-01', '2026-09-30')).toBe(true)
   })
 })
 

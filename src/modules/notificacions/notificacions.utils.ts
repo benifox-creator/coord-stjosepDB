@@ -43,6 +43,20 @@ export function etiquetaReintent(n: Notificacio): string {
   return n.Estat === 'cancel·lada' ? 'Torna a la cua' : 'Reintenta'
 }
 
+/**
+ * Si un correu entra dins del rang triat. Els límits són dates (`2026-09-21`)
+ * i la data del correu porta hora, així que es compara pel dia i prou: un
+ * correu de les set de la tarda del dia «fins a» hi ha de continuar entrant.
+ * Un límit buit vol dir que per aquell costat no es filtra.
+ */
+export function dinsDelRang(iso: string, desDe: string, finsA: string): boolean {
+  const dia = iso.slice(0, 10)
+  if (dia.length < 10) return true      // una data que no entenem no s'amaga
+  if (desDe && dia < desDe) return false
+  if (finsA && dia > finsA) return false
+  return true
+}
+
 /** Data i hora curtes, en el format que fa servir la resta de l'aplicació. */
 export function quan(iso: string | null): string {
   if (!iso) return '—'
