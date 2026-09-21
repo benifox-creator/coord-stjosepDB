@@ -18,6 +18,10 @@ interface Props {
   potVeureCostos: boolean
   parametres: ParametresPreu
   onCanviarEstat: (estat: EstatExcursio, motiu?: string) => Promise<void>
+  // Fa la crida RPC i recarrega la llista (mateixa ruta que onCanviarEstat),
+  // però sense tancar la fitxa: qui confirma un preu vol veure'l sense haver
+  // de tornar a obrir la targeta.
+  onConfirmaPreu: (preu: number) => Promise<void>
   onEditar: () => void
   onClose: () => void
 }
@@ -34,7 +38,8 @@ function Dada({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', currency: 'EUR' })
 
 export function ExcursioDetall({
-  excursio: e, potAprovar, potGestionar, potEditar, potVeureCostos, parametres, onCanviarEstat, onEditar, onClose,
+  excursio: e, potAprovar, potGestionar, potEditar, potVeureCostos, parametres,
+  onCanviarEstat, onConfirmaPreu, onEditar, onClose,
 }: Props) {
   const [ocupat, setOcupat] = useState(false)
   const [error, setError] = useState('')
@@ -46,7 +51,6 @@ export function ExcursioDetall({
   // canvia xocaria amb l'edició que l'usuari encara no ha desat.
   const carregaFinances = useFinances((s) => s.carrega)
   const desaFinances = useFinances((s) => s.desa)
-  const confirmaPreu = useFinances((s) => s.confirma)
   const [finances, setFinances] = useState<Finances | null>(null)
 
   useEffect(() => {
@@ -74,6 +78,33 @@ export function ExcursioDetall({
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No s’ha pogut fer el canvi.')
+      setOcupat(false)
+    }
+  }
+
+  // Mateix patró que `canvia`: sense això, un desament o una confirmació que
+  // falla (RLS, xarxa) no es distingia en pantalla d'un que ha anat bé —
+  // ni tan sols quedava constància que encara s'estava fent la crida.
+  async function desarCostos() {
+    setOcupat(true)
+    setError('')
+    try {
+      await desaICarregaFinances()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No s’han pogut desar els costos.')
+    } finally {
+      setOcupat(false)
+    }
+  }
+
+  async function confirmarPreu(preu: number) {
+    setOcupat(true)
+    setError('')
+    try {
+      await onConfirmaPreu(preu)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No s’ha pogut confirmar el preu.')
+    } finally {
       setOcupat(false)
     }
   }
@@ -151,9 +182,10 @@ export function ExcursioDetall({
               preuConfirmat={e.PreuAlumne}
               confirmatPer={e.PreuConfirmatPer}
               potConfirmar={e.Estat === 'Aprovada' || e.Estat === 'Reservada'}
+              ocupat={ocupat}
               onCanvia={setFinances}
-              onDesa={desaICarregaFinances}
-              onConfirma={(preu) => confirmaPreu(e.id, preu)}
+              onDesa={desarCostos}
+              onConfirma={confirmarPreu}
             />
           )}
 

@@ -4,6 +4,7 @@ import { ExcursioForm } from '../../modules/excursions/ExcursioForm'
 import { ExcursioDetall } from '../../modules/excursions/ExcursioDetall'
 import { CopiarCursAnterior } from '../../modules/excursions/CopiarCursAnterior'
 import { useExcursions } from '../../modules/excursions/useExcursions'
+import { useFinances } from '../../modules/excursions/useFinances'
 import { potAprovar, potGestionar, potEditar, potVeureCostos } from '../../modules/excursions/permisos'
 import { parametresPreu } from '../../modules/excursions/parametres'
 import type { Excursio, ExcursioFormData } from '../../modules/excursions/types'
@@ -19,6 +20,7 @@ export default function ExcursionsWrapper() {
   const email = (useAuthStore((s) => s.user?.email) ?? '').toLowerCase()
   const jo = usuaris.find((u) => u.Email.toLowerCase() === email) ?? null
   const config = useConfigStore((s) => s.config)
+  const confirmaPreu = useFinances((s) => s.confirma)
 
   const [formObert, setFormObert] = useState(false)
   const [editant, setEditant] = useState<Excursio | null>(null)
@@ -69,6 +71,15 @@ export default function ExcursionsWrapper() {
           onCanviarEstat={async (estat, motiu) => {
             await canviarEstat(oberta.id, estat, motiu)
             await load()
+          }}
+          onConfirmaPreu={async (preu) => {
+            await confirmaPreu(oberta.id, preu)
+            // Mateixa ruta que onCanviarEstat: recarregar la llista i, d'aquí,
+            // agafar la fila fresca. Però aquí no es tanca la fitxa (onClose)
+            // en acabar: qui acaba de confirmar un preu vol veure'l sense
+            // haver de tornar a obrir la targeta.
+            await load()
+            setOberta((actual) => (actual && useExcursions.getState().excursions.find((x) => x.id === actual.id)) || actual)
           }}
           onEditar={() => { setEditant(oberta); setOberta(null) }}
           onClose={() => setOberta(null)}

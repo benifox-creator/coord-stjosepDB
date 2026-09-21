@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import type { Finances, Autocar } from './finances.types'
 import type { ParametresPreu } from './preu'
 import { calculaPreu } from './preu'
+import { preuEsValid } from './preuValid'
 
 interface Props {
   finances: Finances
@@ -12,6 +13,9 @@ interface Props {
   preuConfirmat: number | null
   confirmatPer: string | null
   potConfirmar: boolean
+  // Ve de la fitxa: mentre es desa o es confirma no es pot tornar a clicar,
+  // ni tampoc aprovar/rebutjar/reservar/cancel·lar des del mateix formulari.
+  ocupat: boolean
   onCanvia: (f: Finances) => void
   onDesa: () => Promise<void>
   onConfirma: (preu: number) => Promise<void>
@@ -21,7 +25,7 @@ const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', curren
 
 export function BlocEconomic({
   finances: f, parametres, alumnes, acompanyants,
-  preuConfirmat, confirmatPer, potConfirmar, onCanvia, onDesa, onConfirma,
+  preuConfirmat, confirmatPer, potConfirmar, ocupat, onCanvia, onDesa, onConfirma,
 }: Props) {
   const resultat = useMemo(() => calculaPreu({
     alumnes, autocars: f.Autocars.map((a) => a.Preu),
@@ -29,6 +33,7 @@ export function BlocEconomic({
     ampaImport: f.AmpaImport, ampaCobreixActivitat: f.AmpaCobreixActivitat,
     costAcompanyants: f.CostAcompanyants,
   }, parametres), [f, parametres, alumnes])
+  const preuOk = preuEsValid(resultat.preu)
 
   function autocar(id: string, canvis: Partial<Autocar>) {
     onCanvia({ ...f, Autocars: f.Autocars.map((a) => (a.id === id ? { ...a, ...canvis } : a)) })
@@ -97,7 +102,10 @@ export function BlocEconomic({
           ha de poder veure d'on surt. Un número sol no es pot revisar. */}
       <dl className="text-xs text-gray-500 space-y-1 border-t border-gray-100 pt-3">
         <div className="flex justify-between"><dt>Alumnes que s’espera que paguin</dt>
-          <dd>{resultat.esperats} de {alumnes} ({Math.round(parametres.previsio * 100)} %)</dd></div>
+          {/* `esperats` no s'arrodoneix a preu.ts a propòsit (hi entra en el
+              càlcul tal qual); aquí, en canvi, és només per llegir, i "66,75
+              alumnes" no vol dir res a qui ho mira. */}
+          <dd>{Math.round(resultat.esperats)} de {alumnes} ({Math.round(parametres.previsio * 100)} %)</dd></div>
         {/* Els acompanyants no paguen i no entren al càlcul, però qui confirma
             el preu ha de saber quants n'hi ha: el seu cost sí que es reparteix. */}
         <div className="flex justify-between"><dt>Acompanyants</dt><dd>{acompanyants}</dd></div>
@@ -108,14 +116,22 @@ export function BlocEconomic({
           <dt>Preu amb el marge del {parametres.margePct} %</dt><dd>{eur(resultat.preu)}</dd></div>
       </dl>
 
+      {/* Ni desar ni confirmar mentre hi ha una crida en curs (`ocupat`) o
+          mentre el preu calculat no sigui un número vàlid: un preu NaN
+          confirmat es convertiria en `null` en arribar al servidor, i "sense
+          preu" no és el mateix que "encara no calculat". */}
       <div className="flex flex-wrap items-center gap-2">
-        <button onClick={onDesa} className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg">Desa els costos</button>
+        <button onClick={() => void onDesa()} disabled={ocupat || !preuOk}
+          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg disabled:opacity-50">
+          Desa els costos
+        </button>
         {potConfirmar && (
-          <button onClick={() => onConfirma(resultat.preu)}
-            className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg">
+          <button onClick={() => void onConfirma(resultat.preu)} disabled={ocupat || !preuOk}
+            className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg disabled:opacity-50">
             {preuConfirmat === null ? 'Confirma el preu' : 'Torna a confirmar'}
           </button>
         )}
+        {!preuOk && <p className="text-xs text-red-600 w-full">El preu no es pot calcular: revisa els imports.</p>}
       </div>
 
       {preuConfirmat !== null && (
