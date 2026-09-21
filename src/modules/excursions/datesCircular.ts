@@ -49,7 +49,12 @@ export function proposaDates(
     return { circular: '', pagament: '', resguard: '' }
   }
 
-  const circular = mou(dataExcursio, -diesAbansCircular)
+  // També es recula fins a un dia amb classe. Amb els 15 dies de sèrie la
+  // resta cau sempre al mateix dia de la setmana que la sortida menys un, o
+  // sigui que **tota** excursió de dilluns proposava un diumenge: la circular
+  // sortia datada «L'Hospitalet, Diumenge, 1 de novembre de 2026» i la
+  // pantalla marcava la proposta de l'app mateixa com a «no és dia lectiu».
+  const circular = fins_a_lectiu(mou(dataExcursio, -diesAbansCircular), -1, diesNoLectius)
   // El termini es mou **enrere**: endarrerir-lo acostaria el cobrament al dia
   // de la sortida, que és el que no es vol.
   const pagament = fins_a_lectiu(mou(dataExcursio, -diesAbansTermini), -1, diesNoLectius)

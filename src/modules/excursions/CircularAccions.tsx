@@ -7,7 +7,11 @@ import { useState } from 'react'
 import { FileDown, Send } from 'lucide-react'
 import type { Excursio } from './types'
 import type { DatesCircular } from './datesCircular'
-import { esDiaLectiu } from './excursions.utils'
+// La mateixa còpia que fa servir `datesCircular` per proposar les dates.
+// N'hi ha una altra a `excursions.utils`, i aquest és el primer lloc on totes
+// dues s'aplicarien al mateix valor: si divergissin, la pantalla podria marcar
+// com a festiva una data que l'app mateixa acaba de proposar com a lectiva.
+import { esDiaLectiu } from '../../utils/schoolCalendar'
 import { dataLlarga } from './circular/dades'
 
 interface Props {
@@ -36,8 +40,12 @@ function Camp({ etiqueta, valor, diesNoLectius, bloquejat, onCanvia }: {
   return (
     <label className="flex flex-col gap-0.5 text-xs text-gray-500">
       {etiqueta}
+      {/* Sense `aria-label`: l'`<label>` que embolcalla el camp ja el nomena,
+          i un `aria-label` substituïa aquell nom sencer —o sigui que qui fa
+          servir un lector de pantalla no sentia mai el «no és dia lectiu» de
+          sota, que és justament l'avís que hi ha per llegir. */}
       <input
-        type="date" value={valor} disabled={bloquejat} aria-label={etiqueta}
+        type="date" value={valor} disabled={bloquejat}
         onChange={(ev) => onCanvia(ev.target.value)}
         className="px-2 py-1 text-sm border border-gray-200 rounded-lg disabled:bg-gray-50 disabled:text-gray-500"
       />
@@ -65,7 +73,13 @@ export function CircularAccions({
   }))
   const [nota, setNota] = useState('')
 
-  const enviada = e.Estat === 'Circular enviada'
+  // El fet, no l'estat: una excursió cancel·lada **després** d'enviar la
+  // circular deixa de ser «Circular enviada», però el paper continua a casa de
+  // les famílies i els diners ja s'han demanat. Amb l'estat, la fitxa perdia
+  // la línia de qui l'havia enviada i deia que no es podia marcar com a
+  // enviada perquè «aquesta és 'Cancel·lada'» —negant un fet que havia passat,
+  // i justament al cas que el disseny (§5) assenyala com el més delicat.
+  const enviada = e.CircularEnviadaPer !== null
   // El mateix criteri que `enviar_circular` al servidor: sense preu congelat
   // la circular sortiria sense import, i és precisament l'import el que les
   // famílies han de llegir.
@@ -94,7 +108,7 @@ export function CircularAccions({
       <label className="flex flex-col gap-0.5 text-xs text-gray-500">
         Nota per a aquesta excursió (opcional)
         <textarea
-          value={nota} rows={2} disabled={ocupat} aria-label="Nota per a aquesta excursió"
+          value={nota} rows={2} disabled={ocupat}
           onChange={(ev) => setNota(ev.target.value)}
           placeholder="Cal dur esmorzar i roba còmoda."
           className="px-2 py-1 text-sm border border-gray-200 rounded-lg disabled:bg-gray-50"

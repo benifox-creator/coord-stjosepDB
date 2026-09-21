@@ -61,6 +61,25 @@ begin
     end if;
   end if;
 
+  -- El mateix forat, a la resta de columnes de la circular. Congelar només el
+  -- preu no n'hi havia prou: un `update` directe que deixi `estat` intacte
+  -- arriba igualment al curt-circuit de sota, o sigui que aquestes sis
+  -- columnes es podien reescriure lliurement amb la circular ja repartida.
+  -- Les tres dates són les que les famílies tenen impreses a casa; qui consta
+  -- que la va enviar és l'única atribució que en queda; i `ampa_collabora` es
+  -- deriva aquí al servidor precisament perquè un docent que no pot llegir
+  -- `excursio_finances` tingui la frase correcta —si la pogués girar a mà,
+  -- aquella garantia no valdria res.
+  if old.estat = 'Circular enviada'
+    and (new.data_circular is distinct from old.data_circular
+      or new.data_limit_pagament is distinct from old.data_limit_pagament
+      or new.data_limit_resguard is distinct from old.data_limit_resguard
+      or new.circular_enviada_per is distinct from old.circular_enviada_per
+      or new.circular_enviada_el is distinct from old.circular_enviada_el
+      or new.ampa_collabora is distinct from old.ampa_collabora) then
+    raise exception 'La circular ja s''ha enviat: no se''n poden canviar les dades';
+  end if;
+
   if new.estat = old.estat then return new; end if;
 
   if new.estat = 'Cancel·lada' then
@@ -120,11 +139,33 @@ begin
     new.reservada_per := qui; new.reservada_el := now();
 
   -- Noves: enviar la circular. Es pot enviar tant abans com després de
-  -- reservar el transport, per això les dues branques. `enviar_circular` ja
-  -- comprova el preu i qui pot fer-ho; aquí només cal deixar passar la
-  -- transició en si.
+  -- reservar el transport, per això les dues branques.
+  --
+  -- Les condicions es repeteixen aquí encara que `enviar_circular` ja les
+  -- comprovi: la política d'`excursions` és **per fila** i concedeix `update`
+  -- sencer a qui gestiona excursions, així que un `update` directe entra per
+  -- aquí sense haver tocat mai l'RPC. El disparador és l'únic lloc on aquestes
+  -- regles valen de debò.
+  --
+  -- Sense elles, un docent amb la casella de logística podia deixar una
+  -- excursió en `Circular enviada` sense preu: a partir d'aquí ni
+  -- `confirmar_preu` ni la guarda del preu l'accepten —totes dues volen
+  -- `Aprovada` o `Reservada`—, o sigui que el preu ja no es podria posar mai
+  -- més i l'únic camí que quedaria seria cancel·lar-la.
   elsif old.estat in ('Aprovada','Reservada') and new.estat = 'Circular enviada' then
     if not app_private.excursions_gestio() then raise exception 'No autoritzat'; end if;
+    if new.preu_alumne is null then
+      raise exception 'Cal confirmar el preu abans d''enviar la circular';
+    end if;
+    if new.data_circular is null then
+      raise exception 'La circular necessita la data de la circular';
+    end if;
+    if new.data_limit_pagament is null then
+      raise exception 'La circular necessita la data límit de pagament';
+    end if;
+    if new.data_limit_resguard is null then
+      raise exception 'La circular necessita la data de lliurament del resguard';
+    end if;
 
   else
     raise exception 'Transició no vàlida: % → %', old.estat, new.estat;
@@ -161,6 +202,10 @@ begin
               from public.excursio_finances where excursio_id = p_id), false)
    where id = p_id;
 
+  -- Si encara no hi ha fila de costos (mai s'ha desat res), no hi ha res a
+  -- marcar amb els paràmetres: `update` sense files no és cap error, i el
+  -- client (`useFinances.confirma`) sempre desa els costos abans de cridar
+  -- aquí, així que en l'ús normal la fila ja existeix.
   update public.excursio_finances
      set previsio_usada = p_previsio, marge_pct_usat = p_marge_pct, iva_pct_usat = p_iva_pct
    where excursio_id = p_id;

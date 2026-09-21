@@ -8,6 +8,17 @@ async function asUser(email: string, verified = true) {
   await db.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify({ email, email_verified: verified })])
   await db.exec('set role authenticated')
 }
+// Un correu encuat, buscat pel destinatari i per la clau de l'esdeveniment i
+// no pel més recent: dins d'una transacció `now()` val el mateix per a tots,
+// així que ordenar per data de creació no distingeix dos correus adreçats a la
+// mateixa persona. Buscar-lo pel destinatari també fa que la prova digui **a
+// qui** va, que sovint és la meitat del que s'hi vol comprovar.
+async function correu(destinatari: string, clau: string) {
+  await db.exec('reset role')
+  return (await db.query<{subject:string;body:string}>(
+    `select subject,body from public.notifications
+      where recipient=$1 and event_key like $2 || '%' limit 1`, [destinatari, clau])).rows[0]
+}
 
 beforeAll(async () => {
   db = new PGlite()
@@ -852,16 +863,6 @@ describe("què diuen els correus d'excursions", () => {
     await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
     return id
   }
-  // Es busca per la clau de l'esdeveniment i no pel més recent: dins d'una
-  // transacció `now()` val el mateix per a tots, així que ordenar per data de
-  // creació no distingeix dos correus adreçats a la mateixa persona.
-  async function correu(destinatari: string, clau: string) {
-    await db.exec('reset role')
-    return (await db.query<{subject:string;body:string}>(
-      `select subject,body from public.notifications
-        where recipient=$1 and event_key like $2 || '%' limit 1`, [destinatari, clau])).rows[0]
-  }
-
   it("escriu la data en català, apostrofada quan toca", async () => {
     // Postgres la donaria en anglès («Tuesday, October 20»), i la preposició
     // s'apostrofa davant de vocal. Les dues coses es llegeixen com una falta
@@ -982,8 +983,12 @@ describe('enviar la circular', () => {
     await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
     await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
     await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    // La frase sencera i no «preu»: dins d'aquestes funcions hi ha quatre
+    // missatges que porten aquesta paraula («El preu no pot ser negatiu»,
+    // «Només es confirma el preu…»), i amb un bocí tan curt la prova passaria
+    // encara que hagués fallat per un motiu ben diferent.
     await expect(db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09']))
-      .rejects.toThrow('preu')
+      .rejects.toThrow("Cal confirmar el preu abans d'enviar la circular")
   })
 
   it('un docent normal no la pot enviar', async () => {
@@ -993,14 +998,27 @@ describe('enviar la circular', () => {
       .rejects.toThrow('No autoritzat')
   })
 
-  it('avisa qui la va proposar', async () => {
-    const id = await ambPreu()
+  it('avisa qui la va proposar, i li diu les dues dates', async () => {
+    // Qui proposa l'excursió no és qui envia la circular: per això l'excursió
+    // la proposa la mestra i la circular l'envia la coordinació. El correu ha
+    // d'anar a ella, i ha de portar les dues dates —les que li preguntaran les
+    // famílies— i no només el nom del lloc.
+    await asUser('teacher@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Can Montcau','Visita','2026-11-18','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await asUser('admin@stjosep.org')
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    await db.query(`insert into public.excursio_finances(excursio_id) values($1)`,[id])
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id,12.5,0.8,12,10])
     await db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09'])
-    await db.exec('reset role')
-    const n = (await db.query<{subject:string;body:string}>(
-      `select subject,body from public.notifications where event_key like 'circular-enviada:%' limit 1`)).rows
-    expect(n).toHaveLength(1)
-    expect(n[0].body).toContain('Can Montcau')
+
+    const c = await correu('teacher@stjosep.org', 'circular-enviada')
+    expect(c.subject).toContain('Can Montcau')
+    expect(c.body).toContain('Data límit de pagament: Divendres, 6 de novembre de 2026')
+    expect(c.body).toContain('Resguard al tutor: Dilluns, 9 de novembre de 2026')
   })
 
   it('marca si l’AMPA hi col·labora, sense dir quant', async () => {
@@ -1067,6 +1085,94 @@ describe('enviar la circular', () => {
     await expect(db.query('update public.excursions set preu_alumne=999 where id=$1',[id]))
       .rejects.toThrow('Només es confirma')
     await db.exec('rollback to savepoint intent_preu')
+  })
+
+  // El mateix forat, però per la banda de l'estat: la transició sí que passa
+  // pel disparador, i fins ara el disparador només hi mirava el permís,
+  // fiant-se que ja ho havia comprovat `enviar_circular`. Per un `update`
+  // directe no hi passa mai.
+  it('un update directe no pot enviar la circular d’una excursió sense preu', async () => {
+    // El pitjor cas, perquè no té volta enrere: un cop en `Circular enviada`
+    // ni `confirmar_preu` ni la guarda del preu accepten res (totes dues volen
+    // `Aprovada` o `Reservada`), o sigui que el preu ja no s'hi podria posar
+    // mai més i l'únic camí que quedaria seria cancel·lar l'excursió.
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-11-18','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    await db.exec('savepoint intent_estat')
+    await expect(db.query(`update public.excursions set estat='Circular enviada' where id=$1`,[id]))
+      .rejects.toThrow("Cal confirmar el preu abans d'enviar la circular")
+    await db.exec('rollback to savepoint intent_estat')
+  })
+
+  it('ni deixar-la enviada sense les tres dates', async () => {
+    // Cada data amb el seu missatge: si totes tres compartissin un «falten
+    // dades», qui ho llegís no sabria quina hi falta.
+    const id = await ambPreu()
+    const intents: [string, string][] = [
+      ['', 'La circular necessita la data de la circular'],
+      [", data_circular='2026-11-03'", 'La circular necessita la data límit de pagament'],
+      [", data_circular='2026-11-03', data_limit_pagament='2026-11-06'",
+        'La circular necessita la data de lliurament del resguard'],
+    ]
+    for (const [i, [extra, missatge]] of intents.entries()) {
+      await db.exec(`savepoint intent_dates_${i}`)
+      await expect(db.query(`update public.excursions set estat='Circular enviada'${extra} where id=$1`,[id]))
+        .rejects.toThrow(missatge)
+      await db.exec(`rollback to savepoint intent_dates_${i}`)
+    }
+  })
+
+  // Congelar el preu no n'hi havia prou: la resta de columnes de la circular
+  // tenien exactament el mateix forat, i un `update` que no toca `estat`
+  // arriba al curt-circuit del disparador sense trobar cap comprovació.
+  it('un cop enviada, ni les dates ni l’atribució ni l’AMPA es poden tocar', async () => {
+    const id = await ambPreu()
+    await db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09'])
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    const columnes = [
+      // Les dates que les famílies tenen impreses a casa.
+      "data_circular='2026-11-04'",
+      "data_limit_pagament='2026-11-20'",
+      "data_limit_resguard='2026-11-23'",
+      // L'única atribució que queda de qui la va enviar.
+      "circular_enviada_per='other@stjosep.org'",
+      // Un instant concret i no `now()`: dins d'una transacció `now()` torna
+      // l'hora d'inici, que és exactament la que hi ha desada, i l'`update`
+      // no canviaria res —la prova passaria sense provar res.
+      "circular_enviada_el='2020-01-01T00:00:00Z'",
+      // Es deriva al servidor precisament perquè qui no pot llegir els costos
+      // tingui la frase correcta: si la pogués girar a mà, no valdria res.
+      'ampa_collabora=true',
+    ]
+    for (const [i, set] of columnes.entries()) {
+      await db.exec(`savepoint intent_congelat_${i}`)
+      await expect(db.query(`update public.excursions set ${set} where id=$1`,[id]), set)
+        .rejects.toThrow("La circular ja s'ha enviat")
+      await db.exec(`rollback to savepoint intent_congelat_${i}`)
+    }
+  })
+
+  it('però cancel·lar-la continua essent possible: no en toca cap', async () => {
+    // La congelació no ha de tancar l'única sortida que queda quan una
+    // excursió ja enviada s'ha de suspendre.
+    const id = await ambPreu()
+    await db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09'])
+    await db.query(`update public.excursions set estat='Cancel·lada', motiu_cancellacio='pluja' where id=$1`,[id])
+    const e = (await db.query<{estat:string;circular_enviada_per:string}>(
+      'select estat,circular_enviada_per from public.excursions where id=$1',[id])).rows[0]
+    expect(e.estat).toBe('Cancel·lada')
+    // I qui la va enviar hi continua constant: és el que la fitxa ha d'ensenyar.
+    expect(e.circular_enviada_per).toBe('admin@stjosep.org')
   })
 
   it('confirmar_preu segueix funcionant amb el nou control al disparador', async () => {

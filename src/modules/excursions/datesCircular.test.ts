@@ -2,8 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { esDiaLectiu } from '../../utils/schoolCalendar'
 import { proposaDates } from './datesCircular'
 
-// Dijous 20 d'octubre de 2026 no existeix com a festiu; el 2026-10-20 és dimarts.
+// Cap dia marcat a Configuració: així el que es prova és només la regla dels
+// caps de setmana. Quan un test necessita festius, se'ls passa ell mateix.
 const CAP_DE_FESTIUS: string[] = []
+
+/** Totes les dates d'un interval, tancat pels dos extrems. */
+function interval(desDe: string, finsA: string): string[] {
+  const dates: string[] = []
+  const fi = new Date(`${finsA}T00:00:00Z`)
+  for (const d = new Date(`${desDe}T00:00:00Z`); d <= fi; d.setUTCDate(d.getUTCDate() + 1)) {
+    dates.push(d.toISOString().slice(0, 10))
+  }
+  return dates
+}
 
 describe('dia lectiu', () => {
   it('els caps de setmana no ho són', () => {
@@ -40,10 +51,25 @@ describe('proposar les dates de la circular', () => {
     expect(proposaDates('2026-11-16', ['2026-11-06', '2026-11-05']).pagament).toBe('2026-11-04')
   })
 
+  it('la circular tampoc surt en cap de setmana', () => {
+    // Amb els quinze dies de sèrie, la resta cau sempre al mateix dia de la
+    // setmana que la sortida menys un: **tota** excursió de dilluns proposava
+    // un diumenge, i la circular sortia datada en diumenge.
+    expect(proposaDates('2026-11-16', CAP_DE_FESTIUS).circular).toBe('2026-10-30')  // el 1 era diumenge
+    expect(proposaDates('2026-10-19', CAP_DE_FESTIUS).circular).toBe('2026-10-02')  // el 4 era diumenge
+  })
+
+  it('i si els dies lectius anteriors són festius, segueix enrere', () => {
+    // 2027-01-11 menys quinze dies és el 27 de desembre: diumenge i, a més, al
+    // mig de les vacances de Nadal.
+    expect(proposaDates('2027-01-11', ['2026-12-25', '2026-12-24']).circular).toBe('2026-12-23')
+  })
+
   it('el resguard és l\'endemà lectiu del termini', () => {
     // El spec diu «l'endemà»; es pren com l'endemà **lectiu**, perquè el
     // resguard es lliura al tutor i en dissabte no hi ha ningú.
     const d = proposaDates('2026-11-16', CAP_DE_FESTIUS)
+    expect(d.circular).toBe('2026-10-30')   // divendres, no diumenge
     expect(d.pagament).toBe('2026-11-06')   // divendres
     expect(d.resguard).toBe('2026-11-09')   // dilluns, no dissabte
   })
@@ -67,53 +93,13 @@ describe('proposar les dates de la circular', () => {
     expect(proposaDates('2026-13-01', CAP_DE_FESTIUS)).toEqual({ circular: '', pagament: '', resguard: '' })
   })
 
-  it('si la recerca puja 30+ dies sense trobar lectiu, torna cadena buida', () => {
-    // 30+ dies consecutius sense classe. Trip on 2026-11-20, payment on 2026-11-12.
-    // Search backward from Nov 12 for up to 30 days would land around Oct 13.
-    // Mark August through October and November through January as non-teaching.
-    const diesNoLectius = [
-      // August 2026: 15-31
-      '2026-08-15', '2026-08-16', '2026-08-17', '2026-08-18', '2026-08-19',
-      '2026-08-20', '2026-08-21', '2026-08-22', '2026-08-23', '2026-08-24',
-      '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28', '2026-08-29',
-      '2026-08-30', '2026-08-31',
-      // September 2026: 1-30
-      '2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-05',
-      '2026-09-06', '2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10',
-      '2026-09-11', '2026-09-12', '2026-09-13', '2026-09-14', '2026-09-15',
-      '2026-09-16', '2026-09-17', '2026-09-18', '2026-09-19', '2026-09-20',
-      '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25',
-      '2026-09-26', '2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30',
-      // October 2026: 1-31
-      '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05',
-      '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10',
-      '2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15',
-      '2026-10-16', '2026-10-17', '2026-10-18', '2026-10-19', '2026-10-20',
-      '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25',
-      '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30',
-      '2026-10-31',
-      // November 2026: 1-30
-      '2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05',
-      '2026-11-06', '2026-11-07', '2026-11-08', '2026-11-09', '2026-11-10',
-      '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15',
-      '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20',
-      '2026-11-21', '2026-11-22', '2026-11-23', '2026-11-24', '2026-11-25',
-      '2026-11-26', '2026-11-27', '2026-11-28', '2026-11-29', '2026-11-30',
-      // December 2026: 1-31
-      '2026-12-01', '2026-12-02', '2026-12-03', '2026-12-04', '2026-12-05',
-      '2026-12-06', '2026-12-07', '2026-12-08', '2026-12-09', '2026-12-10',
-      '2026-12-11', '2026-12-12', '2026-12-13', '2026-12-14', '2026-12-15',
-      '2026-12-16', '2026-12-17', '2026-12-18', '2026-12-19', '2026-12-20',
-      '2026-12-21', '2026-12-22', '2026-12-23', '2026-12-24', '2026-12-25',
-      '2026-12-26', '2026-12-27', '2026-12-28', '2026-12-29', '2026-12-30',
-      '2026-12-31',
-      // January 2027: 1-20
-      '2027-01-01', '2027-01-02', '2027-01-03', '2027-01-04', '2027-01-05',
-      '2027-01-06', '2027-01-07', '2027-01-08', '2027-01-09', '2027-01-10',
-      '2027-01-11', '2027-01-12', '2027-01-13', '2027-01-14', '2027-01-15',
-      '2027-01-16', '2027-01-17', '2027-01-18', '2027-01-19', '2027-01-20',
-    ]
+  it('si la recerca recula 30+ dies sense trobar lectiu, torna cadena buida', () => {
+    // Un curs sencer marcat com a no lectiu: cap de les tres dates pot
+    // aterrar enlloc. Val més tornar-les buides —i que la pantalla digui
+    // «Encara sense data»— que imprimir un festiu a la circular.
+    const diesNoLectius = interval('2026-08-15', '2027-01-20')
     const d = proposaDates('2026-11-20', diesNoLectius)
+    expect(d.circular).toBe('')
     expect(d.pagament).toBe('')
     expect(d.resguard).toBe('')
   })

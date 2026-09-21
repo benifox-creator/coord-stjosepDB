@@ -12,9 +12,13 @@ export interface TextosCircular {
   resguard: string
 }
 
+// Exactament la regla de `configStore.getValues`, i no una de pròpia: només
+// es cau als valors de sèrie quan **no hi ha** res desat. Amb la regla antiga
+// («si és buit, els de sèrie»), esborrar tots els passos del pagament a
+// Configuració desava `[]` i la pantalla en mostrava zero mentre la circular
+// n'imprimia sis. Una llista buida és una decisió, no un forat.
 function llista(config: Record<string, string[]>, clau: string): string[] {
-  const desats = config[clau]
-  return desats && desats.length ? desats : (CONFIG_DEFAULTS[clau] ?? [])
+  return config[clau] ?? CONFIG_DEFAULTS[clau] ?? []
 }
 const primer = (config: Record<string, string[]>, clau: string) => llista(config, clau)[0] ?? ''
 
