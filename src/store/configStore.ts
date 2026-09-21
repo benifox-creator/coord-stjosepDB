@@ -131,6 +131,24 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'excursions.marge-pct.GM': ['12'],
   'excursions.iva-pct': ['10'],
   'excursions.arrodoniment': ['0.5'],
+  'excursions.dies-abans-circular': ['15'],
+  'excursions.dies-abans-termini': ['8'],
+  'excursions.text-pagament-intro': [
+    'El pagament es fa amb el codi de barres que trobareu al final d’aquesta circular.',
+  ],
+  'excursions.passos-pagament': [
+    'Imprimiu aquesta circular o porteu-ne el codi al mòbil.',
+    'Passeu-lo pel caixer de l’entitat.',
+    'Lliureu el resguard al tutor o tutora.',
+  ],
+  'excursions.text-ampa': ['L’AMPA col·labora en el finançament d’aquesta sortida.'],
+  // El text antic lligava la devolució al pagament fora de termini i no
+  // s'entenia. El centre va confirmar (2026-09-18) que és per a qui avisa a
+  // última hora que no hi anirà.
+  'excursions.text-devolucions': [
+    'Si un alumne no assisteix i s’avisa fora de termini, es retornarà el 75 % de l’import; el 25 % restant cobreix despeses ja compromeses.',
+  ],
+  'excursions.text-resguard': ['Cal lliurar el resguard del pagament al tutor o tutora.'],
   // Visibilitat per defecte: tots els rols veuen tots els mòduls
   'visibilitat.incidencies':  ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
   'visibilitat.inventari':    ['direccio', 'titular', 'cap_estudis', 'professorat', 'convidat'],
