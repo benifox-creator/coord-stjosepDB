@@ -43,6 +43,24 @@ begin
     raise exception 'El dia % no és lectiu', to_char(new.data,'DD/MM/YYYY');
   end if;
 
+  -- El preu es podia canviar sense passar per `confirmar_preu`: la política
+  -- RLS d'aquesta taula (`excursions_gestio`) és per fila, no per columna, i
+  -- concedeix `update` sencer, `estat` inclòs o no. Un `update` directe que
+  -- deixés `estat` intacte passaria de llarg pel curt-circuit de sota —per
+  -- això aquest control hi va **abans**, no després— i deixaria que qui
+  -- només té la casella de logística (`excursions_gestio` cert,
+  -- `excursions_costos` fals) canviés el preu que veuen les famílies, fins i
+  -- tot amb la circular ja enviada. Les dues condicions són les mateixes que
+  -- ja imposa `confirmar_preu`, així que l'RPC hi continua passant net.
+  if new.preu_alumne is distinct from old.preu_alumne
+    or new.preu_confirmat_per is distinct from old.preu_confirmat_per
+    or new.preu_confirmat_el is distinct from old.preu_confirmat_el then
+    if not app_private.excursions_costos() then raise exception 'No autoritzat'; end if;
+    if old.estat not in ('Aprovada','Reservada') then
+      raise exception 'Només es confirma el preu d''una excursió aprovada (ara és %)', old.estat;
+    end if;
+  end if;
+
   if new.estat = old.estat then return new; end if;
 
   if new.estat = 'Cancel·lada' then

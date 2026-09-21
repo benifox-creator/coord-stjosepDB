@@ -1036,4 +1036,52 @@ describe('enviar la circular', () => {
     await expect(db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id,99,0.8,12,10]))
       .rejects.toThrow('Només es confirma')
   })
+
+  // El forat: la política RLS d'`excursions` és `for all` per fila i no
+  // distingeix columnes, així que un `update` directe que no toqui `estat`
+  // passava de llarg del disparador sencer. Aquestes proves ataquen
+  // exactament aquella via, no l'RPC.
+  it('un docent només de logística no pot canviar el preu amb un update directe', async () => {
+    // Mateix compte que a «els diners de les excursions»: la casella de
+    // logística dona `excursions_gestio()` però no `excursions_costos()`.
+    const id = await ambPreu()
+    await db.exec('reset role')
+    await db.query(`update public.usuaris set pot_gestionar_excursions=true where email='teacher@stjosep.org'`)
+    await asUser('teacher@stjosep.org')
+    await db.exec('savepoint intent_preu')
+    await expect(db.query('update public.excursions set preu_alumne=999 where id=$1',[id]))
+      .rejects.toThrow('No autoritzat')
+    await db.exec('rollback to savepoint intent_preu')
+
+    await db.exec('reset role')
+    expect(Number((await db.query<{preu_alumne:string}>(
+      'select preu_alumne from public.excursions where id=$1',[id])).rows[0].preu_alumne)).toBe(12.5)
+  })
+
+  it('un cop enviada la circular, tampoc qui veu els costos pot tocar el preu amb un update directe', async () => {
+    // `admin@stjosep.org` és coordinador: passa `excursions_costos()` sense
+    // problema. El que l'ha de parar aquí és l'estat, no el permís.
+    const id = await ambPreu()
+    await db.query('select public.enviar_circular($1,$2,$3,$4)',[id,'2026-11-03','2026-11-06','2026-11-09'])
+    await db.exec('savepoint intent_preu')
+    await expect(db.query('update public.excursions set preu_alumne=999 where id=$1',[id]))
+      .rejects.toThrow('Només es confirma')
+    await db.exec('rollback to savepoint intent_preu')
+  })
+
+  it('confirmar_preu segueix funcionant amb el nou control al disparador', async () => {
+    // El guard no s'ha d'interposar en el propi camí legítim: `confirmar_preu`
+    // ja complia les dues condicions abans de tocar `estat`.
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Prova','Prova','2026-11-18','09:00','13:00','autocar') returning id`)).rows[0].id
+    await db.query(`insert into public.excursio_grups(excursio_id,grup,alumnes_previstos) values($1,'EP-1 A',25)`,[id])
+    await db.query(`update public.excursions set estat='Proposada' where id=$1`,[id])
+    await db.query(`update public.excursions set estat='Aprovada' where id=$1`,[id])
+    await db.query(`insert into public.excursio_finances(excursio_id) values($1)`,[id])
+    await db.query('select public.confirmar_preu($1,$2,$3,$4,$5)',[id,15,0.8,12,10])
+    expect(Number((await db.query<{preu_alumne:string}>(
+      'select preu_alumne from public.excursions where id=$1',[id])).rows[0].preu_alumne)).toBe(15)
+  })
 })
