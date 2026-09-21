@@ -99,6 +99,13 @@ export function CircularAccions({
           placeholder="Cal dur esmorzar i roba còmoda."
           className="px-2 py-1 text-sm border border-gray-200 rounded-lg disabled:bg-gray-50"
         />
+        {/* El motiu pel qual no es desa és a dalt d'aquest fitxer, però qui
+            torni a generar la circular d'aquí a un mes no llegirà cap comentari:
+            veurà el camp buit i no sabrà que la que van rebre les famílies duia
+            una frase. Per això ho diu la pantalla. */}
+        <span className="text-gray-400">
+          La nota no es desa: si es torna a generar la circular, s’ha de tornar a escriure.
+        </span>
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
