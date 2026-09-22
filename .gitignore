@@ -13,6 +13,10 @@ dist-ssr
 *.local
 
 # Editor directories and files
+# Les còpies `.bak` no les mira ni ESLint ni `tsc` ni el build (per l'extensió),
+# així que una que es committegi hi queda invisible: ja va passar amb
+# `configStore.ts.bak`, que guardava els textos vells de la circular.
+*.bak
 .vscode/*
 !.vscode/extensions.json
 .idea

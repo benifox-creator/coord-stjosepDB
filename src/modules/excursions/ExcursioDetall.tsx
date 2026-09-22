@@ -4,8 +4,12 @@ import type { Excursio, EstatExcursio } from './types'
 import { ESTAT_COLORS, TRANSPORT_LABELS } from './types'
 import type { Finances } from './finances.types'
 import type { ParametresPreu } from './preu'
+import type { DatesCircular } from './datesCircular'
+import type { TextosCircular } from './circular/textos'
+import { dadesCircular } from './circular/dades'
 import { useFinances } from './useFinances'
 import { BlocEconomic } from './BlocEconomic'
+import { CircularAccions } from './CircularAccions'
 
 interface Props {
   excursio: Excursio
@@ -25,6 +29,13 @@ interface Props {
   // sense passar-la, es podria confirmar un preu calculat amb dades que
   // encara no han arribat al servidor.
   onConfirmaPreu: (preu: number, finances: Finances) => Promise<void>
+  // Tot el que fa falta per a la circular ve del Wrapper, que és qui té la
+  // configuració: la proposta de dates, els textos fixos i el calendari. Aquí
+  // no es llegeix res de la configuració, igual que amb `parametres`.
+  datesCircular: DatesCircular
+  textosCircular: TextosCircular
+  diesNoLectius: string[]
+  onEnviarCircular: (dates: DatesCircular) => Promise<void>
   onEditar: () => void
   onClose: () => void
 }
@@ -42,7 +53,8 @@ const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', curren
 
 export function ExcursioDetall({
   excursio: e, potAprovar, potGestionar, potEditar, potVeureCostos, parametres,
-  onCanviarEstat, onConfirmaPreu, onEditar, onClose,
+  datesCircular, textosCircular, diesNoLectius,
+  onCanviarEstat, onConfirmaPreu, onEnviarCircular, onEditar, onClose,
 }: Props) {
   const [ocupat, setOcupat] = useState(false)
   const [error, setError] = useState('')
@@ -129,6 +141,49 @@ export function ExcursioDetall({
     }
   }
 
+  async function generarCircular(dates: DatesCircular, nota: string) {
+    setOcupat(true)
+    setError('')
+    try {
+      // `docx` amb `import()` i no a dalt del fitxer: la llibreria pesa més que
+      // tot el mòdul d'excursions junt, i qui només mira el pla del curs no
+      // l'ha de descarregar mai. Només entra al navegador de qui genera una
+      // circular, i el mateix `import()` no la torna a demanar la segona
+      // vegada.
+      const { circularBlob } = await import('./circular/document')
+      const blob = await circularBlob(dadesCircular(e, dates, textosCircular, nota))
+      const url = URL.createObjectURL(blob)
+      const enllac = document.createElement('a')
+      enllac.href = url
+      // El codi al nom del fitxer: a Secretaria n'hi conviuen moltes a la
+      // mateixa carpeta, i "circular.docx" no es distingeix de la d'ahir.
+      enllac.download = `Circular ${e.Codi}.docx`
+      enllac.click()
+      // La memòria del blob no es torna sola fins que es tanca la pestanya,
+      // però revocar-la tot seguit del `click()` pot arribar abans que el
+      // navegador n'hagi començat la descàrrega: se li deixa passar un torn.
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No s’ha pogut generar la circular.')
+    } finally {
+      setOcupat(false)
+    }
+  }
+
+  // Mateix patró que `confirmarPreu`: la fitxa no es tanca en acabar perquè qui
+  // l'envia vegi l'estat nou i les dates desades a la mateixa targeta.
+  async function enviarCircular(dates: DatesCircular) {
+    setOcupat(true)
+    setError('')
+    try {
+      await onEnviarCircular(dates)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No s’ha pogut marcar la circular com a enviada.')
+    } finally {
+      setOcupat(false)
+    }
+  }
+
   function demanaMotiu(pregunta: string, estat: EstatExcursio) {
     const motiu = window.prompt(pregunta)
     if (motiu?.trim()) void canvia(estat, motiu.trim())
@@ -206,6 +261,24 @@ export function ExcursioDetall({
               onCanvia={setFinances}
               onDesa={desarCostos}
               onConfirma={confirmarPreu}
+            />
+          )}
+
+          {/* Per a qui gestiona, i també amb l'excursió cancel·lada: el bloc
+              explica ell mateix per què no es pot enviar, i qui la va enviar
+              si ja ho estava. */}
+          {potGestionar && (
+            <CircularAccions
+              // Les dates i la nota són estat intern del bloc: amb la `key`,
+              // passar d'una excursió a una altra sense tancar la fitxa el
+              // torna a muntar i no n'arrossega les dates.
+              key={e.id}
+              excursio={e}
+              datesProposades={datesCircular}
+              diesNoLectius={diesNoLectius}
+              ocupat={ocupat}
+              onGenerar={generarCircular}
+              onEnviar={enviarCircular}
             />
           )}
 

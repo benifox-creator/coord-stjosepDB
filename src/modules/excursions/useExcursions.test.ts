@@ -8,6 +8,7 @@ vi.mock('../../services/db', () => ({
   insertRow: vi.fn(),
   updateRowById: vi.fn(),
   deleteRowById: vi.fn(),
+  callRpc: vi.fn(),
 }))
 
 const fila = {
@@ -18,6 +19,8 @@ const fila = {
   motiu_rebuig: null, motiu_cancellacio: null, proposada_per: null,
   aprovada_per: null, reservada_per: null, creat_per: 'a@stjosep.org',
   preu_alumne: null, preu_confirmat_per: null,
+  data_circular: null, data_limit_pagament: null, data_limit_resguard: null,
+  circular_enviada_per: null, ampa_collabora: false,
 }
 
 const dades: ExcursioFormData = {
@@ -215,5 +218,26 @@ describe('copiar del curs anterior', () => {
     preparaOrigen()
     await useExcursions.getState().copiarDelCurs('2025-2026', ['vella'])
     expect(vi.mocked(db.insertRow).mock.calls.some((c) => c[0] === 'excursio_acompanyants')).toBe(false)
+  })
+})
+
+describe('enviar la circular', () => {
+  it('passa per l’RPC i no per un update de la taula', async () => {
+    await useExcursions.getState().enviarCircular('e1', {
+      circular: '2026-10-05', pagament: '2026-10-09', resguard: '2026-10-13',
+    })
+    expect(vi.mocked(db.callRpc)).toHaveBeenCalledWith('enviar_circular', {
+      p_id: 'e1', p_circular: '2026-10-05', p_pagament: '2026-10-09', p_resguard: '2026-10-13',
+    })
+    // Un update directe es saltaria la comprovació del preu i el correu als
+    // acompanyants, que viuen dins la funció del servidor.
+    expect(vi.mocked(db.updateRowById)).not.toHaveBeenCalled()
+  })
+
+  it('deixa passar l’error del servidor a qui l’ha cridat', async () => {
+    vi.mocked(db.callRpc).mockRejectedValueOnce(new Error('Cal confirmar el preu abans d’enviar la circular'))
+    await expect(useExcursions.getState().enviarCircular('e1', {
+      circular: '2026-10-05', pagament: '2026-10-09', resguard: '2026-10-13',
+    })).rejects.toThrow('Cal confirmar el preu')
   })
 })

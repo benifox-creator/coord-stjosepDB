@@ -8,7 +8,6 @@ import type { Usuari, Rol, EtapaSubstitucio } from '../usuaris/types'
 import { ETAPA_FRANJA_KEY, ETAPES_SUBSTITUCIO } from '../substitucions/types'
 import { ImportarUsuarisModal, type ResultatImportacio } from '../usuaris/ImportarUsuarisModal'
 import type { DadesUsuariImportat } from '../usuaris/excelImport.utils'
-import { potVeureCostos } from '../excursions/permisos'
 
 interface LlistaConfig {
   clau: string
@@ -777,24 +776,33 @@ function VisibilitatModuls() {
   )
 }
 
-interface CampPreuConfig { clau: string; label: string }
+interface CampNumericConfig { clau: string; label: string; step?: string }
 
 // Un camp de previsió i un de marge per etapa, més els dos globals. Es
 // genera a partir d'ETAPES_SUBSTITUCIO perquè si mai canvia el llistat
 // d'etapes (poc probable, però ja ha passat amb els grups) aquesta pantalla
 // no es quedi desactualitzada en silenci.
-const CAMPS_PREU_EXCURSIONS: CampPreuConfig[] = [
+const CAMPS_PREU_EXCURSIONS: CampNumericConfig[] = [
   ...ETAPES_SUBSTITUCIO.map((etapa) => ({ clau: `excursions.previsio.${etapa}`, label: `Previsió d'assistència — ${etapa}` })),
   ...ETAPES_SUBSTITUCIO.map((etapa) => ({ clau: `excursions.marge-pct.${etapa}`, label: `Marge de seguretat — ${etapa} (%)` })),
   { clau: 'excursions.iva-pct', label: 'IVA del transport (%)' },
   { clau: 'excursions.arrodoniment', label: "Pas d'arrodoniment del preu (€)" },
 ]
 
-function ParametresPreuExcursionsEditor() {
+// Els dos terminis que la circular esmenta en dies (no en diners, per això
+// van amb els textos i no amb el preu): quan s'envia i quan tanca el pagament.
+const CAMPS_DIES_CIRCULAR: CampNumericConfig[] = [
+  { clau: 'excursions.dies-abans-circular', label: "Dies d'antelació per enviar la circular", step: '1' },
+  { clau: 'excursions.dies-abans-termini', label: 'Dies de termini per fer el pagament', step: '1' },
+]
+
+// Genèric perquè el mateix editor serveix tant per als paràmetres de preu
+// (només costos) com pels dies de la circular (qualsevol que gestioni).
+function CampsNumericsEditor({ camps }: { camps: CampNumericConfig[] }) {
   const update = useConfigStore((s) => s.update)
   const getValues = useConfigStore((s) => s.getValues)
   const [valors, setValors] = useState<Record<string, string>>(() =>
-    Object.fromEntries(CAMPS_PREU_EXCURSIONS.map((c) => [c.clau, getValues(c.clau)[0]])),
+    Object.fromEntries(camps.map((c) => [c.clau, getValues(c.clau)[0]])),
   )
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -818,14 +826,14 @@ function ParametresPreuExcursionsEditor() {
     <div className="space-y-3">
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {CAMPS_PREU_EXCURSIONS.map(({ clau, label }) => (
+        {camps.map(({ clau, label, step }) => (
           <div key={clau} className="flex flex-col gap-1.5 bg-white border border-gray-200 rounded-xl p-3">
             <label htmlFor={clau} className="text-xs font-medium text-gray-600">{label}</label>
             <div className="flex gap-2">
               <input
                 id={clau}
                 type="number"
-                step="0.01"
+                step={step ?? '0.01'}
                 min={0}
                 value={valors[clau]}
                 onChange={(e) => setValors((v) => ({ ...v, [clau]: e.target.value }))}
@@ -847,16 +855,92 @@ function ParametresPreuExcursionsEditor() {
   )
 }
 
+interface CampTextConfig { clau: string; label: string; descripcio: string }
+
+// Els textos de la circular: frases fixes que abans estaven escrites al codi
+// del generador. Un `textarea` perquè són frases senceres, no valors curts.
+const CAMPS_TEXT_CIRCULAR: CampTextConfig[] = [
+  { clau: 'excursions.text-pagament-intro', label: 'Introducció del pagament', descripcio: 'Frase que presenta el codi de barres del pagament a la circular.' },
+  { clau: 'excursions.text-ampa', label: "Contribució de l'AMPA", descripcio: "Frase que explica la participació de l'AMPA en el finançament, quan n'hi ha." },
+  { clau: 'excursions.text-devolucions', label: 'Devolucions per no assistència', descripcio: 'Explica què passa quan un alumne no assisteix i s’avisa fora de termini.' },
+  { clau: 'excursions.text-resguard', label: 'Resguard del pagament', descripcio: 'Recorda què cal fer amb el resguard un cop pagat.' },
+]
+
+function CampTextLlargEditor({ camp }: { camp: CampTextConfig }) {
+  const savedValues = useConfigStore((s) => s.config[camp.clau])
+  const update = useConfigStore((s) => s.update)
+  // Es recalcula a cada render, com fa `LlistaEditor`. Amb `useState(saved ??
+  // defecte)` el valor quedava fixat al primer render: si la pantalla es
+  // muntava abans que `load()` tornés, al quadre hi quedava el text de sèrie
+  // per sempre, i prémer Desar l'escrivia **sobre** la redacció del centre
+  // sense que ningú arribés a veure què s'havia substituït.
+  const desat = savedValues?.[0] ?? CONFIG_DEFAULTS[camp.clau]?.[0] ?? ''
+  // `null` vol dir «el que hi hagi desat, arribi quan arribi»; només mana
+  // l'esborrany a partir del moment que algú escriu al quadre.
+  const [esborrany, setEsborrany] = useState<string | null>(null)
+  const valor = esborrany ?? desat
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleDesar() {
+    if (!valor.trim()) return
+    setError('')
+    setSaving(true)
+    try {
+      await update(camp.clau, [valor.trim()])
+      setEsborrany(null)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 1500)
+    } catch (err) {
+      // Sense això, un desat rebutjat (per exemple, perquè la taula `config`
+      // només la pot escriure la coordinació) deixava el botó com si res i el
+      // text es donava per desat.
+      setError(err instanceof Error ? err.message : 'Error desant la configuració')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <label htmlFor={camp.clau} className="text-sm font-semibold text-text-main">{camp.label}</label>
+      <p className="text-xs text-gray-400 mt-0.5 mb-2">{camp.descripcio}</p>
+      {error && <p role="alert" className="text-sm text-red-700 mb-2">{error}</p>}
+      <textarea
+        id={camp.clau}
+        value={valor}
+        onChange={(e) => { setEsborrany(e.target.value); setSaved(false) }}
+        rows={2}
+        className="input text-sm w-full resize-y"
+      />
+      <div className="flex justify-end mt-2">
+        <button
+          onClick={handleDesar}
+          disabled={saving || !valor.trim()}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-opacity hover:opacity-90"
+          style={{ backgroundColor: '#861414' }}
+        >
+          {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? '✓' : 'Desar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const LLISTA_PASSOS_PAGAMENT: LlistaConfig = {
+  clau: 'excursions.passos-pagament',
+  label: 'Passos del pagament',
+  descripcio: 'Cada entrada és un pas de la circular, en l’ordre que ha de seguir la família.',
+}
+
 export function ConfiguracioPage() {
   const loaded = useConfigStore((s) => s.loaded)
   const loading = useConfigStore((s) => s.loading)
   const error = useConfigStore((s) => s.error)
   const rolActual = useUsuarisStore((s) => s.rol)
-  const usuaris = useUsuarisStore((s) => s.usuaris)
   const emailActual = useAuthStore((s) => s.user?.email ?? '')
   const esCoordinador = rolActual === 'coordinador'
-  const jo = usuaris.find((u) => u.Email.toLowerCase() === emailActual.toLowerCase()) ?? null
-  const potVeureCostosExcursions = potVeureCostos(rolActual, jo)
 
   return (
     <div className="flex flex-col h-full bg-surface">
@@ -927,18 +1011,45 @@ export function ConfiguracioPage() {
           </section>
         )}
 
-        {potVeureCostosExcursions && (
+        {/* Tota la configuració del centre és de la coordinació: escriure a
+            `public.config` demana `app_private.admin()`, que només té el rol
+            `coordinador`. Abans aquesta secció es mostrava a qualsevol que
+            gestionés excursions, que hi trobava camps editables i un servidor
+            que els rebutjava tots. */}
+        {esCoordinador && (
           <section>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#059669' }} />
-              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Excursions — preu</h2>
+              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Excursions</h2>
             </div>
-            <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-              Paràmetres del càlcul del preu per alumne, per etapa: quants matriculats s'espera
-              que hi vagin i el marge de seguretat, més l'IVA del transport i el pas d'arrodoniment,
-              que són comuns a totes les etapes. Només ho veu qui té accés als costos.
-            </p>
-            <ParametresPreuExcursionsEditor />
+
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Circular</p>
+                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+                  Terminis i textos fixos de la circular que reben les famílies. Els valors surten
+                  a totes les circulars del centre, així que, com la resta de la configuració,
+                  només els pot canviar la coordinació.
+                </p>
+                <div className="space-y-3">
+                  <CampsNumericsEditor camps={CAMPS_DIES_CIRCULAR} />
+                  {CAMPS_TEXT_CIRCULAR.map((camp) => (
+                    <CampTextLlargEditor key={camp.clau} camp={camp} />
+                  ))}
+                  <LlistaEditor llista={LLISTA_PASSOS_PAGAMENT} />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preu</p>
+                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+                  Paràmetres del càlcul del preu per alumne, per etapa: quants matriculats s'espera
+                  que hi vagin i el marge de seguretat, més l'IVA del transport i el pas d'arrodoniment,
+                  que són comuns a totes les etapes.
+                </p>
+                <CampsNumericsEditor camps={CAMPS_PREU_EXCURSIONS} />
+              </div>
+            </div>
           </section>
         )}
 
