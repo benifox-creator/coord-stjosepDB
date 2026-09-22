@@ -74,7 +74,10 @@ function CampPagats({ grup, desant, onDesa }: {
   // el focus a dins, cosa que en dispararia el `blur` i desaria una edició a
   // mig fer.
   desant: boolean
-  onDesa: (pagats: number) => void
+  // Diu si el desat ha anat bé. Quan el servidor diu que no, `AlumnesPagats`
+  // no canvia i la `key` tampoc, així que el camp no es remunta tot sol i cal
+  // tornar-lo al valor desat des d'aquí.
+  onDesa: (pagats: number) => Promise<boolean>
 }) {
   const [text, setText] = useState(String(grup.AlumnesPagats))
 
@@ -87,7 +90,13 @@ function CampPagats({ grup, desant, onDesa }: {
       setText(String(grup.AlumnesPagats))
       return
     }
-    onDesa(valor)
+    // Si el desat peta, el camp torna al valor desat: si s'hi quedés el número
+    // escrit, la fitxa ensenyaria dues xifres que es contradiuen —el camp amb
+    // el nou i la línia «Han pagat X de Y» de sota amb el vell—, i qui sempre
+    // rep un no del servidor, el convidat, és qui més fàcilment es pensaria
+    // que ho ha desat. Només toca aquest camp: la promesa és la d'aquesta
+    // crida, i el camp d'un altre grup que encara s'està desant no la veu.
+    void onDesa(valor).then((desat) => { if (!desat) setText(String(grup.AlumnesPagats)) })
   }
 
   return (
@@ -231,13 +240,17 @@ export function ExcursioDetall({
   // Mateix patró que `desarCostos`: `registraPagaments` no atrapa els seus
   // errors (l'RLS o la xarxa hi poden dir que no), i aquí és on es converteixen
   // en una franja vermella en comptes d'una promesa trencada en silenci.
-  async function apuntaPagaments(grupId: string, pagats: number) {
+  // Retorna si ha anat bé perquè el camp d'aquell grup pugui desfer el que
+  // l'usuari hi havia escrit quan el servidor ho rebutja.
+  async function apuntaPagaments(grupId: string, pagats: number): Promise<boolean> {
     setGrupsDesant((actuals) => new Set(actuals).add(grupId))
     setError('')
     try {
       await registraPagaments(grupId, pagats)
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No s’han pogut apuntar els pagaments.')
+      return false
     } finally {
       // Només la seva entrada: si la del grup A peta o acaba, la del B que
       // encara s'està desant no s'ha de desbloquejar pel camí.
@@ -358,14 +371,14 @@ export function ExcursioDetall({
                             key={`${g.id}:${g.AlumnesPagats}`}
                             grup={g}
                             desant={grupsDesant.has(g.id)}
-                            onDesa={(n) => void apuntaPagaments(g.id, n)}
+                            onDesa={(n) => apuntaPagaments(g.id, n)}
                           />
                         </label>
                         {/* En gris i no en vermell: que hi hagi més pagaments
                             que previsions és una dada bona (s'hi ha afegit algú
                             que no es comptava), no pas un error a esmenar. */}
                         {g.AlumnesPagats > g.AlumnesPrevistos && (
-                          <span className="text-xs text-gray-400">més pagaments que previsions</span>
+                          <span className="text-xs text-gray-500">més pagaments que previsions</span>
                         )}
                       </li>
                     ))}
@@ -446,9 +459,9 @@ export function ExcursioDetall({
               (canviar d'estat, desar, confirmar). Cap dels dos té prioritat
               fixa: es mostren tots dos si passa que coincideixen. */}
           {financesError && potVeureCostos && (
-            <p className="text-xs text-red-600">No s’han pogut carregar els costos: {financesError}</p>
+            <p role="alert" className="text-xs text-red-600">No s’han pogut carregar els costos: {financesError}</p>
           )}
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 px-6 py-4 border-t border-gray-200">
