@@ -5,7 +5,7 @@ import type { Excursio, ExcursioFormData, EstatExcursio } from './types'
 import type { DatesCircular } from './datesCircular'
 import { TAULA_EXCURSIONS, rowToExcursio, excursioToInsert, dataTrasladada, type ExcursioRow } from './excursions.utils'
 
-interface GrupRow { id: string; excursio_id: string; grup: string; alumnes_previstos: number; alumnes_finals: number | null }
+interface GrupRow { id: string; excursio_id: string; grup: string; alumnes_previstos: number; alumnes_finals: number | null; alumnes_pagats: number }
 interface AcompanyantRow { id: string; excursio_id: string; email: string }
 
 interface ExcursionsState {
@@ -19,6 +19,7 @@ interface ExcursionsState {
   canviarEstat: (id: string, estat: EstatExcursio, motiu?: string) => Promise<void>
   enviarCircular: (id: string, dates: DatesCircular) => Promise<void>
   copiarDelCurs: (cursOrigen: string, ids: string[]) => Promise<void>
+  registraPagaments: (grupId: string, pagats: number) => Promise<void>
 }
 
 // Si se'n demanen dues seguides, només val la darrera: si no, una resposta
@@ -43,7 +44,11 @@ export const useExcursions = create<ExcursionsState>((set, get) => ({
       set({ excursions: files.map((f) => ({
         ...rowToExcursio(f),
         Grups: grups.filter((g) => g.excursio_id === f.id)
-          .map((g) => ({ id: g.id, Grup: g.grup, AlumnesPrevistos: g.alumnes_previstos, AlumnesFinals: g.alumnes_finals })),
+          .map((g) => ({
+            id: g.id, Grup: g.grup, AlumnesPrevistos: g.alumnes_previstos, AlumnesFinals: g.alumnes_finals,
+            // Mai `null`: "ningú ha pagat" és zero, no un desconegut.
+            AlumnesPagats: g.alumnes_pagats ?? 0,
+          })),
         Acompanyants: acompanyants.filter((a) => a.excursio_id === f.id).map((a) => a.email),
       })) })
     } catch (err) {
@@ -124,6 +129,17 @@ export const useExcursions = create<ExcursionsState>((set, get) => ({
       }
     }
     await get().load(desti)
+  },
+
+  /**
+   * El recompte de pagats no s'actualitza amb un `update`: la migració ha
+   * revocat el privilegi d'escriptura sobre aquesta columna i només
+   * `registra_pagaments` hi pot tocar. Es recarrega després perquè la fitxa
+   * de l'excursió ensenyi la xifra nova.
+   */
+  async registraPagaments(grupId, pagats) {
+    await callRpc('registra_pagaments', { p_grup: grupId, p_pagats: pagats })
+    await get().load()
   },
 }))
 

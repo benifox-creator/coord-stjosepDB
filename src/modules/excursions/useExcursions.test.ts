@@ -152,7 +152,7 @@ describe('canviar d’estat', () => {
   it('conserva els grups ja carregats en refrescar la fila', async () => {
     useExcursions.setState({ excursions: [{
       ...(await import('./excursions.utils')).rowToExcursio(fila),
-      Grups: [{ id: 'g1', Grup: 'EP-1r A', AlumnesPrevistos: 25, AlumnesFinals: null }],
+      Grups: [{ id: 'g1', Grup: 'EP-1r A', AlumnesPrevistos: 25, AlumnesFinals: null, AlumnesPagats: 0 }],
       Acompanyants: ['b@stjosep.org'],
     }] })
     vi.mocked(db.updateRowById).mockResolvedValue({ ...fila, estat: 'Proposada' } as never)
@@ -239,5 +239,17 @@ describe('enviar la circular', () => {
     await expect(useExcursions.getState().enviarCircular('e1', {
       circular: '2026-10-05', pagament: '2026-10-09', resguard: '2026-10-13',
     })).rejects.toThrow('Cal confirmar el preu')
+  })
+})
+
+describe('registrar els pagaments d’un grup', () => {
+  it('crida la funció i els paràmetres exactes de la migració, i recarrega', async () => {
+    // Els noms de la funció i dels dos paràmetres han de coincidir amb
+    // `registra_pagaments` de la base de dades: una errata aquí només es
+    // veuria en producció, no en compilar.
+    taules()
+    await useExcursions.getState().registraPagaments('g1', 18)
+    expect(vi.mocked(db.callRpc)).toHaveBeenCalledWith('registra_pagaments', { p_grup: 'g1', p_pagats: 18 })
+    expect(vi.mocked(db.getAll)).toHaveBeenCalled()
   })
 })
