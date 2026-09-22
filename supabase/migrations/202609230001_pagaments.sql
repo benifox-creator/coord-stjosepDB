@@ -25,6 +25,16 @@ alter table public.excursio_grups add constraint excursio_grups_pagats_check
 revoke update on public.excursio_grups from authenticated;
 grant update (grup, alumnes_previstos, alumnes_finals) on public.excursio_grups to authenticated;
 
+-- I el mateix amb l'`insert`, que si no deixaria la clausura de sobre sense
+-- efecte: el privilegi d'insert de la Fase A és **per taula i cobreix totes
+-- les columnes**, així que un grup podria néixer amb el recompte ja escrit, i
+-- un `delete` seguit d'un `insert` permetria reescriure'n un de registrat. Es
+-- torna a concedir només sobre les columnes que el client escriu de debò: ni
+-- l'`id` (que ja té `default`) ni `alumnes_pagats` no surten mai de cap insert
+-- de l'aplicació, així que aquí no se li treu res que faci servir.
+revoke insert on public.excursio_grups from authenticated;
+grant insert (excursio_id, grup, alumnes_previstos, alumnes_finals) on public.excursio_grups to authenticated;
+
 create or replace function public.registra_pagaments(p_grup uuid, p_pagats integer) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
