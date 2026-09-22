@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X, Loader2, Pencil } from 'lucide-react'
-import type { Excursio, EstatExcursio } from './types'
+import type { Excursio, EstatExcursio, ExcursioGrup } from './types'
 import { ESTAT_COLORS, TRANSPORT_LABELS } from './types'
 import type { Finances } from './finances.types'
 import type { ParametresPreu } from './preu'
@@ -8,6 +8,8 @@ import type { DatesCircular } from './datesCircular'
 import type { TextosCircular } from './circular/textos'
 import { dadesCircular } from './circular/dades'
 import { useFinances } from './useFinances'
+import { useExcursions } from './useExcursions'
+import { recaptat, totalPagats } from './pagaments'
 import { BlocEconomic } from './BlocEconomic'
 import { CircularAccions } from './CircularAccions'
 
@@ -51,6 +53,56 @@ function Dada({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 
 const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', currency: 'EUR' })
 
+/**
+ * El recompte de pagaments d'un grup. S'escriu en una còpia local i només es
+ * desa en sortir del camp o en prémer Enter: cada desat és una crida al
+ * servidor més una recàrrega de tota la llista, i fer-ho a cada tecla en
+ * dispararia una per dígit.
+ *
+ * Qui el munta li posa una `key` que inclou la xifra desada, perquè quan torni
+ * del servidor (o la canviï algú altre) el camp es torni a muntar amb el valor
+ * bo. Copiar-lo amb un efecte xocaria amb l'edició encara no desada, el mateix
+ * motiu pel qual els costos tampoc no es copien així.
+ */
+function CampPagats({ grup, ocupat, onDesa }: {
+  grup: ExcursioGrup
+  ocupat: boolean
+  onDesa: (pagats: number) => void
+}) {
+  const [text, setText] = useState(String(grup.AlumnesPagats))
+
+  function desa() {
+    const valor = Number(text.trim())
+    // Un camp buit, un negatiu o un decimal no són un pagament a mitges: es
+    // torna al que hi havia en comptes d'enviar al servidor una xifra que
+    // rebutjaria igualment.
+    if (text.trim() === '' || !Number.isInteger(valor) || valor < 0) {
+      setText(String(grup.AlumnesPagats))
+      return
+    }
+    // Sortir del camp sense haver-hi tocat res no ha de costar una crida.
+    if (valor === grup.AlumnesPagats) return
+    onDesa(valor)
+  }
+
+  return (
+    <input
+      type="number"
+      min={0}
+      step={1}
+      value={text}
+      disabled={ocupat}
+      aria-label={`Pagaments rebuts del grup ${grup.Grup}`}
+      onChange={(ev) => setText(ev.target.value)}
+      onBlur={desa}
+      // Enter no desa ell mateix: treu el focus i deixa que ho faci `onBlur`,
+      // perquè les dues maneres d'acabar passin exactament pel mateix camí.
+      onKeyDown={(ev) => { if (ev.key === 'Enter') ev.currentTarget.blur() }}
+      className="w-16 px-2 py-0.5 text-sm border border-gray-200 rounded-lg disabled:opacity-50"
+    />
+  )
+}
+
 export function ExcursioDetall({
   excursio: e, potAprovar, potGestionar, potEditar, potVeureCostos, parametres,
   datesCircular, textosCircular, diesNoLectius,
@@ -71,6 +123,15 @@ export function ExcursioDetall({
   // l'únic lloc que l'ensenya, i abans d'aquest camp res ho feia.
   const financesError = useFinances((s) => s.error)
   const [finances, setFinances] = useState<Finances | null>(null)
+
+  const registraPagaments = useExcursions((s) => s.registraPagaments)
+  // Els grups es llegeixen de l'store i no de la prop `excursio`: qui obre la
+  // fitxa n'ha guardat una còpia del moment d'obrir-la, i `registraPagaments`
+  // recarrega la llista però no aquella còpia. Sense això, després d'apuntar un
+  // pagament el camp i el total seguirien ensenyant la xifra vella fins a
+  // tancar i tornar a obrir la targeta. Es cau a la prop mentre la recàrrega no
+  // ha tornat, o si algú munta la fitxa sense passar per l'store.
+  const grups = useExcursions((s) => s.excursions.find((x) => x.id === e.id)?.Grups) ?? e.Grups
 
   useEffect(() => {
     // Sense accés als diners, `carrega` tornaria zero files igualment (l'RLS
@@ -141,6 +202,21 @@ export function ExcursioDetall({
     }
   }
 
+  // Mateix patró que `desarCostos`: `registraPagaments` no atrapa els seus
+  // errors (l'RLS o la xarxa hi poden dir que no), i aquí és on es converteixen
+  // en una franja vermella en comptes d'una promesa trencada en silenci.
+  async function apuntaPagaments(grupId: string, pagats: number) {
+    setOcupat(true)
+    setError('')
+    try {
+      await registraPagaments(grupId, pagats)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No s’han pogut apuntar els pagaments.')
+    } finally {
+      setOcupat(false)
+    }
+  }
+
   async function generarCircular(dates: DatesCircular, nota: string) {
     setOcupat(true)
     setError('')
@@ -189,7 +265,9 @@ export function ExcursioDetall({
     if (motiu?.trim()) void canvia(estat, motiu.trim())
   }
 
-  const alumnes = e.Grups.reduce((s, g) => s + g.AlumnesPrevistos, 0)
+  const alumnes = grups.reduce((s, g) => s + g.AlumnesPrevistos, 0)
+  const pagats = totalPagats(grups)
+  const diners = recaptat(grups, e.PreuAlumne)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -231,12 +309,44 @@ export function ExcursioDetall({
 
           <div>
             <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">Grups</p>
-            {e.Grups.length === 0
+            {grups.length === 0
               ? <p className="text-sm text-gray-400 italic">Cap grup encara.</p>
               : (
-                <ul className="text-sm text-text-main space-y-0.5">
-                  {e.Grups.map((g) => <li key={g.id}>{g.Grup} — {g.AlumnesPrevistos} alumnes</li>)}
-                </ul>
+                <>
+                  <ul className="text-sm text-text-main space-y-1">
+                    {grups.map((g) => (
+                      <li key={g.id} className="flex flex-wrap items-center gap-2">
+                        <span>{g.Grup} — {g.AlumnesPrevistos} alumnes</span>
+                        <label className="flex items-center gap-1 text-xs text-gray-500">
+                          {/* "Han pagat" i no "pagats" a seques: el número del
+                              costat són alumnes previstos, i les dues xifres
+                              es confondrien sense dir què compta cadascuna. */}
+                          Han pagat
+                          <CampPagats
+                            key={`${g.id}:${g.AlumnesPagats}`}
+                            grup={g}
+                            ocupat={ocupat}
+                            onDesa={(n) => void apuntaPagaments(g.id, n)}
+                          />
+                        </label>
+                        {/* En gris i no en vermell: que hi hagi més pagaments
+                            que previsions és una dada bona (s'hi ha afegit algú
+                            que no es comptava), no pas un error a esmenar. */}
+                        {g.AlumnesPagats > g.AlumnesPrevistos && (
+                          <span className="text-xs text-gray-400">més pagaments que previsions</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Han pagat {pagats} de {alumnes} alumnes previstos
+                    {/* Zero i «encara no se sap» no són el mateix: sense preu
+                        confirmat, un 0 € es llegiria com que no ha entrat res. */}
+                    {diners === null
+                      ? ' · falta confirmar el preu per saber què s’ha recaptat'
+                      : ` · recaptat ${eur(diners)}`}
+                  </p>
+                </>
               )}
           </div>
 
