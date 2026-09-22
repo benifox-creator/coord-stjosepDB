@@ -64,6 +64,17 @@ describe('carregar el pla del curs', () => {
     expect(e.Acompanyants).toEqual(['b@stjosep.org'])
   })
 
+  it('sense pagaments registrats, el recompte és zero i no un desconegut', async () => {
+    // "Ningú ha pagat" és zero, no `null`. Si la fila arriba sense la
+    // columna (o amb `null`), el mapeig l'ha de convertir igualment.
+    taules({
+      grups: [{ id: 'g1', excursio_id: 'e1', grup: 'EP-1r A', alumnes_previstos: 25, alumnes_finals: null, alumnes_pagats: null }],
+    })
+    await useExcursions.getState().load('2026-2027')
+    const [e] = useExcursions.getState().excursions
+    expect(e.Grups[0].AlumnesPagats).toBe(0)
+  })
+
   it('demana només les excursions del curs que toca', async () => {
     taules()
     await useExcursions.getState().load('2026-2027')

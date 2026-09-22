@@ -5,7 +5,11 @@ import type { Excursio, ExcursioFormData, EstatExcursio } from './types'
 import type { DatesCircular } from './datesCircular'
 import { TAULA_EXCURSIONS, rowToExcursio, excursioToInsert, dataTrasladada, type ExcursioRow } from './excursions.utils'
 
-interface GrupRow { id: string; excursio_id: string; grup: string; alumnes_previstos: number; alumnes_finals: number | null; alumnes_pagats: number }
+// `alumnes_pagats` és `number | null` i no `number`: la columna és NOT NULL a la
+// base de dades, però una fila que arribi d'un moment de la migració abans
+// d'omplir-la (o d'una versió antiga de la memòria cau de PostgREST) pot no
+// portar-la. El `?? 0` de sota és qui la converteix en zero.
+interface GrupRow { id: string; excursio_id: string; grup: string; alumnes_previstos: number; alumnes_finals: number | null; alumnes_pagats: number | null }
 interface AcompanyantRow { id: string; excursio_id: string; email: string }
 
 interface ExcursionsState {
