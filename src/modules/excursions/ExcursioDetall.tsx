@@ -9,7 +9,7 @@ import type { TextosCircular } from './circular/textos'
 import { dadesCircular } from './circular/dades'
 import { useFinances } from './useFinances'
 import { useExcursions } from './useExcursions'
-import { recaptat, totalPagats } from './pagaments'
+import { pagamentsAApuntar, recaptat, totalPagats } from './pagaments'
 import { BlocEconomic } from './BlocEconomic'
 import { CircularAccions } from './CircularAccions'
 
@@ -64,24 +64,29 @@ const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', curren
  * bo. Copiar-lo amb un efecte xocaria amb l'edició encara no desada, el mateix
  * motiu pel qual els costos tampoc no es copien així.
  */
-function CampPagats({ grup, ocupat, onDesa }: {
+function CampPagats({ grup, desant, onDesa }: {
   grup: ExcursioGrup
-  ocupat: boolean
+  // Només mentre es desa AQUEST grup, no mentre la fitxa està ocupada: si es
+  // bloquegessin tots els camps alhora, tabular del grup A al B just després
+  // de desar A deixaria el B bloquejat abans no rebés el focus —tota la crida
+  // i la recàrrega del curs sencer—, i qui apunta els pagaments de tres grups
+  // seguits escriuria al no-res. De retruc, tampoc no es bloqueja un camp amb
+  // el focus a dins, cosa que en dispararia el `blur` i desaria una edició a
+  // mig fer.
+  desant: boolean
   onDesa: (pagats: number) => void
 }) {
   const [text, setText] = useState(String(grup.AlumnesPagats))
 
   function desa() {
-    const valor = Number(text.trim())
-    // Un camp buit, un negatiu o un decimal no són un pagament a mitges: es
-    // torna al que hi havia en comptes d'enviar al servidor una xifra que
-    // rebutjaria igualment.
-    if (text.trim() === '' || !Number.isInteger(valor) || valor < 0) {
+    const valor = pagamentsAApuntar(text, grup.AlumnesPagats)
+    // `null` vol dir que no hi ha res a enviar: o el que s'ha escrit no és un
+    // recompte que es pugui desar, o ja és el que hi ha. Es torna al valor
+    // desat perquè el camp no es quedi ensenyant una cosa que no s'ha apuntat.
+    if (valor === null) {
       setText(String(grup.AlumnesPagats))
       return
     }
-    // Sortir del camp sense haver-hi tocat res no ha de costar una crida.
-    if (valor === grup.AlumnesPagats) return
     onDesa(valor)
   }
 
@@ -91,7 +96,7 @@ function CampPagats({ grup, ocupat, onDesa }: {
       min={0}
       step={1}
       value={text}
-      disabled={ocupat}
+      disabled={desant}
       aria-label={`Pagaments rebuts del grup ${grup.Grup}`}
       onChange={(ev) => setText(ev.target.value)}
       onBlur={desa}
@@ -125,13 +130,22 @@ export function ExcursioDetall({
   const [finances, setFinances] = useState<Finances | null>(null)
 
   const registraPagaments = useExcursions((s) => s.registraPagaments)
-  // Els grups es llegeixen de l'store i no de la prop `excursio`: qui obre la
-  // fitxa n'ha guardat una còpia del moment d'obrir-la, i `registraPagaments`
+  const [grupDesant, setGrupDesant] = useState<string | null>(null)
+  // La fila es llegeix de l'store i no de la prop `excursio`: qui obre la fitxa
+  // n'ha guardat una còpia del moment d'obrir-la, i `registraPagaments`
   // recarrega la llista però no aquella còpia. Sense això, després d'apuntar un
   // pagament el camp i el total seguirien ensenyant la xifra vella fins a
   // tancar i tornar a obrir la targeta. Es cau a la prop mentre la recàrrega no
   // ha tornat, o si algú munta la fitxa sense passar per l'store.
-  const grups = useExcursions((s) => s.excursions.find((x) => x.id === e.id)?.Grups) ?? e.Grups
+  const fila = useExcursions((s) => s.excursions.find((x) => x.id === e.id))
+  const grups = fila?.Grups ?? e.Grups
+  // El preu surt de la MATEIXA fila que els grups, no de la prop: barrejar
+  // pagaments acabats de recarregar amb un preu del moment d'obrir la fitxa
+  // donaria un recaptat fals si algú confirma (o reconfirma) el preu mentre la
+  // targeta és oberta —i, en el cas suau, diria «falta confirmar el preu» quan
+  // ja s'ha confirmat. En una pantalla que parla de diners, les dues xifres han
+  // de venir del mateix moment.
+  const preu = fila ? fila.PreuAlumne : e.PreuAlumne
 
   useEffect(() => {
     // Sense accés als diners, `carrega` tornaria zero files igualment (l'RLS
@@ -207,6 +221,7 @@ export function ExcursioDetall({
   // en una franja vermella en comptes d'una promesa trencada en silenci.
   async function apuntaPagaments(grupId: string, pagats: number) {
     setOcupat(true)
+    setGrupDesant(grupId)
     setError('')
     try {
       await registraPagaments(grupId, pagats)
@@ -214,6 +229,7 @@ export function ExcursioDetall({
       setError(err instanceof Error ? err.message : 'No s’han pogut apuntar els pagaments.')
     } finally {
       setOcupat(false)
+      setGrupDesant(null)
     }
   }
 
@@ -267,7 +283,7 @@ export function ExcursioDetall({
 
   const alumnes = grups.reduce((s, g) => s + g.AlumnesPrevistos, 0)
   const pagats = totalPagats(grups)
-  const diners = recaptat(grups, e.PreuAlumne)
+  const diners = recaptat(grups, preu)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -304,7 +320,7 @@ export function ExcursioDetall({
             <Dada etiqueta="Alumnes previstos" valor={String(alumnes)} />
             {/* El preu confirmat surt a la circular que reben les famílies:
                 amagar-lo no té sentit encara que qui mira no vegi el desglossament. */}
-            {e.PreuAlumne !== null && <Dada etiqueta="Preu per alumne" valor={eur(e.PreuAlumne)} />}
+            {preu !== null && <Dada etiqueta="Preu per alumne" valor={eur(preu)} />}
           </div>
 
           <div>
@@ -325,7 +341,7 @@ export function ExcursioDetall({
                           <CampPagats
                             key={`${g.id}:${g.AlumnesPagats}`}
                             grup={g}
-                            ocupat={ocupat}
+                            desant={ocupat && grupDesant === g.id}
                             onDesa={(n) => void apuntaPagaments(g.id, n)}
                           />
                         </label>
