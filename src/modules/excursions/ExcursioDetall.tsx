@@ -130,22 +130,34 @@ export function ExcursioDetall({
   const [finances, setFinances] = useState<Finances | null>(null)
 
   const registraPagaments = useExcursions((s) => s.registraPagaments)
-  const [grupDesant, setGrupDesant] = useState<string | null>(null)
-  // La fila es llegeix de l'store i no de la prop `excursio`: qui obre la fitxa
-  // n'ha guardat una còpia del moment d'obrir-la, i `registraPagaments`
-  // recarrega la llista però no aquella còpia. Sense això, després d'apuntar un
-  // pagament el camp i el total seguirien ensenyant la xifra vella fins a
-  // tancar i tornar a obrir la targeta. Es cau a la prop mentre la recàrrega no
-  // ha tornat, o si algú munta la fitxa sense passar per l'store.
+  // QUINS grups s'estan desant, i no si se n'està desant algun. Dos desats de
+  // grups diferents es poden encavalcar a posta —el camp del grup B no es
+  // bloqueja mentre es desa el A, perquè s'hi pugui tabular i escriure—, i amb
+  // un sol indicador compartit el primer que acabés desbloquejaria també el
+  // segon i n'apagaria la rodeta amb la crida encara en marxa: el camp del B
+  // tornaria a admetre un desat abans que el seu propi hagués contestat, i
+  // ningú no podria dir quina de les dues escriptures arriba primera.
+  const [grupsDesant, setGrupsDesant] = useState<ReadonlySet<string>>(new Set())
+
   const fila = useExcursions((s) => s.excursions.find((x) => x.id === e.id))
-  const grups = fila?.Grups ?? e.Grups
-  // El preu surt de la MATEIXA fila que els grups, no de la prop: barrejar
-  // pagaments acabats de recarregar amb un preu del moment d'obrir la fitxa
-  // donaria un recaptat fals si algú confirma (o reconfirma) el preu mentre la
-  // targeta és oberta —i, en el cas suau, diria «falta confirmar el preu» quan
-  // ja s'ha confirmat. En una pantalla que parla de diners, les dues xifres han
-  // de venir del mateix moment.
-  const preu = fila ? fila.PreuAlumne : e.PreuAlumne
+  // Tot el que la fitxa ensenya surt d'aquesta fila i no de la prop `excursio`:
+  // qui obre la targeta n'ha guardat una còpia del moment d'obrir-la, i el
+  // `load` de `registraPagaments` posa al dia la llista però no aquella còpia.
+  // D'aquí surten els grups, el preu i el que rep el bloc econòmic, perquè cap
+  // parella de xifres de la targeta pugui venir de dos moments diferents: un
+  // preu per alumne a dalt i un altre al bloc de costos seria la mateixa mena
+  // d'error que multiplicar pagaments acabats de recarregar per un preu vell.
+  // El `?? e` cobreix el moment abans que torni la recàrrega i una fitxa
+  // muntada sense passar per l'store. Es tria la fila sencera i no camp per
+  // camp amb `??`: un preu que el servidor hagi buidat (`null`) ha de quedar
+  // buit, no pas ressuscitar el de la còpia vella.
+  const ex = fila ?? e
+  const grups = ex.Grups
+  const preu = ex.PreuAlumne
+  // Per a la rodeta del peu i per als botons: qualsevol acció de la fitxa o
+  // qualsevol pagament encara en marxa. Els camps de pagaments, en canvi, miren
+  // només el seu grup.
+  const enMarxa = ocupat || grupsDesant.size > 0
 
   useEffect(() => {
     // Sense accés als diners, `carrega` tornaria zero files igualment (l'RLS
@@ -220,16 +232,20 @@ export function ExcursioDetall({
   // errors (l'RLS o la xarxa hi poden dir que no), i aquí és on es converteixen
   // en una franja vermella en comptes d'una promesa trencada en silenci.
   async function apuntaPagaments(grupId: string, pagats: number) {
-    setOcupat(true)
-    setGrupDesant(grupId)
+    setGrupsDesant((actuals) => new Set(actuals).add(grupId))
     setError('')
     try {
       await registraPagaments(grupId, pagats)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No s’han pogut apuntar els pagaments.')
     } finally {
-      setOcupat(false)
-      setGrupDesant(null)
+      // Només la seva entrada: si la del grup A peta o acaba, la del B que
+      // encara s'està desant no s'ha de desbloquejar pel camí.
+      setGrupsDesant((actuals) => {
+        const seguents = new Set(actuals)
+        seguents.delete(grupId)
+        return seguents
+      })
     }
   }
 
@@ -243,13 +259,13 @@ export function ExcursioDetall({
       // circular, i el mateix `import()` no la torna a demanar la segona
       // vegada.
       const { circularBlob } = await import('./circular/document')
-      const blob = await circularBlob(dadesCircular(e, dates, textosCircular, nota))
+      const blob = await circularBlob(dadesCircular(ex, dates, textosCircular, nota))
       const url = URL.createObjectURL(blob)
       const enllac = document.createElement('a')
       enllac.href = url
       // El codi al nom del fitxer: a Secretaria n'hi conviuen moltes a la
       // mateixa carpeta, i "circular.docx" no es distingeix de la d'ahir.
-      enllac.download = `Circular ${e.Codi}.docx`
+      enllac.download = `Circular ${ex.Codi}.docx`
       enllac.click()
       // La memòria del blob no es torna sola fins que es tanca la pestanya,
       // però revocar-la tot seguit del `click()` pot arribar abans que el
@@ -290,8 +306,8 @@ export function ExcursioDetall({
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <h2 className="font-semibold text-text-main">{e.Codi}</h2>
-            <span className={`px-2 py-0.5 text-xs rounded-full ${ESTAT_COLORS[e.Estat]}`}>{e.Estat}</span>
+            <h2 className="font-semibold text-text-main">{ex.Codi}</h2>
+            <span className={`px-2 py-0.5 text-xs rounded-full ${ESTAT_COLORS[ex.Estat]}`}>{ex.Estat}</span>
           </div>
           <div className="flex items-center gap-2">
             {potEditar && (
@@ -299,7 +315,7 @@ export function ExcursioDetall({
                 <Pencil size={13} /> Edita
               </button>
             )}
-            <button onClick={onClose} disabled={ocupat} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
+            <button onClick={onClose} disabled={enMarxa} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
               <X size={20} />
             </button>
           </div>
@@ -307,16 +323,16 @@ export function ExcursioDetall({
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <Dada etiqueta="Activitat" valor={e.Activitat} />
-            <Dada etiqueta="Data" valor={e.Data ?? ''} />
-            <Dada etiqueta="Lloc" valor={[e.Lloc, e.Poblacio].filter(Boolean).join(' · ')} />
-            <Dada etiqueta="Etapa" valor={e.Etapa} />
-            <Dada etiqueta="Horari" valor={e.HoraSortida && e.HoraTornada ? `${e.HoraSortida} – ${e.HoraTornada}` : ''} />
+            <Dada etiqueta="Activitat" valor={ex.Activitat} />
+            <Dada etiqueta="Data" valor={ex.Data ?? ''} />
+            <Dada etiqueta="Lloc" valor={[ex.Lloc, ex.Poblacio].filter(Boolean).join(' · ')} />
+            <Dada etiqueta="Etapa" valor={ex.Etapa} />
+            <Dada etiqueta="Horari" valor={ex.HoraSortida && ex.HoraTornada ? `${ex.HoraSortida} – ${ex.HoraTornada}` : ''} />
             <Dada
               etiqueta="Transport"
-              valor={e.Transport === 'altres' ? `${TRANSPORT_LABELS.altres.split(' (')[0]}: ${e.TransportDetall}` : TRANSPORT_LABELS[e.Transport]}
+              valor={ex.Transport === 'altres' ? `${TRANSPORT_LABELS.altres.split(' (')[0]}: ${ex.TransportDetall}` : TRANSPORT_LABELS[ex.Transport]}
             />
-            <Dada etiqueta="Responsable" valor={e.Responsable} />
+            <Dada etiqueta="Responsable" valor={ex.Responsable} />
             <Dada etiqueta="Alumnes previstos" valor={String(alumnes)} />
             {/* El preu confirmat surt a la circular que reben les famílies:
                 amagar-lo no té sentit encara que qui mira no vegi el desglossament. */}
@@ -341,7 +357,7 @@ export function ExcursioDetall({
                           <CampPagats
                             key={`${g.id}:${g.AlumnesPagats}`}
                             grup={g}
-                            desant={ocupat && grupDesant === g.id}
+                            desant={grupsDesant.has(g.id)}
                             onDesa={(n) => void apuntaPagaments(g.id, n)}
                           />
                         </label>
@@ -369,8 +385,8 @@ export function ExcursioDetall({
           <div>
             <p className="text-[11px] uppercase tracking-wide text-gray-400 mb-1">Acompanyants</p>
             <p className="text-sm text-text-main">
-              {e.Acompanyants.length ? e.Acompanyants.join(', ') : 'Encara sense assignar'}
-              {e.AcompanyantsExterns > 0 && ` · ${e.AcompanyantsExterns} externs`}
+              {ex.Acompanyants.length ? ex.Acompanyants.join(', ') : 'Encara sense assignar'}
+              {ex.AcompanyantsExterns > 0 && ` · ${ex.AcompanyantsExterns} externs`}
             </p>
           </div>
 
@@ -379,11 +395,11 @@ export function ExcursioDetall({
               finances={finances}
               parametres={parametres}
               alumnes={alumnes}
-              acompanyants={e.Acompanyants.length + e.AcompanyantsExterns}
-              preuConfirmat={e.PreuAlumne}
-              confirmatPer={e.PreuConfirmatPer}
-              potConfirmar={e.Estat === 'Aprovada' || e.Estat === 'Reservada'}
-              ocupat={ocupat}
+              acompanyants={ex.Acompanyants.length + ex.AcompanyantsExterns}
+              preuConfirmat={ex.PreuAlumne}
+              confirmatPer={ex.PreuConfirmatPer}
+              potConfirmar={ex.Estat === 'Aprovada' || ex.Estat === 'Reservada'}
+              ocupat={enMarxa}
               onCanvia={setFinances}
               onDesa={desarCostos}
               onConfirma={confirmarPreu}
@@ -399,26 +415,26 @@ export function ExcursioDetall({
               // passar d'una excursió a una altra sense tancar la fitxa el
               // torna a muntar i no n'arrossega les dates.
               key={e.id}
-              excursio={e}
+              excursio={ex}
               datesProposades={datesCircular}
               diesNoLectius={diesNoLectius}
-              ocupat={ocupat}
+              ocupat={enMarxa}
               onGenerar={generarCircular}
               onEnviar={enviarCircular}
             />
           )}
 
-          {e.Observacions && <Dada etiqueta="Observacions" valor={e.Observacions} />}
+          {ex.Observacions && <Dada etiqueta="Observacions" valor={ex.Observacions} />}
 
           <div className="border-t border-gray-100 pt-4 space-y-1 text-xs text-gray-500">
-            <p>Proposada per {e.ProposadaPer ?? e.Creat_per}</p>
-            {e.AprovadaPer && <p>Aprovada per {e.AprovadaPer}</p>}
-            {e.ReservadaPer && <p>Reservada per {e.ReservadaPer}</p>}
-            {e.MotiuRebuig && <p className="text-amber-700">Rebutjada: {e.MotiuRebuig}</p>}
-            {e.MotiuCancellacio && <p className="text-red-600">Cancel·lada: {e.MotiuCancellacio}</p>}
+            <p>Proposada per {ex.ProposadaPer ?? ex.Creat_per}</p>
+            {ex.AprovadaPer && <p>Aprovada per {ex.AprovadaPer}</p>}
+            {ex.ReservadaPer && <p>Reservada per {ex.ReservadaPer}</p>}
+            {ex.MotiuRebuig && <p className="text-amber-700">Rebutjada: {ex.MotiuRebuig}</p>}
+            {ex.MotiuCancellacio && <p className="text-red-600">Cancel·lada: {ex.MotiuCancellacio}</p>}
           </div>
 
-          {e.Estat === 'Cancel·lada' && (
+          {ex.Estat === 'Cancel·lada' && (
             <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
               Si ja s’havia enviat la circular, la devolució dels diners s’ha de gestionar fora de l’aplicació:
               l’aplicació encara no ho fa.
@@ -436,19 +452,19 @@ export function ExcursioDetall({
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 px-6 py-4 border-t border-gray-200">
-          {ocupat && <Loader2 size={16} className="animate-spin text-gray-400 self-center mr-auto" />}
-          {e.Estat === 'Proposada' && potAprovar && (
+          {enMarxa && <Loader2 size={16} className="animate-spin text-gray-400 self-center mr-auto" />}
+          {ex.Estat === 'Proposada' && potAprovar && (
             <>
               <button
                 onClick={() => demanaMotiu('Per què es rebutja?', 'Esborrany')}
-                disabled={ocupat}
+                disabled={enMarxa}
                 className="px-4 py-2 text-sm font-medium text-amber-800 bg-amber-100 rounded-lg disabled:opacity-50"
               >
                 Rebutja
               </button>
               <button
                 onClick={() => void canvia('Aprovada')}
-                disabled={ocupat}
+                disabled={enMarxa}
                 className="px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50"
                 style={{ backgroundColor: '#15803d' }}
               >
@@ -456,20 +472,20 @@ export function ExcursioDetall({
               </button>
             </>
           )}
-          {e.Estat === 'Aprovada' && potGestionar && (
+          {ex.Estat === 'Aprovada' && potGestionar && (
             <button
               onClick={() => void canvia('Reservada')}
-              disabled={ocupat}
+              disabled={enMarxa}
               className="px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50"
               style={{ backgroundColor: '#861414' }}
             >
               Marca com a reservada
             </button>
           )}
-          {e.Estat !== 'Cancel·lada' && potGestionar && (
+          {ex.Estat !== 'Cancel·lada' && potGestionar && (
             <button
               onClick={() => demanaMotiu('Per què es cancel·la?', 'Cancel·lada')}
-              disabled={ocupat}
+              disabled={enMarxa}
               className="px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-50"
             >
               Cancel·la

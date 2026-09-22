@@ -64,6 +64,14 @@ describe('què s’envia quan algú acaba d’escriure al camp', () => {
     expect(pagamentsAApuntar('-3', 5)).toBeNull()
   })
 
+  it('el signe «+» sí que passa: és el mateix nombre', () => {
+    // Un camp `type="number"` admet escriure-hi «+18», i ignorar-ho en silenci
+    // seria perdre un recompte ben escrit.
+    expect(pagamentsAApuntar('+18', 5)).toBe(18)
+    expect(pagamentsAApuntar('+18', 18)).toBeNull()
+    expect(pagamentsAApuntar('++18', 5)).toBeNull()
+  })
+
   it('un decimal no s’envia: un pagament a mitges no existeix', () => {
     expect(pagamentsAApuntar('1.5', 5)).toBeNull()
     expect(pagamentsAApuntar('1,5', 5)).toBeNull()

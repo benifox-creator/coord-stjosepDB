@@ -24,15 +24,17 @@ export function recaptat(grups: ExcursioGrup[], preuAlumne: number | null): numb
  * recompte que puguem desar, o ja és el que hi ha desat i la crida seria de
  * franc (i amb ella una recàrrega de tota la llista).
  *
- * Només dígits. Un `input type="number"` deixa escriure-hi «1e3», i `Number()`
- * ho converteix en 1000 sense dir res: apuntar mil pagaments en un grup de
- * vint-i-cinc perquè algú ha premut la «e» és pitjor que no fer res, i el
- * «més pagaments que previsions» ho ensenyaria en gris, com si fos correcte.
- * Els zeros del davant sí que passen: «007» són set pagaments i prou.
+ * Només dígits, amb un «+» al davant com a molt. Un `input type="number"`
+ * deixa escriure-hi «1e3», i `Number()` ho converteix en 1000 sense dir res:
+ * apuntar mil pagaments en un grup de vint-i-cinc perquè algú ha premut la «e»
+ * és pitjor que no fer res, i el «més pagaments que previsions» ho ensenyaria
+ * en gris, com si fos correcte. El «+», en canvi, és el mateix nombre escrit
+ * amb un signe que el camp numèric també admet, i no hi ha cap motiu per
+ * ignorar-lo. Els zeros del davant també passen: «007» són set pagaments.
  */
 export function pagamentsAApuntar(text: string, desat: number): number | null {
   const net = text.trim()
-  if (!/^\d+$/.test(net)) return null
+  if (!/^\+?\d+$/.test(net)) return null
   const valor = Number(net)
   if (!Number.isSafeInteger(valor)) return null
   return valor === desat ? null : valor
