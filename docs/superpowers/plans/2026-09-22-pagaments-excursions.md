@@ -427,13 +427,26 @@ git commit -m "feat(pagaments): apuntar-los des de la fitxa"
 
 Un cop fusionat, aplicar `202609230001_pagaments.sql` a producció i comprovar-ho amb una consulta, no només amb el «success»:
 
+La clausura té **dues meitats** —l'`update` i l'`insert`—, i mirar-ne només una diria que tot va bé amb l'altra oberta. Les dues alhora:
+
 ```sql
-select column_name, privilege_type from information_schema.column_privileges
- where table_name='excursio_grups' and grantee='authenticated' and privilege_type='UPDATE'
- order by column_name;
+select privilege_type, string_agg(column_name, ', ' order by column_name) as columnes
+  from information_schema.column_privileges
+ where table_name='excursio_grups' and grantee='authenticated'
+   and privilege_type in ('INSERT','UPDATE')
+ group by privilege_type;
 ```
 
-Esperat: hi surten `grup`, `alumnes_previstos` i `alumnes_finals`, i **no** `alumnes_pagats`.
+Esperat: a `UPDATE`, `alumnes_finals, alumnes_previstos, grup`; a `INSERT`, aquelles tres més `excursio_id`. A cap de les dues hi ha de sortir `alumnes_pagats`.
+
+I que el privilegi de taula ja no hi sigui, que és el que els cobria totes les columnes:
+
+```sql
+select privilege_type from information_schema.role_table_grants
+ where table_name='excursio_grups' and grantee='authenticated' order by 1;
+```
+
+Esperat: només `DELETE` i `SELECT`.
 
 ## Què ve després
 
