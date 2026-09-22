@@ -27,7 +27,7 @@ const excursioDesada: Excursio = {
   PreuAlumne: null, PreuConfirmatPer: null,
   DataCircular: null, DataLimitPagament: null, DataLimitResguard: null,
   CircularEnviadaPer: null, AmpaCollabora: false,
-  Grups: [{ id: 'g1', Grup: 'EP-1r A', AlumnesPrevistos: 25, AlumnesFinals: null }],
+  Grups: [{ id: 'g1', Grup: 'EP-1r A', AlumnesPrevistos: 25, AlumnesFinals: null, AlumnesPagats: 0 }],
   Acompanyants: [],
 }
 

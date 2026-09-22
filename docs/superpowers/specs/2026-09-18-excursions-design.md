@@ -266,7 +266,7 @@ Accions en bloc sobre les seleccionades: **aprovar**, i **exportar per a pressup
 
 ## 12. Per a més endavant
 
-**Peces pendents:** control de pagaments per número de llista (amb la llista **congelada** el dia que es crea l'excursió, perquè els números es desplacen quan entra alumnat a mig curs); bestretes i tancament econòmic (la vista que Direcció tenia a la fulla "JAV"); informes del curs (AMPA, autocars per trimestre, comparació amb el curs anterior); i que marcar els acompanyants generi les seves substitucions.
+**Peces pendents:** control de pagaments — que ja té el seu disseny a `2026-09-22-pagaments-excursions-design.md`, i que **descarta el número de llista**: el que el centre vol saber és la xifra recaptada, no qui deu diners, i un recompte per grup ja la dona sense cap dada d'alumnat; bestretes i tancament econòmic (la vista que Direcció tenia a la fulla "JAV"); informes del curs (AMPA, autocars per trimestre, comparació amb el curs anterior); i que marcar els acompanyants generi les seves substitucions.
 
 **Quan hi hagi dades de pagaments**, la previsió d'assistència es podrà **proposar a partir de l'històric real de cada nivell** en lloc d'un número fix. Aquell control haurà de permetre marcar com a pagat **sigui quin sigui el mètode**: encara hi ha famílies que paguen en efectiu al tutor.
 

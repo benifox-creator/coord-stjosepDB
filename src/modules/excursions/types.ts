@@ -28,6 +28,7 @@ export interface ExcursioGrup {
   Grup: string
   AlumnesPrevistos: number
   AlumnesFinals: number | null
+  AlumnesPagats: number
 }
 
 export interface Excursio {

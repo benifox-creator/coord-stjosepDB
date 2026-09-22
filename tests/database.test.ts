@@ -1191,3 +1191,157 @@ describe('enviar la circular', () => {
       'select preu_alumne from public.excursions where id=$1',[id])).rows[0].preu_alumne)).toBe(15)
   })
 })
+
+describe('apuntar els pagaments', () => {
+  // L'excursió a part del grup: les proves de l'`insert` de grups necessiten
+  // l'excursió feta i el grup encara no, i un docent corrent només pot escriure
+  // grups al seu propi esborrany, així que qui la crea importa.
+  async function unaExcursio() {
+    return (await db.query<{id:string}>(`
+      insert into public.excursions(etapa,lloc,activitat,data,hora_sortida,hora_tornada,transport)
+      values('EP','Can Montcau','Visita','2026-11-18','09:00','13:00','autocar') returning id`)).rows[0].id
+  }
+  async function grupDUnaExcursio() {
+    await asUser('admin@stjosep.org')
+    const id = await unaExcursio()
+    return (await db.query<{id:string}>(`
+      insert into public.excursio_grups(excursio_id,grup,alumnes_previstos)
+      values($1,'EP-1 A',25) returning id`,[id])).rows[0].id
+  }
+  const pagats = async (grup: string) => Number((await db.query<{alumnes_pagats:number}>(
+    'select alumnes_pagats from public.excursio_grups where id=$1',[grup])).rows[0].alumnes_pagats)
+
+  it('comença a zero', async () => {
+    expect(await pagats(await grupDUnaExcursio())).toBe(0)
+  })
+
+  it('un docent corrent pot apuntar-ne, encara que l’excursió no sigui seva', async () => {
+    // Qui té els resguards a la mà és el tutor, i `usuaris` no sap de quin grup
+    // és tutor cadascú. La porta és oberta a propòsit, i queda rastre.
+    const grup = await grupDUnaExcursio()
+    await asUser('teacher@stjosep.org')
+    await db.query('select public.registra_pagaments($1,$2)',[grup,18])
+    expect(await pagats(grup)).toBe(18)
+  })
+
+  it('però un docent corrent segueix sense poder tocar les previsions', async () => {
+    // Obrir la porta als pagaments no n'ha d'obrir cap altra: qui no gestiona
+    // excursions no ha de poder canviar quants alumnes s'hi esperen.
+    const grup = await grupDUnaExcursio()
+    await asUser('teacher@stjosep.org')
+    expect((await db.query(
+      'update public.excursio_grups set alumnes_previstos=99 where id=$1 returning id',[grup])).rows)
+      .toHaveLength(0)
+  })
+
+  it('un convidat no', async () => {
+    const grup = await grupDUnaExcursio()
+    await asUser('guest@stjosep.org')
+    await expect(db.query('select public.registra_pagaments($1,$2)',[grup,18]))
+      .rejects.toThrow('No autoritzat')
+  })
+
+  it('un número negatiu es rebutja', async () => {
+    const grup = await grupDUnaExcursio()
+    await asUser('teacher@stjosep.org')
+    await expect(db.query('select public.registra_pagaments($1,$2)',[grup,-1]))
+      .rejects.toThrow('no pot ser negatiu')
+  })
+
+  it('pot haver-hi més pagaments que previsions', async () => {
+    // Els previstos s'escriuen al setembre i el nombre es mou. Que en paguin
+    // més dels previstos és una dada correcta, no un error que calgui aturar.
+    const grup = await grupDUnaExcursio()
+    await asUser('teacher@stjosep.org')
+    await db.query('select public.registra_pagaments($1,$2)',[grup,30])
+    expect(await pagats(grup)).toBe(30)
+  })
+
+  it('un grup que no existeix no passa en silenci', async () => {
+    await asUser('teacher@stjosep.org')
+    await expect(db.query('select public.registra_pagaments($1,$2)',
+      ['00000000-0000-0000-0000-000000000000',5]))
+      .rejects.toThrow('no existeix')
+  })
+
+  // La prova que dona sentit a tota la tasca.
+  it('la funció és l’únic camí: un update directe es rebutja', async () => {
+    // Fins i tot per a qui gestiona excursions i pot escriure la resta de la
+    // fila. Si això deixés de ser cert, apuntar pagaments deixaria de ser una
+    // acció controlada i passaria a ser una columna qualsevol.
+    const grup = await grupDUnaExcursio()
+    await asUser('admin@stjosep.org')
+    await db.exec('savepoint intent')
+    // El text de PostgreSQL i no un error qualsevol: sense pinçar-lo, la prova
+    // que dona sentit a la tasca també passaria amb un error de sintaxi o de
+    // connexió, que són precisament el contrari del que vol demostrar.
+    await expect(db.query('update public.excursio_grups set alumnes_pagats=99 where id=$1',[grup]))
+      .rejects.toThrow('permission denied')
+    await db.exec('rollback to savepoint intent')
+    await db.exec('reset role')
+    expect(await pagats(grup)).toBe(0)
+  })
+
+  // El mirall de la prova de sobre. El privilegi d'insert és per taula i cobreix
+  // totes les columnes, així que sense clausurar-lo també la clausura de
+  // l'`update` seria de mentida: n'hi hauria prou amb fer néixer el grup amb la
+  // xifra escrita, o amb un `delete` i un `insert` per reescriure'n una de ja
+  // registrada.
+  it('la funció és l’únic camí: un insert que hi posi el recompte es rebutja', async () => {
+    for (const email of ['admin@stjosep.org', 'teacher@stjosep.org']) {
+      // L'excursió la crea qui després hi provarà l'insert: si el docent
+      // corrent l'intentés sobre una excursió aliena l'aturaria la política de
+      // files, i la prova no diria res dels privilegis per columna.
+      await asUser(email)
+      const excursio = await unaExcursio()
+      await db.exec('savepoint intent_insert')
+      await expect(db.query(`
+        insert into public.excursio_grups(excursio_id,grup,alumnes_previstos,alumnes_pagats)
+        values($1,'EP-1 A',25,999)`,[excursio]))
+        .rejects.toThrow('permission denied')
+      await db.exec('rollback to savepoint intent_insert')
+    }
+    await db.exec('reset role')
+  })
+
+  it('però crear un grup amb les columnes de sempre hi entra, i el recompte a zero', async () => {
+    // Clausurar l'`insert` és fàcil que es passi de frenada i bloquegi crear
+    // grups, que és la funció principal de la taula i no té res a veure amb
+    // els pagaments.
+    await asUser('admin@stjosep.org')
+    const excursio = await unaExcursio()
+    const g = (await db.query<{alumnes_finals:number;alumnes_pagats:number}>(`
+      insert into public.excursio_grups(excursio_id,grup,alumnes_previstos,alumnes_finals)
+      values($1,'EP-1 A',25,24) returning alumnes_finals, alumnes_pagats`,[excursio])).rows[0]
+    expect(Number(g.alumnes_finals)).toBe(24)
+    expect(Number(g.alumnes_pagats)).toBe(0)
+  })
+
+  it('apuntar un pagament deixa rastre de qui ho ha fet', async () => {
+    // El disseny justifica la porta oberta dient que «queda rastre». Que el
+    // `security definer` no blanquegi l'actor —que hi consti el docent i no la
+    // propietària de la funció— és el que fa que això sigui veritat.
+    const grup = await grupDUnaExcursio()
+    await asUser('teacher@stjosep.org')
+    await db.query('select public.registra_pagaments($1,$2)',[grup,18])
+    await db.exec('reset role')
+    const rastre = (await db.query<{actor:string;after_row:{alumnes_pagats:number}}>(`
+      select actor, after_row from public.audit_events
+      where table_name='excursio_grups' and operation='UPDATE' and record_id=$1`,[grup])).rows
+    expect(rastre).toHaveLength(1)
+    expect(rastre[0].actor).toBe('teacher@stjosep.org')
+    expect(Number(rastre[0].after_row.alumnes_pagats)).toBe(18)
+  })
+
+  it('però les columnes de sempre es continuen podent escriure', async () => {
+    // Retirar el permís d'update i tornar-lo a donar per columnes és fàcil que
+    // es passi de frenada i bloquegi el que ja funcionava.
+    const grup = await grupDUnaExcursio()
+    await asUser('admin@stjosep.org')
+    await db.query('update public.excursio_grups set alumnes_previstos=26, alumnes_finals=24 where id=$1',[grup])
+    const g = (await db.query<{alumnes_previstos:number;alumnes_finals:number}>(
+      'select alumnes_previstos,alumnes_finals from public.excursio_grups where id=$1',[grup])).rows[0]
+    expect(g.alumnes_previstos).toBe(26)
+    expect(g.alumnes_finals).toBe(24)
+  })
+})
