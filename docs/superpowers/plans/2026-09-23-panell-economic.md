@@ -817,6 +817,10 @@ interface FinancesRow {
 interface AutocarRow { excursio_id: string; preu: string | number }
 
 const n = (v: string | number | null | undefined, defecte = 0): number => {
+  // `Number(null)` és `0`, no `NaN`: cal descartar `null`/`undefined` abans
+  // de convertir, o un valor encara no congelat («previsio_usada» abans de
+  // confirmar el preu) es llegiria com a zero en comptes del valor de sempre.
+  if (v === null || v === undefined) return defecte
   const x = Number(v)
   return Number.isFinite(x) ? x : defecte
 }
