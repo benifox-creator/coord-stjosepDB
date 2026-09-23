@@ -898,7 +898,8 @@ Expected: PASS, 8 proves.
 
 - [ ] **Step 5: Totes les portes**
 
-Run: `npm run lint && npx tsc --noEmit && npm test`
+Run: `npm run lint && npm run typecheck && npm test`
+<!-- El tsconfig.json de l'arrel només té "references"; sense `-b` no compila cap fitxer. -->
 Expected: tot verd. **Apunta el nombre de fitxers de prova, no només el de proves.**
 
 - [ ] **Step 6: Commit**
@@ -1186,7 +1187,7 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
 
 - [ ] **Step 3: Comprova que compila i que el linter hi està d'acord**
 
-Run: `npx tsc --noEmit && npm run lint`
+Run: `npm run typecheck && npm run lint`
 Expected: tot verd. Si `text-text-main` no existeix al tema de Tailwind, mira quina classe fan servir `ExcursionsPage.tsx` i `ExcursioDetall.tsx` i usa la mateixa.
 
 - [ ] **Step 4: Commit**
@@ -1301,7 +1302,7 @@ A `src/modules/excursions/ExcursionsPage.tsx`, a la capçalera on ja hi ha el bo
 
 - [ ] **Step 4: Totes les portes**
 
-Run: `npm run lint && npx tsc --noEmit && npm test && npm run build`
+Run: `npm run lint && npm run typecheck && npm test && npm run build`
 Expected: tot verd. **Informa del nombre de fitxers de prova, no només del de proves.**
 
 - [ ] **Step 5: Commit**
