@@ -232,6 +232,21 @@ describe('el resum del curs', () => {
     ], AVUI)
     expect(r.perVenir.map((p) => p.id)).toEqual(['c', 'b', 'a'])
   })
+
+  it('sense cap sortida feta, encara no hi ha res a dir', () => {
+    const r = resumCurs([], AVUI)
+    expect(r.compten).toBe(0)
+    expect(r.resTancat).toBe(true)
+  })
+
+  it('amb una feta que compta i una que en queda fora, ja hi ha alguna cosa tancada', () => {
+    const r = resumCurs([
+      sortida({ id: 'a', data: '2026-10-05' }),
+      sortida({ id: 'b', data: '2026-11-05', assistents: 0 }),
+    ], AVUI)
+    expect(r.compten).toBe(1)
+    expect(r.resTancat).toBe(false)
+  })
 })
 
 describe('el repartiment per etapa', () => {

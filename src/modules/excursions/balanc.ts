@@ -128,6 +128,14 @@ export interface ResumCurs {
   perVenir: Previsio[]
   /** Les fetes que no compten al coixí, per a l'avís. */
   foraDelCoixi: BalancSortida[]
+  /** Quantes sortides fetes entren al coixí. */
+  compten: number
+  /**
+   * Si no n'hi ha cap. Zero i «encara no se sap» no són el mateix: sense cap
+   * sortida que compti, els totals no diuen que no s'ha guanyat ni perdut
+   * res, diuen que encara no hi ha res a dir.
+   */
+  resTancat: boolean
   totals: TotalsCurs
 }
 
@@ -160,9 +168,14 @@ export function resumCurs(sortides: DadesSortida[], avui: string): ResumCurs {
     // ordenaria primer, i una sortida sense dia no és la més imminent.
     .sort((a, b) => (a.data ?? '9999-99-99').localeCompare(b.data ?? '9999-99-99'))
 
-  const compten = fetes.filter((f) => f.foraDelCoixi === null)
-  const haEntrat = compten.reduce((s, f) => s + f.haEntrat, 0)
-  const haCostat = compten.reduce((s, f) => s + f.haCostat, 0)
+  const queComptenAlCoixi = fetes.filter((f) => f.foraDelCoixi === null)
+  const haEntrat = queComptenAlCoixi.reduce((s, f) => s + f.haEntrat, 0)
+  const haCostat = queComptenAlCoixi.reduce((s, f) => s + f.haCostat, 0)
+  const compten = queComptenAlCoixi.length
+  // Zero i «encara no se sap» no són el mateix: sense cap sortida que compti,
+  // les tres primeres xifres no poden dir «0 €» perquè es llegiria com que
+  // s'ha perdut tot, quan el que passa és que encara no hi ha res tancat.
+  const resTancat = compten === 0
 
   // Un pendent negatiu es llegiria com que sobren diners quan el que passa és
   // que n'han pagat més dels esperats. Zero és la resposta honesta.
@@ -172,6 +185,7 @@ export function resumCurs(sortides: DadesSortida[], avui: string): ResumCurs {
   return {
     fetes, perVenir,
     foraDelCoixi: fetes.filter((f) => f.foraDelCoixi !== null),
+    compten, resTancat,
     totals: { haEntrat, haCostat, coixi: haEntrat - haCostat, pendent },
   }
 }

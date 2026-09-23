@@ -34,11 +34,7 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
   error: string | null
   onCurs: (curs: string) => void
 }) {
-  const { fetes, perVenir, foraDelCoixi, totals } = resum
-  const compten = fetes.length - foraDelCoixi.length
-  // Cap sortida tancada no és «zero euros»: un 0 € es llegiria com que s'ha
-  // perdut tot, i el que passa és que encara no hi ha res a dir.
-  const resTancat = compten === 0
+  const { fetes, perVenir, foraDelCoixi, compten, resTancat, totals } = resum
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
