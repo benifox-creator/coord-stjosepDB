@@ -679,6 +679,10 @@ const files: Record<string, unknown[]> = {}
 
 beforeEach(() => {
   useBalanc.setState({ sortides: [], loading: false, error: null })
+  // Imprescindible: `vitest.config.ts` no té `clearMocks`, així que sense
+  // això l'historial de crides s'acumula entre proves i `mock.calls[0]`
+  // seria la crida d'una altra prova. Mateix patró que `useExcursions.test.ts`.
+  vi.clearAllMocks()
   files.excursions = [{
     id: 'e1', lloc: 'Can Montcau', etapa: 'EP', data: '2026-11-18',
     estat: 'Reservada', preu_alumne: '30.00', curs_escolar: '2026-2027',
