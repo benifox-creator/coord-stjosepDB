@@ -191,7 +191,11 @@ describe('el resum del curs', () => {
     expect(r.totals.coixi).toBeCloseTo(50, 2)
     expect(r.foraDelCoixi.map((f) => [f.id, f.foraDelCoixi])).toEqual([['b', 'sense-pagaments']])
     // Però segueix sent una sortida feta: la taula l'ha d'ensenyar.
-    expect(r.fetes.map((f) => f.id)).toEqual(['a', 'b'])
+    // 'b' surt primera perquè és la més recent (05-11-2026 > 05-10-2026):
+    // quedar fora del coixí no la mou de lloc a la llista. L'ordre en si
+    // té la seva pròpia prova ("les fetes surten de la més recent a la
+    // més antiga").
+    expect(r.fetes.map((f) => f.id)).toEqual(['b', 'a'])
   })
 
   it('el pendent de cobrar és el que falta de les que vénen', () => {
