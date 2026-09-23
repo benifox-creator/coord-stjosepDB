@@ -86,6 +86,17 @@ function ingresAmb(d: DadesSortida, n: number, preu: number): number {
   return n * preu + n * ampa
 }
 
+/**
+ * Si una xifra en euros és negativa de debò. Les sumes en coma flotant deixen
+ * residus: un coixí que matemàticament és zero surt com a −1,78e−15, i sense
+ * tolerància la pantalla el pinta «−0,00 €» en vermell i diu «no cobreix».
+ * Mig cèntim és el tall: per sota d'això no hi ha cap euro que es pugui perdre.
+ * Viu aquí i no a cada component perquè la decisió sigui una de sola.
+ */
+export function esNegatiu(euros: number): boolean {
+  return euros < -0.005
+}
+
 export function balancSortida(d: DadesSortida): BalancSortida {
   const haCostat = costAmb(d, d.assistents)
   const haEntrat = d.preuAlumne === null ? 0 : ingresAmb(d, d.assistents, d.preuAlumne)
@@ -152,8 +163,10 @@ export interface ResumCurs {
 
 /**
  * Una sortida cancel·lada no ha costat res ni ha ingressat res, i un esborrany
- * és privat del seu autor i pot no enviar-se mai: cap de les dues no té un
- * cost compromès que valgui la pena ensenyar.
+ * encara no s'ha proposat i pot no proposar-se mai: cap de les dues no té un
+ * cost compromès que valgui la pena ensenyar. No és que l'esborrany sigui
+ * privat —la política de lectura deixa veure'l a qui vegi el mòdul; el que és
+ * privat és escriure-hi—, és que encara no compromet cap diner.
  */
 function compta(d: DadesSortida): boolean {
   return d.estat !== 'Cancel·lada' && d.estat !== 'Esborrany'

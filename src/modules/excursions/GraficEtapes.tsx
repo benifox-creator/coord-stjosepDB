@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { perEtapa, type BalancSortida, type MesuraEtapa } from './balanc'
+import { esNegatiu, perEtapa, type BalancSortida, type MesuraEtapa } from './balanc'
 
 const MESURES: { clau: MesuraEtapa; etiqueta: string; ajuda: string }[] = [
   { clau: 'total', etiqueta: 'Total gastat', ajuda: 'On van els diners. La més alta sol ser la que té més alumnes, no la més cara.' },
@@ -44,11 +44,11 @@ export function GraficEtapes({ fetes }: { fetes: BalancSortida[] }) {
         {files.map((f) => (
           <div key={f.etapa} className="flex-1 flex flex-col justify-end items-center gap-1">
             <span className={`text-xs font-semibold ${
-              mesura === 'coixi' ? (f.valor < 0 ? 'text-red-700' : 'text-emerald-700') : 'text-text-main'
+              mesura === 'coixi' ? (esNegatiu(f.valor) ? 'text-red-700' : 'text-emerald-700') : 'text-text-main'
             }`}>{eur(f.valor)}</span>
             <div
               className={`w-full rounded-t-md ${
-                mesura === 'coixi' && f.valor < 0 ? 'bg-red-300' : 'bg-indigo-300'
+                mesura === 'coixi' && esNegatiu(f.valor) ? 'bg-red-300' : 'bg-indigo-300'
               }`}
               style={{ height: `${Math.max(4, (Math.abs(f.valor) / sostre) * 80)}px` }}
             />

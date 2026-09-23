@@ -1,4 +1,6 @@
 import { GraficEtapes } from './GraficEtapes'
+import { esNegatiu } from './balanc'
+import { dataLlarga } from './circular/dades'
 import type { ResumCurs, MotiuFora } from './balanc'
 
 const eur = (n: number) => n.toLocaleString('ca-ES', { style: 'currency', currency: 'EUR' })
@@ -76,8 +78,8 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
         <Xifra
           etiqueta="Coixí"
           valor={resTancat ? '—' : eur(totals.coixi)}
-          detall={resTancat ? 'no hi ha res tancat' : totals.coixi < 0 ? 'no cobreix' : 'cobreix'}
-          to={resTancat ? undefined : totals.coixi < 0 ? 'roig' : 'verd'}
+          detall={resTancat ? 'no hi ha res tancat' : esNegatiu(totals.coixi) ? 'no cobreix' : 'cobreix'}
+          to={resTancat ? undefined : esNegatiu(totals.coixi) ? 'roig' : 'verd'}
         />
         <Xifra
           etiqueta="Pendent de cobrar"
@@ -121,7 +123,7 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
                     <td className="py-1.5 px-2 text-right">{eur(f.haCostat)}</td>
                     <td className="py-1.5 px-2 text-right">{f.foraDelCoixi ? '—' : eur(f.haEntrat)}</td>
                     <td className={`py-1.5 px-2 text-right ${
-                      f.foraDelCoixi ? 'text-gray-500' : f.coixi < 0 ? 'text-red-700' : 'text-emerald-700'
+                      f.foraDelCoixi ? 'text-gray-500' : esNegatiu(f.coixi) ? 'text-red-700' : 'text-emerald-700'
                     }`}>
                       {f.foraDelCoixi ? MOTIUS[f.foraDelCoixi] : eur(f.coixi)}
                     </td>
@@ -136,7 +138,7 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
         Per venir — {perVenir.length} {perVenir.length === 1 ? 'sortida' : 'sortides'}
       </p>
       {perVenir.length === 0
-        ? <p className="text-sm text-gray-500 italic">No queda cap sortida aprovada per fer aquest curs.</p>
+        ? <p className="text-sm text-gray-500 italic">No queda cap sortida per fer aquest curs.</p>
         : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -178,7 +180,15 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
               : `${foraDelCoixi.length} sortides fetes no compten al coixí`}
           </strong>
           {' — '}
-          {foraDelCoixi.map((f) => `${f.lloc} (${MOTIUS[f.foraDelCoixi as MotiuFora]})`).join(', ')}.
+          {/* Amb la data, perquè qui ho llegeix pugui anar a buscar la sortida.
+              Una sortida sense dia no ha de deixar cap coma penjada, i la
+              llista se separa amb punt i coma perquè la data ja en porta una. */}
+          {foraDelCoixi.map((f) => {
+            // `dataLlarga` torna cadena buida si no hi ha dia o no s'entén:
+            // llavors no s'hi posa ni la data ni la coma que la precedeix.
+            const quan = dataLlarga(f.data ?? '').toLowerCase()
+            return `${f.lloc}${quan ? `, ${quan}` : ''} (${MOTIUS[f.foraDelCoixi as MotiuFora]})`
+          }).join('; ')}.
           {' '}Sense aquestes dades, la xifra diria que s’hi ha perdut tot el que ha costat.
         </div>
       )}

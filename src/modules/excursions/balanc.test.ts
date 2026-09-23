@@ -76,6 +76,13 @@ describe('el balanç d’una sortida', () => {
     expect(balancSortida(sortida({ preuAlumne: null })).haEntrat).toBe(0)
   })
 
+  it('sense preu i sense pagaments alhora, guanya «sense preu»', () => {
+    // El comentari de `balanc.ts` diu que l'ordre importa justament aquí:
+    // dels dos motius, el més informatiu és que ningú no hi ha posat preu.
+    const b = balancSortida(sortida({ preuAlumne: null, assistents: 0 }))
+    expect(b.foraDelCoixi).toBe('sense-preu')
+  })
+
   it('menys pagaments que previsions NO la deixa fora', () => {
     // 18 de 26 és una dada bona: la gent no hi va, i el coixí ho ha de notar.
     expect(balancSortida(sortida({ assistents: 18 })).foraDelCoixi).toBeNull()
@@ -96,6 +103,28 @@ describe('la previsió d’una sortida que encara no ha passat', () => {
 
   it('sense preu confirmat no s’inventa què hauria d’entrar', () => {
     expect(previsioSortida(sortida({ preuAlumne: null })).hauriaDEntrar).toBeNull()
+  })
+})
+
+import { esNegatiu } from './balanc'
+
+describe('quan una xifra en euros és negativa de debò', () => {
+  it('el residu de la coma flotant no és negatiu', () => {
+    // El cas trobat: 3 assistents, autocar de 12,10 € i IVA del 10 % donen un
+    // coixí de −1,78e−15, que la pantalla pintava «−0,00 €» en vermell.
+    expect(esNegatiu(-1.78e-15)).toBe(false)
+    expect(esNegatiu(0)).toBe(false)
+  })
+
+  it('mig cèntim és el tall', () => {
+    expect(esNegatiu(-0.004)).toBe(false)
+    expect(esNegatiu(-0.01)).toBe(true)
+    expect(esNegatiu(-250)).toBe(true)
+  })
+
+  it('un positiu no ho és mai', () => {
+    expect(esNegatiu(0.01)).toBe(false)
+    expect(esNegatiu(100)).toBe(false)
   })
 })
 
@@ -166,7 +195,7 @@ describe('el resum del curs', () => {
   })
 
   it('els esborranys tampoc', () => {
-    // Un esborrany és privat del seu autor i pot no enviar-se mai: el seu
+    // Un esborrany encara no s'ha proposat i pot no proposar-se mai: el seu
     // cost no està compromès.
     const r = resumCurs([sortida({ id: 'a', data: '2027-03-20', estat: 'Esborrany' })], AVUI)
     expect(r.perVenir).toHaveLength(0)
