@@ -47,6 +47,21 @@ export function arrodoneixAmunt(valor: number, pas: number): number {
   return Math.round(passos * pas * 100) / 100
 }
 
+/**
+ * Un import net amb l'IVA aplicat.
+ *
+ * Viu aquí perquè n'hi hagi **una sola definició**: el càlcul l'usa per als
+ * autocars i la pantalla de costos l'usa per ensenyar, al costat del camp, què
+ * acabarà valent el que s'hi escriu. Si les dues divergissin, la xifra que es
+ * promet en teclejar no seria la que entra al preu.
+ *
+ * **No arrodoneix**: qui l'ensenya ja ho fa en formatar, i arrodonir aquí
+ * canviaria el càlcul, que està verificat contra 44 sortides reals.
+ */
+export function ambIva(net: number, ivaPct: number): number {
+  return net * (1 + ivaPct / 100)
+}
+
 export function calculaPreu(c: CostosExcursio, p: ParametresPreu): ResultatPreu {
   // **No s'arrodoneix.** Comprovat contra les excursions reals: amb 89 alumnes
   // i una previsió de 0,75 l'Excel reparteix entre 66,75 i no entre 67, i
@@ -60,7 +75,7 @@ export function calculaPreu(c: CostosExcursio, p: ParametresPreu): ResultatPreu 
   const activitatTotal = c.preuActivitatTipus === 'total' ? activitat : 0
   const activitatPerAlumne = c.preuActivitatTipus === 'per_alumne' ? activitat : 0
 
-  const transport = c.autocars.reduce((s, preu) => s + preu, 0) * (1 + p.ivaPct / 100)
+  const transport = ambIva(c.autocars.reduce((s, preu) => s + preu, 0), p.ivaPct)
   const costosFixos = transport + activitatTotal + c.costAcompanyants
 
   const costAlumne = esperats > 0 ? costosFixos / esperats + activitatPerAlumne : 0

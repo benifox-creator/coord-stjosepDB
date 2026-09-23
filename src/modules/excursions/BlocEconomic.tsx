@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { Finances, Autocar } from './finances.types'
 import type { ParametresPreu } from './preu'
-import { calculaPreu } from './preu'
+import { calculaPreu, ambIva } from './preu'
 import { preuEsValid } from './preuValid'
 
 interface Props {
@@ -63,6 +63,17 @@ export function BlocEconomic({
                 onChange={(e) => autocar(a.id, { Preu: Number(e.target.value) })}
                 className="w-32 px-2 py-1 text-sm border border-gray-200 rounded-lg" />
             </label>
+            {/* Què acabarà valent el que s'hi acaba d'escriure. Un número sol no
+                diu si porta IVA, i el pressupost de l'empresa sol venir en brut:
+                teclejar-hi el brut és l'error natural, i sense això no el veu
+                ningú —tots els preus surten un 10 % alts i res no ho detecta—.
+                Ensenyant el brut al costat, qui hi escriu 550 pensant que ja
+                l'inclou llegeix «550 → 605» i ho enxampa. */}
+            {a.Preu > 0 && (
+              <p className="text-xs text-gray-500 mb-1.5 whitespace-nowrap">
+                → {eur(ambIva(a.Preu, parametres.ivaPct))} amb IVA
+              </p>
+            )}
             <button onClick={() => onCanvia({ ...f, Autocars: f.Autocars.filter((x) => x.id !== a.id) })}
               aria-label="Treu l’autocar" className="p-1 mb-1.5 text-gray-300 hover:text-red-600">
               <Trash2 size={14} />
