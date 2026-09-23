@@ -41,6 +41,8 @@ Si el tutor no ha apuntat cap resguard, el recompte és zero, i comptar-la diria
 
 El criteri és **zero pagaments a totes les files de grup**, no «menys pagaments que previsions»: apuntar-ne 18 de 22 és una dada bona i ha de comptar sencera.
 
+**Una sortida feta sense preu confirmat queda fora pel mateix motiu**: té cost real i cap ingrés possible, i comptar-la diria que s'hi ha perdut tot quan el que passa és que ningú no li ha posat preu. Surt al mateix avís, amb el seu motiu. Per això el que es desa no és un sí/no sinó **quin dels dos motius** l'ha deixada fora.
+
 ## 4. Els números
 
 Per sortida, amb els paràmetres que es van congelar en confirmar el preu (`previsio_usada`, `marge_pct_usat`, `iva_pct_usat`), no amb els de la configuració d'avui:
@@ -116,17 +118,22 @@ Accés: **`excursions_costos()`**, el permís estricte de diners, tant a la ruta
 **El càlcul va a un mòdul pur nou, `src/modules/excursions/balanc.ts`**, germà de `preu.ts` i pel mateix motiu que aquell: és on un error costa diners de debò, i així es prova amb sortides reals sense muntar ni base de dades ni React.
 
 ```ts
+export type MotiuFora = 'sense-pagaments' | 'sense-preu'
+
 export interface BalancSortida {
   assistents: number
   haCostat: number
   haEntrat: number
   coixi: number
-  sensePagaments: boolean
+  foraDelCoixi: MotiuFora | null
 }
 export function balancSortida(...): BalancSortida
-export function totalsCurs(...): TotalsCurs
-export function perEtapa(...): FilaEtapa[]
+export function previsioSortida(...): Previsio
+export function resumCurs(sortides, avui): ResumCurs
+export function perEtapa(fetes, mesura): FilaEtapa[]
 ```
+
+**Cap funció mira el rellotge.** La data d'avui entra com a argument, perquè les proves puguin situar-se on vulguin; qui la calcula és la pantalla, al límit de l'aplicació.
 
 **Sense vista SQL ni migració nova.** Són desenes de files l'any i es calculen al client a partir del que ja se sap llegir. A més, cada superfície nova a la base de dades ha costat un forat en aquest mòdul —el privilegi d'`insert` per taula n'és l'últim—, i una vista que no calgui és una superfície que no cal revisar.
 
