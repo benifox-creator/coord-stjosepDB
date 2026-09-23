@@ -129,3 +129,154 @@ describe('el lligam amb el càlcul del preu', () => {
     expect(b.coixi).toBeGreaterThan(0)
   })
 })
+
+import { resumCurs, perEtapa } from './balanc'
+
+const AVUI = '2026-12-01'
+
+describe('el resum del curs', () => {
+  it('parteix per data: les d’abans d’avui són fetes, la resta per venir', () => {
+    const r = resumCurs([
+      sortida({ id: 'a', data: '2026-10-05' }),
+      sortida({ id: 'b', data: '2027-03-20' }),
+    ], AVUI)
+    expect(r.fetes.map((f) => f.id)).toEqual(['a'])
+    expect(r.perVenir.map((p) => p.id)).toEqual(['b'])
+  })
+
+  it('una sortida d’avui mateix ja compta com a feta', () => {
+    const r = resumCurs([sortida({ id: 'a', data: AVUI })], AVUI)
+    expect(r.fetes.map((f) => f.id)).toEqual(['a'])
+  })
+
+  it('una sortida sense data encara no ha passat', () => {
+    const r = resumCurs([sortida({ id: 'a', data: null })], AVUI)
+    expect(r.perVenir.map((p) => p.id)).toEqual(['a'])
+  })
+
+  it('les cancel·lades no surten enlloc', () => {
+    // No han costat res ni han ingressat res.
+    const r = resumCurs([
+      sortida({ id: 'a', data: '2026-10-05', estat: 'Cancel·lada' }),
+      sortida({ id: 'b', data: '2027-03-20', estat: 'Cancel·lada' }),
+    ], AVUI)
+    expect(r.fetes).toHaveLength(0)
+    expect(r.perVenir).toHaveLength(0)
+    expect(r.foraDelCoixi).toHaveLength(0)
+  })
+
+  it('els esborranys tampoc', () => {
+    // Un esborrany és privat del seu autor i pot no enviar-se mai: el seu
+    // cost no està compromès.
+    const r = resumCurs([sortida({ id: 'a', data: '2027-03-20', estat: 'Esborrany' })], AVUI)
+    expect(r.perVenir).toHaveLength(0)
+  })
+
+  it('suma el que ha entrat i el que ha costat de les fetes', () => {
+    const r = resumCurs([
+      sortida({ id: 'a', data: '2026-10-05' }),
+      sortida({ id: 'b', data: '2026-11-05' }),
+    ], AVUI)
+    expect(r.totals.haEntrat).toBeCloseTo(1200, 2)
+    expect(r.totals.haCostat).toBeCloseTo(1100, 2)
+    expect(r.totals.coixi).toBeCloseTo(100, 2)
+  })
+
+  it('una feta sense pagaments queda fora dels totals i surt a l’avís', () => {
+    // Si comptés, el total diria que s'hi ha perdut tot el cost.
+    const r = resumCurs([
+      sortida({ id: 'a', data: '2026-10-05' }),
+      sortida({ id: 'b', data: '2026-11-05', assistents: 0 }),
+    ], AVUI)
+    expect(r.totals.coixi).toBeCloseTo(50, 2)
+    expect(r.foraDelCoixi.map((f) => [f.id, f.foraDelCoixi])).toEqual([['b', 'sense-pagaments']])
+    // Però segueix sent una sortida feta: la taula l'ha d'ensenyar.
+    expect(r.fetes.map((f) => f.id)).toEqual(['a', 'b'])
+  })
+
+  it('el pendent de cobrar és el que falta de les que vénen', () => {
+    // 26 × 0,75 × 30 = 585 esperats, 7 × 30 = 210 ja cobrats.
+    const r = resumCurs([sortida({ id: 'b', data: '2027-03-20', assistents: 7 })], AVUI)
+    expect(r.totals.pendent).toBeCloseTo(585 - 210, 2)
+  })
+
+  it('una que ve sense preu no inventa pendent', () => {
+    const r = resumCurs([sortida({ id: 'b', data: '2027-03-20', preuAlumne: null })], AVUI)
+    expect(r.totals.pendent).toBe(0)
+  })
+
+  it('un pendent no pot ser negatiu', () => {
+    // Si en paguen més dels esperats abans d'anar-hi, no falta res per cobrar
+    // —i un pendent negatiu es llegiria com que sobren diners.
+    const r = resumCurs([sortida({ id: 'b', data: '2027-03-20', assistents: 26 })], AVUI)
+    expect(r.totals.pendent).toBe(0)
+  })
+
+  it('les fetes surten de la més recent a la més antiga', () => {
+    const r = resumCurs([
+      sortida({ id: 'a', data: '2026-10-05' }),
+      sortida({ id: 'b', data: '2026-11-20' }),
+    ], AVUI)
+    expect(r.fetes.map((f) => f.id)).toEqual(['b', 'a'])
+  })
+
+  it('les que vénen surten de la més pròxima a la més llunyana, i les sense data al final', () => {
+    const r = resumCurs([
+      sortida({ id: 'a', data: null }),
+      sortida({ id: 'b', data: '2027-05-10' }),
+      sortida({ id: 'c', data: '2027-01-15' }),
+    ], AVUI)
+    expect(r.perVenir.map((p) => p.id)).toEqual(['c', 'b', 'a'])
+  })
+})
+
+describe('el repartiment per etapa', () => {
+  const fetes = () => resumCurs([
+    sortida({ id: 'a', etapa: 'EP', data: '2026-10-05' }),
+    sortida({ id: 'b', etapa: 'EP', data: '2026-11-05' }),
+    sortida({ id: 'c', etapa: 'EI', data: '2026-11-10', assistents: 10 }),
+  ], AVUI).fetes
+
+  it('suma el gastat per etapa', () => {
+    expect(perEtapa(fetes(), 'total')).toEqual([
+      { etapa: 'EI', valor: 550 },
+      { etapa: 'EP', valor: 1100 },
+    ])
+  })
+
+  it('el cost per alumne divideix pels assistents de l’etapa', () => {
+    // EI: 550 € entre 10 assistents. EP: 1.100 € entre 40.
+    expect(perEtapa(fetes(), 'per_alumne')).toEqual([
+      { etapa: 'EI', valor: 55 },
+      { etapa: 'EP', valor: 27.5 },
+    ])
+  })
+
+  it('el coixí per etapa pot ser negatiu', () => {
+    // EI: 10 × 30 − 550 = −250.
+    expect(perEtapa(fetes(), 'coixi')).toEqual([
+      { etapa: 'EI', valor: -250 },
+      { etapa: 'EP', valor: 100 },
+    ])
+  })
+
+  it('una etapa sense sortides no surt', () => {
+    expect(perEtapa(fetes(), 'total').map((f) => f.etapa)).not.toContain('ESO 1r-2n')
+  })
+
+  it('les que estan fora del coixí no compten al gràfic', () => {
+    // Mateix criteri que als totals: no tenen res a dir sobre el coixí.
+    const amb = resumCurs([
+      sortida({ id: 'a', etapa: 'EP', data: '2026-10-05' }),
+      sortida({ id: 'z', etapa: 'EP', data: '2026-10-06', assistents: 0 }),
+    ], AVUI).fetes
+    expect(perEtapa(amb, 'total')).toEqual([{ etapa: 'EP', valor: 550 }])
+  })
+
+  it('sense assistents no divideix per zero', () => {
+    // Amb totes les de l'etapa fora del coixí, l'etapa no hi surt: és
+    // preferible a una barra amb «Infinity €».
+    const cap = resumCurs([sortida({ id: 'z', etapa: 'EP', data: '2026-10-06', assistents: 0 })], AVUI).fetes
+    expect(perEtapa(cap, 'per_alumne')).toEqual([])
+  })
+})

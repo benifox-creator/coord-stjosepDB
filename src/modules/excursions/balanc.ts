@@ -112,3 +112,105 @@ export function previsioSortida(d: DadesSortida): Previsio {
     cobrat: d.preuAlumne === null ? 0 : d.assistents * d.preuAlumne,
   }
 }
+
+export interface TotalsCurs {
+  haEntrat: number
+  haCostat: number
+  coixi: number
+  /** El que falta per cobrar de les que encara no han passat. Mai negatiu. */
+  pendent: number
+}
+
+export interface ResumCurs {
+  /** Les que ja han passat, de la més recent a la més antiga. */
+  fetes: BalancSortida[]
+  /** Les que vénen, de la més pròxima a la més llunyana; les sense data, al final. */
+  perVenir: Previsio[]
+  /** Les fetes que no compten al coixí, per a l'avís. */
+  foraDelCoixi: BalancSortida[]
+  totals: TotalsCurs
+}
+
+/**
+ * Una sortida cancel·lada no ha costat res ni ha ingressat res, i un esborrany
+ * és privat del seu autor i pot no enviar-se mai: cap de les dues no té un
+ * cost compromès que valgui la pena ensenyar.
+ */
+function compta(d: DadesSortida): boolean {
+  return d.estat !== 'Cancel·lada' && d.estat !== 'Esborrany'
+}
+
+/**
+ * El tall és la **data**, no l'estat: una sortida del novembre que segueix en
+ * estat `Aprovada` ja ha passat, i l'estat només diu que ningú no l'ha tocada
+ * des de llavors. Una sortida sense data encara no pot haver passat.
+ */
+function jaHaPassat(d: DadesSortida, avui: string): boolean {
+  return d.data !== null && d.data <= avui
+}
+
+export function resumCurs(sortides: DadesSortida[], avui: string): ResumCurs {
+  const bones = sortides.filter(compta)
+
+  const fetes = bones.filter((d) => jaHaPassat(d, avui)).map(balancSortida)
+    .sort((a, b) => (b.data ?? '').localeCompare(a.data ?? ''))
+
+  const perVenir = bones.filter((d) => !jaHaPassat(d, avui)).map(previsioSortida)
+    // Les sense data van al final: `null` es compara com a cadena buida, que
+    // ordenaria primer, i una sortida sense dia no és la més imminent.
+    .sort((a, b) => (a.data ?? '9999-99-99').localeCompare(b.data ?? '9999-99-99'))
+
+  const compten = fetes.filter((f) => f.foraDelCoixi === null)
+  const haEntrat = compten.reduce((s, f) => s + f.haEntrat, 0)
+  const haCostat = compten.reduce((s, f) => s + f.haCostat, 0)
+
+  // Un pendent negatiu es llegiria com que sobren diners quan el que passa és
+  // que n'han pagat més dels esperats. Zero és la resposta honesta.
+  const pendent = perVenir.reduce(
+    (s, p) => s + Math.max(0, (p.hauriaDEntrar ?? 0) - p.cobrat), 0)
+
+  return {
+    fetes, perVenir,
+    foraDelCoixi: fetes.filter((f) => f.foraDelCoixi !== null),
+    totals: { haEntrat, haCostat, coixi: haEntrat - haCostat, pendent },
+  }
+}
+
+export type MesuraEtapa = 'total' | 'per_alumne' | 'coixi'
+
+export interface FilaEtapa {
+  etapa: string
+  valor: number
+}
+
+/**
+ * El repartiment per etapa de les sortides **fetes que compten**. Les tres
+ * mesures diuen coses diferents a posta: el total ensenya on van els diners
+ * (i la més gran sempre serà la que té més alumnes), el cost per alumne és
+ * l'única xifra comparable entre etapes, i el coixí és l'única que assenyala
+ * un problema.
+ */
+export function perEtapa(fetes: BalancSortida[], mesura: MesuraEtapa): FilaEtapa[] {
+  const per = new Map<string, BalancSortida[]>()
+  for (const f of fetes) {
+    if (f.foraDelCoixi !== null) continue
+    const llista = per.get(f.etapa)
+    if (llista) llista.push(f)
+    else per.set(f.etapa, [f])
+  }
+
+  const files: FilaEtapa[] = []
+  for (const [etapa, sortides] of per) {
+    const cost = sortides.reduce((s, f) => s + f.haCostat, 0)
+    if (mesura === 'total') { files.push({ etapa, valor: cost }); continue }
+    if (mesura === 'coixi') {
+      files.push({ etapa, valor: sortides.reduce((s, f) => s + f.coixi, 0) })
+      continue
+    }
+    const assistents = sortides.reduce((s, f) => s + f.assistents, 0)
+    // Cap assistent vol dir cap sortida amb pagaments: l'etapa no hi surt,
+    // que és millor que una barra amb «Infinity €».
+    if (assistents > 0) files.push({ etapa, valor: cost / assistents })
+  }
+  return files.sort((a, b) => a.etapa.localeCompare(b.etapa))
+}
