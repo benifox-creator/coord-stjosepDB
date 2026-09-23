@@ -109,7 +109,11 @@ export function previsioSortida(d: DadesSortida): Previsio {
     id: d.id, lloc: d.lloc, etapa: d.etapa, data: d.data,
     costara: costAmb(d, esperats),
     hauriaDEntrar: d.preuAlumne === null ? null : ingresAmb(d, esperats, d.preuAlumne),
-    cobrat: d.preuAlumne === null ? 0 : d.assistents * d.preuAlumne,
+    // El mateix `ingresAmb` que `hauriaDEntrar`, només que amb els qui ja han
+    // pagat: les dues xifres s'han de restar, i si una hi compta l'AMPA i
+    // l'altra no, la resta no arriba mai a zero ni pagant-hi tothom —es
+    // quedaria encallada exactament en l'aportació de l'AMPA.
+    cobrat: d.preuAlumne === null ? 0 : ingresAmb(d, d.assistents, d.preuAlumne),
   }
 }
 
@@ -117,8 +121,15 @@ export interface TotalsCurs {
   haEntrat: number
   haCostat: number
   coixi: number
-  /** El que falta per cobrar de les que encara no han passat. Mai negatiu. */
-  pendent: number
+  /**
+   * El que falta per cobrar de les que encara no han passat. Mai negatiu, i
+   * `null` quan n'hi ha per venir i cap no té el preu confirmat: llavors no
+   * se'n pot dir res, i un `0 €` es llegiria com que no queda res per cobrar.
+   * Amb cap sortida per venir sí que és `0`: aquell zero és de debò.
+   */
+  pendent: number | null
+  /** Quantes de les que vénen encara no tenen el preu confirmat. */
+  perVenirSensePreu: number
 }
 
 export interface ResumCurs {
@@ -177,16 +188,23 @@ export function resumCurs(sortides: DadesSortida[], avui: string): ResumCurs {
   // s'ha perdut tot, quan el que passa és que encara no hi ha res tancat.
   const resTancat = compten === 0
 
+  const perVenirSensePreu = perVenir.filter((p) => p.hauriaDEntrar === null).length
+  // Zero i «encara no se sap» tampoc no són el mateix aquí: si totes les que
+  // vénen estan sense preu, no hi ha cap xifra possible i un `0 €` diria que
+  // no queda res per cobrar mentre la taula diu «falta confirmar el preu».
+  // Sense cap sortida per venir, en canvi, el zero és honest.
   // Un pendent negatiu es llegiria com que sobren diners quan el que passa és
   // que n'han pagat més dels esperats. Zero és la resposta honesta.
-  const pendent = perVenir.reduce(
-    (s, p) => s + Math.max(0, (p.hauriaDEntrar ?? 0) - p.cobrat), 0)
+  const pendent = perVenir.length > 0 && perVenirSensePreu === perVenir.length
+    ? null
+    : perVenir.reduce(
+      (s, p) => (p.hauriaDEntrar === null ? s : s + Math.max(0, p.hauriaDEntrar - p.cobrat)), 0)
 
   return {
     fetes, perVenir,
     foraDelCoixi: fetes.filter((f) => f.foraDelCoixi !== null),
     compten, resTancat,
-    totals: { haEntrat, haCostat, coixi: haEntrat - haCostat, pendent },
+    totals: { haEntrat, haCostat, coixi: haEntrat - haCostat, pendent, perVenirSensePreu },
   }
 }
 

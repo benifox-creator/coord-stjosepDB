@@ -204,8 +204,38 @@ describe('el resum del curs', () => {
     expect(r.totals.pendent).toBeCloseTo(585 - 210, 2)
   })
 
-  it('una que ve sense preu no inventa pendent', () => {
+  it('si l’única que ve no té preu, el pendent no se sap: no és zero', () => {
+    // El primer dia de producció: una sola sortida, per venir i sense preu
+    // confirmat. Dir «0,00 €» contradiria la taula, que diu «falta confirmar
+    // el preu» d'aquella mateixa sortida.
     const r = resumCurs([sortida({ id: 'b', data: '2027-03-20', preuAlumne: null })], AVUI)
+    expect(r.totals.pendent).toBeNull()
+    expect(r.totals.perVenirSensePreu).toBe(1)
+  })
+
+  it('sense cap sortida per venir, el pendent és zero de debò', () => {
+    // Aquí el zero sí que és honest: no queda res per cobrar.
+    const r = resumCurs([sortida({ id: 'a', data: '2026-10-05' })], AVUI)
+    expect(r.totals.pendent).toBe(0)
+    expect(r.totals.perVenirSensePreu).toBe(0)
+  })
+
+  it('amb una que ve amb preu i una altra sense, el pendent és el de la que en té', () => {
+    const r = resumCurs([
+      sortida({ id: 'b', data: '2027-03-20', assistents: 7 }),
+      sortida({ id: 'c', data: '2027-04-10', preuAlumne: null }),
+    ], AVUI)
+    expect(r.totals.pendent).toBeCloseTo(585 - 210, 2)
+    expect(r.totals.perVenirSensePreu).toBe(1)
+  })
+
+  it('amb l’aportació de l’AMPA i tots els esperats pagats, no queda res per cobrar', () => {
+    // 40 × 0,75 = 30 esperats, i 30 que han pagat. `hauriaDEntrar` compta
+    // l'AMPA (30 × 34) i `cobrat` també: si només ho fes una de les dues, la
+    // resta es quedaria encallada en 30 × 4 = 120 € que no pot pagar ningú.
+    const r = resumCurs([
+      sortida({ id: 'b', data: '2027-03-20', previstos: 40, assistents: 30, ampaImport: 4 }),
+    ], AVUI)
     expect(r.totals.pendent).toBe(0)
   })
 

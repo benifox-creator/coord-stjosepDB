@@ -81,8 +81,14 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
         />
         <Xifra
           etiqueta="Pendent de cobrar"
-          valor={eur(totals.pendent)}
-          detall={`${perVenir.length} ${perVenir.length === 1 ? 'sortida' : 'sortides'} per venir`}
+          valor={totals.pendent === null ? '—' : eur(totals.pendent)}
+          detall={`${perVenir.length} ${perVenir.length === 1 ? 'sortida' : 'sortides'} per venir${
+            totals.perVenirSensePreu > 0
+              ? totals.perVenirSensePreu === 1
+                ? ', 1 sense preu confirmat'
+                : `, ${totals.perVenirSensePreu} sense preu confirmat`
+              : ''
+          }`}
         />
       </div>
 
