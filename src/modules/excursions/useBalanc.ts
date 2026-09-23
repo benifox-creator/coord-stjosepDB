@@ -34,11 +34,14 @@ const n = (v: string | number | null | undefined, defecte = 0): number => {
   return Number.isFinite(x) ? x : defecte
 }
 
+/** Els paràmetres de sempre d'una etapa, tal com els diu la configuració viva. */
+export type PerDefecte = (etapa: string) => { previsio: number; ivaPct: number }
+
 interface BalancState {
   sortides: DadesSortida[]
   loading: boolean
   error: string | null
-  carrega: (curs: string) => Promise<void>
+  carrega: (curs: string, perDefecte: PerDefecte) => Promise<void>
 }
 
 // Si se'n demanen dos seguits, només val el darrer: si no, la resposta lenta
@@ -51,7 +54,7 @@ export const useBalanc = create<BalancState>((set) => ({
   loading: false,
   error: null,
 
-  async carrega(curs) {
+  async carrega(curs, perDefecte) {
     const meva = ++generacio
     set({ loading: true, error: null })
     try {
@@ -69,6 +72,9 @@ export const useBalanc = create<BalancState>((set) => ({
         // qui mira no té accés als diners i l'RLS no li'n torna cap. En tots
         // dos casos la sortida té els costos a zero.
         const f = finances.find((x) => x.excursio_id === e.id)
+        // Els de sempre de l'etapa de **cada** sortida: la previsió no és la
+        // mateixa a EI que a BATX, i el store no ha de saber d'on surten.
+        const sempre = perDefecte(e.etapa)
         return {
           id: e.id, lloc: e.lloc, etapa: e.etapa, data: e.data, estat: e.estat,
           previstos: meus.reduce((s, g) => s + g.alumnes_previstos, 0),
@@ -83,10 +89,13 @@ export const useBalanc = create<BalancState>((set) => ({
           ampaImport: n(f?.ampa_import),
           ampaCobreixActivitat: f?.ampa_cobreix_activitat ?? false,
           costAcompanyants: n(f?.cost_acompanyants),
-          // Els congelats en confirmar el preu. Mentre no s'ha confirmat són
-          // nuls, i llavors val més el valor de sempre del centre que un NaN.
-          previsio: n(f?.previsio_usada, 0.75),
-          ivaPct: n(f?.iva_pct_usat, 10),
+          // Els congelats en confirmar el preu. Un valor congelat mana sempre
+          // sobre la configuració d'avui: una sortida amb el preu confirmat a
+          // l'octubre no s'ha de recalcular perquè algú canviï l'IVA al març.
+          // Per això `perDefecte` només s'usa quan el congelat és nul, que és
+          // mentre encara no s'ha confirmat el preu.
+          previsio: n(f?.previsio_usada, sempre.previsio),
+          ivaPct: n(f?.iva_pct_usat, sempre.ivaPct),
         }
       }) })
     } catch (err) {
