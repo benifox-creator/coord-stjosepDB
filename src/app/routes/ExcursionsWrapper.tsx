@@ -63,6 +63,7 @@ export default function ExcursionsWrapper() {
         loading={loading}
         error={error}
         potAprovar={potAprovar(rol)}
+        potVeureCostos={potVeureCostos(rol, jo)}
         onNova={() => setFormObert(true)}
         onObrir={setOberta}
         onRefresh={() => void load()}

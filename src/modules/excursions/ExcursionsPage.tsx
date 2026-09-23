@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Plus, RefreshCw, Copy } from 'lucide-react'
 import type { Excursio } from './types'
 import { ESTATS_EXCURSIO, ESTAT_COLORS, ETAPES_EXCURSIO } from './types'
@@ -15,6 +16,7 @@ interface Props {
   loading: boolean
   error: string | null
   potAprovar: boolean
+  potVeureCostos: boolean
   onNova: () => void
   onObrir: (e: Excursio) => void
   onRefresh: () => void
@@ -23,7 +25,7 @@ interface Props {
 }
 
 export function ExcursionsPage({
-  excursions, loading, error, potAprovar,
+  excursions, loading, error, potAprovar, potVeureCostos,
   onNova, onObrir, onRefresh, onAprovar, onCopiarCursAnterior,
 }: Props) {
   const [etapa, setEtapa] = useState('')
@@ -66,6 +68,14 @@ export function ExcursionsPage({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {potVeureCostos && (
+              <Link
+                to="/excursions/economia"
+                className="text-xs text-gray-500 hover:text-text-main px-2 py-1"
+              >
+                Economia
+              </Link>
+            )}
             <button onClick={onRefresh} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Actualitza">
               <RefreshCw size={16} />
             </button>

@@ -30,6 +30,7 @@ const ConfiguracioPage = lazy(() => import('./modules/configuracio/ConfiguracioP
 const MaterialInfantilPage = lazy(() => import('./modules/material-infantil/MaterialInfantilPage').then(m => ({ default: m.MaterialInfantilPage })))
 const HorarisPage = lazy(() => import('./modules/horaris/HorarisPage').then(m => ({ default: m.HorarisPage })))
 const ExcursionsWrapper = lazy(() => import('./app/routes/ExcursionsWrapper'))
+const EconomiaWrapper = lazy(() => import('./app/routes/EconomiaWrapper'))
 const NotificacionsWrapper = lazy(() => import('./app/routes/NotificacionsWrapper'))
 const AjudaPage = lazy(() => import('./pages/AjudaPage').then(m => ({ default: m.AjudaPage })))
 
@@ -105,6 +106,10 @@ function AppRoutes() {
                 />
                 <Route path="/horaris" element={<VisibilitatGuard visKey="horaris"><HorarisPage /></VisibilitatGuard>} />
                 <Route path="/excursions" element={<VisibilitatGuard visKey="excursions"><ExcursionsWrapper /></VisibilitatGuard>} />
+                <Route
+                  path="/excursions/economia"
+                  element={<VisibilitatGuard visKey="excursions"><EconomiaWrapper /></VisibilitatGuard>}
+                />
                 <Route path="/notificacions" element={<VisibilitatGuard visKey="notificacions"><NotificacionsWrapper /></VisibilitatGuard>} />
                 <Route
                   path="/configuracio"
