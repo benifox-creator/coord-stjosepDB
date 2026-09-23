@@ -1017,7 +1017,7 @@ function Xifra({ etiqueta, valor, detall, to }: {
   to?: 'verd' | 'roig'
 }) {
   return (
-    <div className="flex-1 min-w-[128px] border border-gray-200 rounded-xl px-3 py-2.5">
+    <div className="sm:flex-1 sm:min-w-[128px] border border-gray-200 rounded-xl px-3 py-2.5">
       <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">{etiqueta}</p>
       <p className={`text-xl font-semibold ${
         to === 'verd' ? 'text-emerald-700' : to === 'roig' ? 'text-red-700' : 'text-text-main'
@@ -1065,7 +1065,7 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
       {error && <p role="alert" className="text-xs text-red-700 mb-4">{error}</p>}
       {loading && <p className="text-xs text-gray-500 mb-4">Carregant…</p>}
 
-      <div className="flex flex-wrap gap-2.5 mb-5">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2.5 mb-5">
         <Xifra
           etiqueta="Ha entrat"
           valor={resTancat ? '—' : eur(totals.haEntrat)}
