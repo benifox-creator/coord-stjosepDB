@@ -64,7 +64,9 @@ export function PanellEconomic({ resum, curs, cursos, loading, error, onCurs }: 
         <Xifra
           etiqueta="Ha entrat"
           valor={resTancat ? '—' : eur(totals.haEntrat)}
-          detall={resTancat ? 'cap sortida tancada encara' : `de ${compten} sortides fetes`}
+          detall={resTancat
+            ? 'cap sortida tancada encara'
+            : `de ${compten} ${compten === 1 ? 'sortida feta' : 'sortides fetes'}`}
         />
         <Xifra
           etiqueta="Ha costat"
