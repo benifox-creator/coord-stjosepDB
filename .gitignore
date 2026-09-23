@@ -39,3 +39,6 @@ service-account-*.json
 .claude/skills/
 skills-lock.json
 .worktrees/
+
+# Espai de treball dels plans en execució i del company visual (només local)
+.superpowers/
