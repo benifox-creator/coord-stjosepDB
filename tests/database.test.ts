@@ -1,6 +1,8 @@
 import { PGlite } from '@electric-sql/pglite'
 import { readFile, readdir } from 'node:fs/promises'
 import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect } from 'vitest'
+import { potRedactar, potPublicar, potEliminar } from '../src/modules/coneixement/permisos'
+import type { Rol, Usuari } from '../src/modules/usuaris/types'
 
 let db: PGlite
 async function asUser(email: string, verified = true) {
@@ -1510,5 +1512,61 @@ describe('redactar la base de coneixement', () => {
     const visible = (await db.query<{v:boolean}>(`select app_private.module_visible('coneixement') as v`)).rows[0].v
     await db.exec('reset role')
     expect(visible).toBe(true)
+  })
+
+  // La promesa central d'aquesta branca: que `potRedactar`, `potPublicar` i
+  // `potEliminar` (src/modules/coneixement/permisos.ts) diguin exactament el
+  // mateix que `coneixement_redactor()`, `admin()` i la política
+  // `module_delete`. Sense aquesta prova, les dues bandes es poden
+  // desincronitzar sense que res ho detecti — que és exactament el que va
+  // passar amb `MaterialInfantilGuard` i `canAccessModul` (FIX 1).
+  describe('el client i el servidor diuen el mateix (permisos.ts vs SQL)', () => {
+    const ROLS: Rol[] = ['coordinador', 'direccio', 'titular', 'cap_estudis', 'professorat', 'convidat']
+    const usuariAmb = (casella: boolean): Usuari => ({
+      id: 'combo', Email: 'combo@stjosep.org', Nom: 'Combo', Rol: 'professorat', Etapa: null,
+      PotGestionarMaterial: false, PotGestionarExcursions: false, PotGestionarCostosExcursions: false,
+      PotRedactarConeixement: casella, Data_alta: '2026-09-01',
+    })
+
+    it('potRedactar i potPublicar, per a tota combinació de rol × casella', async () => {
+      for (const rol of ROLS) {
+        for (const casella of [true, false]) {
+          await asUser('admin@stjosep.org')
+          await db.query(`update public.usuaris set rol=$1, pot_redactar_coneixement=$2 where email='teacher@stjosep.org'`, [rol, casella])
+          await asUser('teacher@stjosep.org')
+          const fila = (await db.query<{ redactor: boolean; admin: boolean }>(
+            `select app_private.coneixement_redactor() as redactor, app_private.admin() as admin`)).rows[0]
+          await db.exec('reset role')
+          const combo = `rol=${rol} casella=${casella}`
+          expect(fila.redactor, combo).toBe(potRedactar(rol, usuariAmb(casella)))
+          expect(fila.admin, combo).toBe(potPublicar(rol))
+        }
+      }
+    })
+
+    it('potEliminar, per a tota combinació de rol × casella × publicat', async () => {
+      await asUser('admin@stjosep.org')
+      const esborrany = (await db.query<{ id: string }>(`
+        insert into public.coneixement(titol, categoria, contingut) values('E','Administratiu','x') returning id`)).rows[0].id
+      const publicatId = (await db.query<{ id: string }>(`
+        insert into public.coneixement(titol, categoria, contingut) values('P','Administratiu','x') returning id`)).rows[0].id
+      await db.query('select public.publica_article($1, true)', [publicatId])
+      await db.exec('reset role')
+
+      for (const rol of ROLS) {
+        for (const casella of [true, false]) {
+          for (const [id, publicat] of [[esborrany, false], [publicatId, true]] as const) {
+            await asUser('admin@stjosep.org')
+            await db.query(`update public.usuaris set rol=$1, pot_redactar_coneixement=$2 where email='teacher@stjosep.org'`, [rol, casella])
+            await asUser('teacher@stjosep.org')
+            await db.exec('savepoint intent_fix3')
+            const esborrat = (await db.query('delete from public.coneixement where id=$1 returning id', [id])).rows.length > 0
+            await db.exec('rollback to savepoint intent_fix3')
+            await db.exec('reset role')
+            expect(esborrat, `rol=${rol} casella=${casella} publicat=${publicat}`).toBe(potEliminar(rol, usuariAmb(casella), publicat))
+          }
+        }
+      }
+    })
   })
 })
