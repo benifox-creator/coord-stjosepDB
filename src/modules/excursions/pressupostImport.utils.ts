@@ -161,11 +161,11 @@ export function interpretaPressupost(
   // amb dos autocars s'ha de decidir sencera, no línia a línia.
   const perCodi = new Map<string, FilaCrua[]>()
   const ordre: string[] = []
+  const resultats: FilaPressupost[] = []
   for (let i = 1; i < matriu.length; i++) {
     const row = matriu[i] ?? []
     const get = (c: number) => (c === -1 ? null : numero(row[c]))
     const codi = text(row[idx.codi])
-    if (!codi) continue
     const crua: FilaCrua = {
       fila: i + 1,
       places: get(idx.places),
@@ -177,14 +177,31 @@ export function interpretaPressupost(
     // sortida, que és una resposta legítima i no un error. `0` no és «sense
     // preu» (és `null`): un servei gratuït és una resposta legítima també, i
     // s'ha de desar tal qual, no confondre's amb «no contestat».
-    if (crua.preuAutocar === null && crua.perAlumne === null && crua.total === null) continue
+    const tePreu = crua.preuAutocar !== null || crua.perAlumne !== null || crua.total !== null
+    if (!codi) {
+      // El bus partit en dues files n'és l'escenari bandera: quan algú
+      // combina verticalment la cel·la del codi, `sheet_to_json` la torna
+      // buida a totes les files menys la primera. No s'hereta el codi de la
+      // fila de sobre —seria endevinar de quina sortida són aquests diners,
+      // i si s'errés el preu aniria a l'excursió que no toca sense que res
+      // ho notés—, així que una fila amb preu i sense codi surt com a error
+      // en comptes de desaparèixer en silenci. Sense cap preu, en canvi, és
+      // una fila buida del full i se segueix saltant sense soroll.
+      if (tePreu) {
+        resultats.push({
+          fila: crua.fila, codi: '', lloc: '', valid: false,
+          error: 'Hi ha un preu sense codi: el codi s’ha de repetir a cada línia.',
+        })
+      }
+      continue
+    }
+    if (!tePreu) continue
     const llista = perCodi.get(codi)
     if (llista) llista.push(crua)
     else { perCodi.set(codi, [crua]); ordre.push(codi) }
   }
 
   const perCodiExcursio = new Map(excursions.map((e) => [e.Codi, e]))
-  const resultats: FilaPressupost[] = []
 
   for (const codi of ordre) {
     const crues = perCodi.get(codi) ?? []

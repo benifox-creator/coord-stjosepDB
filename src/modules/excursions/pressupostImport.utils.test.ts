@@ -385,6 +385,30 @@ describe('com s’interpreta un número escrit com a text', () => {
   })
 })
 
+describe('una fila amb preu i sense codi', () => {
+  it('surt com a error i nomena la seva fila', () => {
+    const r = interpreta([fila('', 40, 480)])
+    expect(r).toHaveLength(1)
+    expect(r[0].valid).toBe(false)
+    expect(r[0].fila).toBe(2) // capçalera = fila 1, aquesta és la fila 2
+    expect(r[0].error).toContain('sense codi')
+  })
+
+  it('no s’hereta el codi de la fila de sobre: dues entrades, la vàlida i l’error', () => {
+    const r = interpreta([fila('EXC-0001', 55, 610), fila('', 40, 480)])
+    expect(r).toHaveLength(2)
+    const valida = r.find((f) => f.valid)
+    const error = r.find((f) => !f.valid)
+    expect(valida?.data?.autocars).toEqual([{ places: 55, preu: 610 }])
+    expect(error?.codi).toBe('')
+    expect(error?.error).toContain('sense codi')
+  })
+
+  it('una fila del tot buida (sense codi i sense preu) se segueix saltant en silenci', () => {
+    expect(interpreta([fila('')])).toEqual([])
+  })
+})
+
 describe('el que avisa sense aturar', () => {
   it('una sortida que ja tenia autocars diu quants en perd', () => {
     const ambAutocars = new Map([['e1', { quants: 2, total: 1100 }]])
