@@ -72,14 +72,14 @@ function BotoPublicar({
 function ArticleCard({
   article,
   onClick,
-  esCoordinador,
+  potPublicar,
   publicant,
   onPublica,
   destacat,
 }: {
   article: Article
   onClick: () => void
-  esCoordinador: boolean
+  potPublicar: boolean
   publicant: boolean
   onPublica: () => void
   /** Els avisos porten un accent visual perquè no passin desapercebuts. */
@@ -144,7 +144,7 @@ function ArticleCard({
         </div>
       </button>
 
-      {esCoordinador && (
+      {potPublicar && (
         <div className="flex justify-end">
           <BotoPublicar esBorrany={esBorrany} publicant={publicant} onClick={onPublica} />
         </div>
@@ -158,13 +158,13 @@ function ArticleCard({
 function ArticleDesplegable({
   article,
   onVeureDetall,
-  esCoordinador,
+  potPublicar,
   publicant,
   onPublica,
 }: {
   article: Article
   onVeureDetall: () => void
-  esCoordinador: boolean
+  potPublicar: boolean
   publicant: boolean
   onPublica: () => void
 }) {
@@ -213,7 +213,7 @@ function ArticleDesplegable({
                 {links.length} {links.length === 1 ? 'enllaç' : 'enllaços'}
               </span>
             )}
-            {esCoordinador && (
+            {potPublicar && (
               <BotoPublicar esBorrany={esBorrany} publicant={publicant} onClick={onPublica} />
             )}
           </div>
@@ -237,7 +237,10 @@ interface Props {
   articles: Article[]
   loading: boolean
   error: string | null
-  esCoordinador: boolean
+  /** Crea, edita i veu els esborranys: rol coordinador o casella marcada. */
+  potRedactar: boolean
+  /** Publica, retira i esborra un article publicat: només el coordinador. */
+  potPublicar: boolean
   onNou: () => void
   onVeureDetall: (article: Article) => void
   onRefresh: () => void
@@ -248,7 +251,8 @@ export function ConeixementPage({
   articles,
   loading,
   error,
-  esCoordinador,
+  potRedactar,
+  potPublicar,
   onNou,
   onVeureDetall,
   onRefresh,
@@ -326,7 +330,7 @@ export function ConeixementPage({
             >
               <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
             </button>
-            {esCoordinador && (
+            {potRedactar && (
               <button
                 onClick={onNou}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg shadow-sm transition-opacity hover:opacity-90"
@@ -340,7 +344,7 @@ export function ConeixementPage({
         </div>
 
         {/* KPIs: només qui veu els esborranys en treu res, la resta ja només veu publicats */}
-        {esCoordinador && (
+        {potRedactar && (
           <div className="flex gap-5 mb-4">
             {[
               { label: 'Total', val: stats.total, color: '#861414' },
@@ -421,7 +425,7 @@ export function ConeixementPage({
                 ? 'Encara no hi ha articles a la base de coneixement.'
                 : 'Cap article coincideix amb la cerca.'}
             </p>
-            {esCoordinador && articles.length === 0 && (
+            {potRedactar && articles.length === 0 && (
               <button
                 onClick={onNou}
                 className="mt-4 text-sm font-medium text-primary hover:underline"
@@ -445,7 +449,7 @@ export function ConeixementPage({
                         article={original}
                         destacat
                         onClick={() => onVeureDetall(original)}
-                        esCoordinador={esCoordinador}
+                        potPublicar={potPublicar}
                         publicant={publicantId === original.id}
                         onPublica={() => handlePublica(original)}
                       />
@@ -467,7 +471,7 @@ export function ConeixementPage({
                         key={al.id}
                         article={original}
                         onVeureDetall={() => onVeureDetall(original)}
-                        esCoordinador={esCoordinador}
+                        potPublicar={potPublicar}
                         publicant={publicantId === original.id}
                         onPublica={() => handlePublica(original)}
                       />
@@ -489,7 +493,7 @@ export function ConeixementPage({
                         key={al.id}
                         article={original}
                         onClick={() => onVeureDetall(original)}
-                        esCoordinador={esCoordinador}
+                        potPublicar={potPublicar}
                         publicant={publicantId === original.id}
                         onPublica={() => handlePublica(original)}
                       />
@@ -511,7 +515,7 @@ export function ConeixementPage({
                         key={al.id}
                         article={original}
                         onClick={() => onVeureDetall(original)}
-                        esCoordinador={esCoordinador}
+                        potPublicar={potPublicar}
                         publicant={publicantId === original.id}
                         onPublica={() => handlePublica(original)}
                       />
@@ -539,7 +543,7 @@ export function ConeixementPage({
                         key={al.id}
                         article={original}
                         onVeureDetall={() => onVeureDetall(original)}
-                        esCoordinador={esCoordinador}
+                        potPublicar={potPublicar}
                         publicant={publicantId === original.id}
                         onPublica={() => handlePublica(original)}
                       />

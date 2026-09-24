@@ -44,7 +44,7 @@ function tagsToArray(tags: string): string[] {
   return tags.split(',').map((t) => t.trim()).filter(Boolean)
 }
 
-export function useConeixement(esCoordinador: boolean) {
+export function useConeixement(potRedactar: boolean) {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -55,14 +55,14 @@ export function useConeixement(esCoordinador: boolean) {
     try {
       const rows = await getAll<ConeixementRow>(TABLE, 'titol')
       const tots = rows.map(rowToArticle)
-      // Coordinador veu tots; la resta només els publicats
-      setArticles(esCoordinador ? tots : tots.filter((a) => a.Publicat === 'true'))
+      // Qui redacta veu tots els esborranys; la resta només els publicats.
+      setArticles(potRedactar ? tots : tots.filter((a) => a.Publicat === 'true'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconegut')
     } finally {
       setLoading(false)
     }
-  }, [esCoordinador])
+  }, [potRedactar])
 
   // External fetch: synchronous loading state prevents stale content during refresh.
   // eslint-disable-next-line react-hooks/set-state-in-effect

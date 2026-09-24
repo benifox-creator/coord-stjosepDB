@@ -8,14 +8,17 @@ import { parseTags, parseLinks } from './coneixement.utils'
 
 interface Props {
   article: Article
-  esCoordinador: boolean
+  /** Crea, edita i veu els esborranys: rol coordinador o casella marcada. */
+  potRedactar: boolean
+  /** Publica, retira i esborra un article publicat: només el coordinador. */
+  potPublicar: boolean
   onClose: () => void
   onEditar: () => void
   onTogglePublicat: (article: Article) => Promise<void>
   onEliminar: (article: Article) => Promise<void>
 }
 
-export function ConeixementDetall({ article, esCoordinador, onClose, onEditar, onTogglePublicat, onEliminar }: Props) {
+export function ConeixementDetall({ article, potRedactar, potPublicar, onClose, onEditar, onTogglePublicat, onEliminar }: Props) {
   const [confirmEliminar, setConfirmEliminar] = useState(false)
   const [eliminant, setEliminant] = useState(false)
   const [toggling, setToggling] = useState(false)
@@ -56,7 +59,7 @@ export function ConeixementDetall({ article, esCoordinador, onClose, onEditar, o
           <div className="flex-1 min-w-0 pr-4">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-semibold text-primary">{article.ID}</span>
-              {esCoordinador && esBorrany && (
+              {potRedactar && esBorrany && (
                 <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                   <EyeOff size={10} /> Esborrany
                 </span>
@@ -148,8 +151,9 @@ export function ConeixementDetall({ article, esCoordinador, onClose, onEditar, o
           )}
         </div>
 
-        {/* Footer coordinador */}
-        {esCoordinador && (
+        {/* Footer: editar és de qui redacta; publicar i esborrar un cop
+            publicat, només del coordinador (`potPublicar`). */}
+        {potRedactar && (
           <div className="border-t border-gray-200 px-6 py-4 shrink-0">
             {confirmEliminar ? (
               <div className="flex items-center justify-between gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
@@ -174,28 +178,32 @@ export function ConeixementDetall({ article, esCoordinador, onClose, onEditar, o
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <button
-                  onClick={() => setConfirmEliminar(true)}
-                  className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors"
-                >
-                  <Trash2 size={13} /> Eliminar
-                </button>
-                <div className="flex items-center gap-2">
+                {potPublicar ? (
                   <button
-                    onClick={handleTogglePublicat}
-                    disabled={toggling}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50 ${
-                      esBorrany
-                        ? 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
-                        : 'border-gray-300 text-gray-600 bg-gray-50 hover:bg-gray-100'
-                    }`}
+                    onClick={() => setConfirmEliminar(true)}
+                    className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors"
                   >
-                    {toggling
-                      ? <Loader2 size={12} className="animate-spin" />
-                      : esBorrany ? <Eye size={13} /> : <EyeOff size={13} />
-                    }
-                    {esBorrany ? 'Publicar' : 'Tornar a esborrany'}
+                    <Trash2 size={13} /> Eliminar
                   </button>
+                ) : <span />}
+                <div className="flex items-center gap-2">
+                  {potPublicar && (
+                    <button
+                      onClick={handleTogglePublicat}
+                      disabled={toggling}
+                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-50 ${
+                        esBorrany
+                          ? 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
+                          : 'border-gray-300 text-gray-600 bg-gray-50 hover:bg-gray-100'
+                      }`}
+                    >
+                      {toggling
+                        ? <Loader2 size={12} className="animate-spin" />
+                        : esBorrany ? <Eye size={13} /> : <EyeOff size={13} />
+                      }
+                      {esBorrany ? 'Publicar' : 'Tornar a esborrany'}
+                    </button>
+                  )}
                   <button
                     onClick={onEditar}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"

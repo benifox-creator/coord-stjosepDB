@@ -3,13 +3,21 @@ import { ConeixementPage } from '../../modules/coneixement/ConeixementPage'
 import { ConeixementForm } from '../../modules/coneixement/ConeixementForm'
 import { ConeixementDetall } from '../../modules/coneixement/ConeixementDetall'
 import { useConeixement } from '../../modules/coneixement/useConeixement'
+import { potRedactar as calculaPotRedactar, potPublicar as calculaPotPublicar } from '../../modules/coneixement/permisos'
 import type { Article } from '../../modules/coneixement/types'
-import { useUsuarisStore, potEliminar } from '../../store/usuarisStore'
+import { useUsuarisStore } from '../../store/usuarisStore'
+import { useAuthStore } from '../../store/authStore'
 
 export default function ConeixementWrapper() {
   const rol = useUsuarisStore((s) => s.rol)
-  const esCoordinador = potEliminar(rol)
-  const { articles, loading, error, crear, editar, togglePublicat, publica, eliminar, refetch } = useConeixement(esCoordinador)
+  const usuaris = useUsuarisStore((s) => s.usuaris)
+  const email = (useAuthStore((s) => s.user?.email) ?? '').toLowerCase()
+  const jo = usuaris.find((u) => u.Email.toLowerCase() === email) ?? null
+
+  const potRedactar = calculaPotRedactar(rol, jo)
+  const potPublicar = calculaPotPublicar(rol)
+
+  const { articles, loading, error, crear, editar, togglePublicat, publica, eliminar, refetch } = useConeixement(potRedactar)
   const [formObert, setFormObert] = useState(false)
   const [editant, setEditant] = useState<Article | null>(null)
   const [seleccionat, setSeleccionat] = useState<Article | null>(null)
@@ -25,7 +33,8 @@ export default function ConeixementWrapper() {
         articles={articles}
         loading={loading}
         error={error}
-        esCoordinador={esCoordinador}
+        potRedactar={potRedactar}
+        potPublicar={potPublicar}
         onNou={() => setFormObert(true)}
         onVeureDetall={setSeleccionat}
         onRefresh={refetch}
@@ -41,7 +50,8 @@ export default function ConeixementWrapper() {
       {seleccionat && (
         <ConeixementDetall
           article={seleccionat}
-          esCoordinador={esCoordinador}
+          potRedactar={potRedactar}
+          potPublicar={potPublicar}
           onClose={() => setSeleccionat(null)}
           onEditar={() => handleEditar(seleccionat)}
           onTogglePublicat={async (a) => { await togglePublicat(a); setSeleccionat(null) }}
