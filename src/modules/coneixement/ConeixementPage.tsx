@@ -6,7 +6,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import type { Article } from './types'
 import type { TipusArticle } from './articles'
-import { agrupaPerTipus, cerca, aLlista } from './articles'
+import { agrupaPerTipus, cerca, filtraPerCategoria, aLlista } from './articles'
 import { parseTags, parseLinks, formatDateISO } from './coneixement.utils'
 
 const TIPUS_FILTRE_OPCIONS: { valor: TipusArticle; etiqueta: string }[] = [
@@ -274,7 +274,7 @@ export function ConeixementPage({
   const llistes = useMemo(() => articles.map(aLlista), [articles])
   const trobatsPerText = useMemo(() => cerca(llistes, textCerca), [llistes, textCerca])
   const trobats = useMemo(
-    () => (filtreCategoria ? trobatsPerText.filter((a) => a.categoria === filtreCategoria) : trobatsPerText),
+    () => filtraPerCategoria(trobatsPerText, filtreCategoria),
     [trobatsPerText, filtreCategoria],
   )
   const grups = useMemo(() => agrupaPerTipus(trobats, avui), [trobats, avui])

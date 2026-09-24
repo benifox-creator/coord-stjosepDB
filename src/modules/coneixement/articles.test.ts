@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { esVigent, agrupaPerTipus, cerca, aLlista, type ArticleLlista, type ArticleDesat } from './articles'
+import { esVigent, agrupaPerTipus, cerca, filtraPerCategoria, aLlista, type ArticleLlista, type ArticleDesat } from './articles'
 
 const AVUI = '2026-09-24'
 
@@ -107,6 +107,30 @@ describe('cercar', () => {
 
   it('el que no hi és, no hi surt', () => {
     expect(cerca(tots, 'piscina')).toEqual([])
+  })
+})
+
+describe('filtrar per categoria', () => {
+  const tots = [
+    art({ id: 'a', categoria: 'Excursions' }),
+    art({ id: 'b', categoria: 'Excursions 1r ESO' }),
+    art({ id: 'c', categoria: 'Material' }),
+  ]
+
+  it('amb categoria buida, totes', () => {
+    expect(filtraPerCategoria(tots, '').map((a) => a.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('només les que hi coincideixen exactament', () => {
+    expect(filtraPerCategoria(tots, 'Material').map((a) => a.id)).toEqual(['c'])
+  })
+
+  it('no confon una categoria amb una altra que la conté com a subcadena', () => {
+    expect(filtraPerCategoria(tots, 'Excursions').map((a) => a.id)).toEqual(['a'])
+  })
+
+  it('la que no hi és, no hi surt', () => {
+    expect(filtraPerCategoria(tots, 'Esports')).toEqual([])
   })
 })
 

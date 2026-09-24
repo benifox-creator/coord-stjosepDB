@@ -80,6 +80,13 @@ export function cerca(articles: ArticleLlista[], text: string): ArticleLlista[] 
     a.tags.some((t) => clau(t).includes(q)))
 }
 
+export function filtraPerCategoria(articles: ArticleLlista[], categoria: string): ArticleLlista[] {
+  if (categoria === '') return articles
+  // Igualtat exacta i no `includes`: una categoria «Excursions» no ha
+  // d'agafar «Excursions 1r ESO» només perquè hi és a dins com a subcadena.
+  return articles.filter((a) => a.categoria === categoria)
+}
+
 /** La forma que té un article tal com el torna el hook, heretada del full de càlcul. */
 export interface ArticleDesat {
   id: string
