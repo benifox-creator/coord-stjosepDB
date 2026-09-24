@@ -42,12 +42,25 @@ function clau(s: string): string {
   return s.trim().toLowerCase().replace(/[’‘`´]/g, '\'').normalize('NFD').replace(/\p{Diacritic}/gu, '')
 }
 
+// Els diners que aquest full porta tenen sempre dos decimals com a molt, i
+// d'això surt tota la regla: si hi ha una coma, és el decimal i els punts són
+// de milers («1.234,56» -> 1234.56). Si no hi ha coma, un punt seguit
+// d'exactament tres xifres —una vegada o més, fins al final— no pot ser mai
+// un decimal (cap import en euros en té tres) i per tant és de milers
+// («1.200» -> 1200, «1.200.500» -> 1200500); un punt seguit d'una o dues
+// xifres sí que és el decimal («610.5» i «610.50» -> 610.5). Sense aquesta
+// regla, «1.200» —la notació normal d'un preu escrit amb punt de milers— es
+// llegia com 1,2 i entrava a la base de dades com un preu vàlid.
+const NOMES_MILERS = /^-?\d+(?:\.\d{3})+$/
+
 /** `null` quan la cel·la és buida; `NaN` quan hi ha alguna cosa que no és un número. */
 function numero(v: unknown): number | null {
-  const s = text(v)
+  const s = text(v).replace(/\s/g, '')
   if (s === '') return null
   // Les comes decimals hi arriben quan algú escriu el número com a text.
-  return Number(s.replace(/\s/g, '').replace(',', '.'))
+  if (s.includes(',')) return Number(s.replace(/\./g, '').replace(',', '.'))
+  if (NOMES_MILERS.test(s)) return Number(s.replace(/\./g, ''))
+  return Number(s)
 }
 
 // Les quatre columnes de preu que el full sap llegir, en l'ordre canònic en

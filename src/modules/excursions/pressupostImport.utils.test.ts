@@ -304,6 +304,87 @@ describe('el preu zero', () => {
   })
 })
 
+describe('com s’interpreta un número escrit com a text', () => {
+  // «1.200» és la notació normal d'un preu de mil dos-cents euros escrit amb
+  // el punt de milers. Abans d'aquest arreglo es llegia com 1,2 —cap error,
+  // cap avís, un preu vàlid i fals— perquè `numero()` només tractava la coma
+  // com a decimal i deixava el punt tal qual.
+  it('«1.200» és mil dos-cents, no u coma dos', () => {
+    const r = interpreta([fila('EXC-0001', 55, '1.200')])
+    expect(r[0].valid).toBe(true)
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 1200 }])
+  })
+
+  it('«1.200,00» és mil dos-cents amb la coma decimal', () => {
+    const r = interpreta([fila('EXC-0001', 55, '1.200,00')])
+    expect(r[0].valid).toBe(true)
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 1200 }])
+  })
+
+  it('«1.234,56» amb punt de milers i coma decimal alhora', () => {
+    const r = interpreta([fila('EXC-0001', 55, '1.234,56')])
+    expect(r[0].valid).toBe(true)
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 1234.56 }])
+  })
+
+  it('«1200» sense cap separador', () => {
+    const r = interpreta([fila('EXC-0001', 55, '1200')])
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 1200 }])
+  })
+
+  it('«1 200» amb espai de milers', () => {
+    const r = interpreta([fila('EXC-0001', 55, '1 200')])
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 1200 }])
+  })
+
+  it('«610,50» amb coma decimal', () => {
+    const r = interpreta([fila('EXC-0001', 55, '610,50')])
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 610.5 }])
+  })
+
+  it('«610.5» amb un punt seguit d’una xifra és el decimal', () => {
+    const r = interpreta([fila('EXC-0001', 55, '610.5')])
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 610.5 }])
+  })
+
+  it('«610.50» amb un punt seguit de dues xifres també és el decimal', () => {
+    const r = interpreta([fila('EXC-0001', 55, '610.50')])
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 610.5 }])
+  })
+
+  it('«1.200.500» amb dos punts de milers seguits es llegeix com 1200500, no com NaN', () => {
+    // Massa gran per a una línia (sostre de 10.000 €): l'important aquí no és
+    // que la fila s'aturi —ho fa igualment— sinó *per què*. Abans dels dos
+    // punts, `Number('1.200.500')` era `NaN` i la fila queia a «no és un
+    // número»; ara es llegeix com el número que és i cau al sostre de
+    // sanitat, que és l'error correcte per a una xifra tan gran.
+    const r = interpreta([fila('EXC-0001', 55, '1.200.500')])
+    expect(r[0].valid).toBe(false)
+    expect(r[0].error).toContain('teclat')
+  })
+
+  it('«0» és zero', () => {
+    expect(interpreta([fila('EXC-0001', 55, '0')])[0].data?.autocars).toEqual([{ places: 55, preu: 0 }])
+  })
+
+  it('«12» és dotze', () => {
+    expect(interpreta([fila('EXC-0001', 55, '12')])[0].data?.autocars).toEqual([{ places: 55, preu: 12 }])
+  })
+
+  it('una cadena que no és un número segueix aturant la fila', () => {
+    const r = interpreta([fila('EXC-0001', 55, 'a consultar')])
+    expect(r[0].valid).toBe(false)
+    expect(r[0].error).toContain('número')
+  })
+
+  it('de punta a punta: una fila amb «1.200» a preu autocar acaba amb un autocar de 1200, no d’1,2', async () => {
+    const file = excel([fila('EXC-0001', 55, '1.200')])
+    const { files } = await parsejaExcelPressupost(file, [excursio()], SENSE_AUTOCARS, false, 10)
+    expect(files[0].valid).toBe(true)
+    expect(files[0].data?.autocars).toEqual([{ places: 55, preu: 1200 }])
+  })
+})
+
 describe('el que avisa sense aturar', () => {
   it('una sortida que ja tenia autocars diu quants en perd', () => {
     const ambAutocars = new Map([['e1', { quants: 2, total: 1100 }]])
