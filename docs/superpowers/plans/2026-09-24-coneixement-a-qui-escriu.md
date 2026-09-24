@@ -292,8 +292,11 @@ describe('redactar la base de coneixement', () => {
   })
 
   it('un redactor pot esborrar un esborrany però no un article publicat', async () => {
+    const esborrany = await unArticle(false)
     const publicat = await unArticle(true)
     await asUser('redactor@stjosep.org')
+    expect((await db.query('delete from public.coneixement where id=$1 returning id',[esborrany])).rows)
+      .toHaveLength(1)
     expect((await db.query('delete from public.coneixement where id=$1 returning id',[publicat])).rows)
       .toHaveLength(0)
     await db.exec('reset role')
@@ -369,7 +372,7 @@ git commit -m "feat(coneixement): qui redacta, qui publica, i els quatre tipus"
 
 **Interfaces:**
 - Consumes: res del projecte. Defineix les seves pròpies entrades, com fan `preu.ts` i `balanc.ts`.
-- Produces: `TipusArticle`, `ArticleLlista`, `esVigent(a, avui): boolean`, `agrupaPerTipus(articles, avui): GrupsArticles`, `cerca(articles, text): ArticleLlista[]`.
+- Produces: `TipusArticle`, `ArticleLlista`, `ArticleDesat`, `esVigent(a, avui): boolean`, `agrupaPerTipus(articles, avui): GrupsArticles`, `cerca(articles, text): ArticleLlista[]`, `aLlista(a: ArticleDesat): ArticleLlista`.
 
 **Restriccions:**
 
@@ -561,16 +564,75 @@ export function cerca(articles: ArticleLlista[], text: string): ArticleLlista[] 
 }
 ```
 
-- [ ] **Step 4: Executa i comprova que passen**
+- [ ] **Step 4: El pas de l'article desat a l'article de la llista**
+
+El hook torna articles amb **la forma heretada del full de càlcul** —`Tags` és una cadena separada per comes, `Publicat` és `'true'` en text— i `ArticleLlista` no. Aquesta conversió és lògica, i per tant no pot viure al component.
+
+Va aquí, i **sense importar res**: TypeScript és estructural, així que declarar la forma d'entrada en local n'hi ha prou perquè hi encaixi el que el hook dona.
+
+```ts
+/** La forma que té un article tal com el torna el hook, heretada del full de càlcul. */
+export interface ArticleDesat {
+  id: string
+  Titol: string
+  Tipus: TipusArticle
+  Categoria: string
+  Contingut: string
+  /** Separades per comes. */
+  Tags: string
+  CaducaEl: string | null
+  /** `'true'` o `'false'`, en text. */
+  Publicat: string
+}
+
+export function aLlista(a: ArticleDesat): ArticleLlista {
+  return {
+    id: a.id, titol: a.Titol, tipus: a.Tipus, categoria: a.Categoria,
+    contingut: a.Contingut,
+    tags: a.Tags.split(',').map((t) => t.trim()).filter(Boolean),
+    caducaEl: a.CaducaEl,
+    publicat: a.Publicat === 'true',
+  }
+}
+```
+
+Amb les seves proves, al mateix fitxer:
+
+```ts
+describe('passar de l’article desat al de la llista', () => {
+  const desat = {
+    id: 'a1', Titol: 'Com es reserva el carro', Tipus: 'procediment' as const,
+    Categoria: 'Procediments', Contingut: 'Primer...', Tags: 'carro, portàtils',
+    CaducaEl: null, Publicat: 'true',
+  }
+
+  it('les etiquetes passen de cadena a llista', () => {
+    expect(aLlista(desat).tags).toEqual(['carro', 'portàtils'])
+  })
+
+  it('sense etiquetes, una llista buida i no una amb una cadena buida', () => {
+    expect(aLlista({ ...desat, Tags: '' }).tags).toEqual([])
+  })
+
+  it('el publicat passa de text a booleà', () => {
+    expect(aLlista(desat).publicat).toBe(true)
+    expect(aLlista({ ...desat, Publicat: 'false' }).publicat).toBe(false)
+  })
+})
+```
+
+Recorda afegir `aLlista` i `ArticleDesat` a l'`import` del capçal del fitxer de proves.
+
+- [ ] **Step 5: Executa i comprova que passen**
 
 Run: `npx vitest run src/modules/coneixement/articles.test.ts`
-Expected: PASS, 14 proves.
+Expected: PASS, 17 proves.
 
-- [ ] **Step 5: Comprova amb una mutació**
+- [ ] **Step 6: Comprova amb una mutació**
 
 Fes que `esVigent` torni sempre `true`. Han de fallar les proves dels avisos caducats. Desfés-ho i digues què va passar.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/modules/coneixement/articles.ts src/modules/coneixement/articles.test.ts
@@ -710,7 +772,7 @@ git commit -m "feat(coneixement): triar el tipus i la caducitat dels avisos"
 - Modify: `src/modules/coneixement/ConeixementPage.tsx`
 
 **Interfaces:**
-- Consumes: `agrupaPerTipus`, `cerca`, `TipusArticle` de `./articles`; `publica` del hook (Task 4).
+- Consumes: `agrupaPerTipus`, `cerca`, `aLlista`, `TipusArticle` de `./articles`; `publica` del hook (Task 4). **El pas de la forma heretada a `ArticleLlista` el fa `aLlista`, no el component.**
 
 **Restriccions:**
 
