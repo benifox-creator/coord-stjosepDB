@@ -54,7 +54,9 @@ alter table public.coneixement add constraint coneixement_caducitat_check
   check ((tipus = 'avis') = (caduca_el is not null));
 
 -- Les quatre polítiques passen d'`admin()` a `coneixement_redactor()`, tret
--- d'esborrar: un redactor pot esborrar el que encara no s'ha publicat, i res més.
+-- d'esborrar: un redactor pot esborrar qualsevol esborrany que encara no
+-- s'hagi publicat, no només el que ell mateix ha escrit, i res més un cop
+-- publicat. És a posta: no es mira l'autor.
 drop policy module_read on public.coneixement;
 create policy module_read on public.coneixement for select to authenticated
 using (app_private.module_visible('coneixement') and (app_private.coneixement_redactor() or publicat));
