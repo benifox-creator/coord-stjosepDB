@@ -50,6 +50,30 @@ function numero(v: unknown): number | null {
   return Number(s.replace(/\s/g, '').replace(',', '.'))
 }
 
+// Les quatre columnes de preu que el full sap llegir, en l'ordre canònic en
+// què `capcaleresPressupost` (pressupostExport.utils.ts) les escriu.
+const COLUMNES_DE_PREU = ['Places', 'Preu autocar', 'Preu per alumne', 'Preu total del grup'] as const
+
+// Cap preu d'una línia no arriba a aquesta xifra: un autocar de dia val entre
+// tres-cents i mil i escaig euros, i una activitat per a un grup sencer no
+// arriba a aquest ordre de magnitud. En canvi els números de sèrie de les
+// dates d'Excel d'aquests cursos ronden els 46.000 —una cel·la de preu
+// formatada com a data, o algú que hi afegeix un zero de més sense voler,
+// queden atrapats aquí en comptes de colar-se com un import real.
+const PREU_MAXIM_LINIA = 10_000
+
+/**
+ * Els noms de les columnes de preu (de les quatre que reconeix el full) que
+ * hi són presents, en l'ordre canònic. Serveix perquè la finestra d'importar
+ * pugui ensenyar quines ha sabut llegir: si algú ha reanomenat «Preu
+ * autocar» a «Preu bus», aquí no hi surt «Preu autocar», i qui miri la
+ * previsualització ho pot veure abans que cap fila desaparegui en silenci.
+ */
+export function columnesDePreuReconegudes(matriu: unknown[][]): string[] {
+  const capcaleres = (matriu[0] ?? []).map((c) => clau(text(c)))
+  return COLUMNES_DE_PREU.filter((nom) => capcaleres.includes(clau(nom)))
+}
+
 function net(brut: number, portaIva: boolean, ivaPct: number): number {
   const valor = portaIva ? brut / (1 + ivaPct / 100) : brut
   // Al cèntim: les columnes són `numeric(10,2)` i els decimals de més es
@@ -86,6 +110,17 @@ export function interpretaPressupost(
   if (idx.codi === -1) {
     throw new Error('El full no té la columna «Codi». Fes servir el fitxer que va sortir de l’aplicació.')
   }
+  // Que no es reconegui cap de les quatre columnes de preu no és «cap fila
+  // té preu» (legítim: l'empresa encara no ha pressupostat res), és que
+  // l'aplicació no sap llegir aquest full —per exemple algú l'ha reanomenat
+  // sencer. Sense aquest tall, totes les files es llegirien com «sense preu»
+  // i la sortida desapareixeria del resultat sense cap avís.
+  if (idx.places === -1 && idx.preuAutocar === -1 && idx.perAlumne === -1 && idx.total === -1) {
+    throw new Error(
+      'El full no té cap columna de preu (Places, Preu autocar, Preu per alumne, Preu total del grup). ' +
+      'Fes servir el fitxer que va sortir de l’aplicació.',
+    )
+  }
 
   // Les files es recullen agrupades pel codi abans de jutjar res: una sortida
   // amb dos autocars s'ha de decidir sencera, no línia a línia.
@@ -104,7 +139,9 @@ export function interpretaPressupost(
       total: get(idx.total),
     }
     // Una fila sense cap preu se salta: l'empresa no ha pressupostat aquella
-    // sortida, que és una resposta legítima i no un error.
+    // sortida, que és una resposta legítima i no un error. `0` no és «sense
+    // preu» (és `null`): un servei gratuït és una resposta legítima també, i
+    // s'ha de desar tal qual, no confondre's amb «no contestat».
     if (crua.preuAutocar === null && crua.perAlumne === null && crua.total === null) continue
     const llista = perCodi.get(codi)
     if (llista) llista.push(crua)
@@ -138,6 +175,15 @@ export function interpretaPressupost(
       [c.places, c.preuAutocar, c.perAlumne, c.total].some((n) => n !== null && n < 0))
     if (negatiu) {
       resultats.push({ ...base, fila: negatiu.fila, valid: false, error: 'Hi ha un valor negatiu.' })
+      continue
+    }
+    const excessiu = crues.find((c) =>
+      [c.places, c.preuAutocar, c.perAlumne, c.total].some((n) => n !== null && n > PREU_MAXIM_LINIA))
+    if (excessiu) {
+      resultats.push({
+        ...base, fila: excessiu.fila, valid: false,
+        error: `Un valor és més gran de ${PREU_MAXIM_LINIA} €: sembla una data d’Excel o un error de teclat.`,
+      })
       continue
     }
     const sensePlaces = crues.find((c) => c.preuAutocar !== null && (c.places === null || c.places <= 0))
@@ -188,7 +234,12 @@ export async function parsejaExcelPressupost(
   ivaPct: number,
 ): Promise<FilaPressupost[]> {
   const XLSX = await import('xlsx')
-  const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array' })
+  // `cellDates: true`: si Excel ha format una cel·la de preu com a data (li
+  // passa sol amb certs patrons, o algú escriu «5/12» pensant en una
+  // fracció), això la torna com a `Date` i cau a la comprovació de «no és un
+  // número» en comptes de colar-se com el número de sèrie cru —un import de
+  // desenes de milers d'euros.
+  const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
   const matriu = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, blankrows: false })
   return interpretaPressupost(matriu, excursions, ambAutocars, portaIva, ivaPct)

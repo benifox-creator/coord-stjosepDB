@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { interpretaPressupost, type FilaPressupost } from './pressupostImport.utils'
+import { interpretaPressupost, columnesDePreuReconegudes, type FilaPressupost } from './pressupostImport.utils'
 import type { Excursio } from './types'
 
 function excursio(canvis: Partial<Excursio> = {}): Excursio {
@@ -174,6 +174,68 @@ describe('l’IVA', () => {
     const r = interpreta([fila('EXC-0001', 55, 100)], { portaIva: true, ivaPct: 21 })
     // 100 / 1,21 = 82,6446…
     expect(r[0].data?.autocars[0].preu).toBe(82.64)
+  })
+})
+
+describe('el sostre de sanitat del preu', () => {
+  // El full ho torna cru: una cel·la de preu formatada com a data (Excel ho
+  // fa sol amb certs patrons) es llegeix com el seu número de sèrie, que per
+  // a les dates d'aquests cursos ronda els 46.000.
+  it('un preu que és en realitat una data d’Excel atura la fila', () => {
+    const r = interpreta([fila('EXC-0001', 55, 46032)])
+    expect(r[0].valid).toBe(false)
+    expect(r[0].error).toContain('data')
+  })
+
+  it('9.999 € passa: és per sota del sostre', () => {
+    const r = interpreta([fila('EXC-0001', 55, 9999)])
+    expect(r[0].valid).toBe(true)
+  })
+
+  it('10.001 € s’atura: és per sobre del sostre', () => {
+    const r = interpreta([fila('EXC-0001', 55, 10001)])
+    expect(r[0].valid).toBe(false)
+    expect(r[0].error).toContain('teclat')
+  })
+})
+
+describe('cap columna de preu reconeguda', () => {
+  it('un full sense cap de les quatre columnes de preu no es pot llegir', () => {
+    expect(() => interpretaPressupost(
+      [['Codi', 'Data', 'Destinació'], ['EXC-0001', '2026-11-18', 'Can Montcau']],
+      [excursio()], SENSE_AUTOCARS, false, 10,
+    )).toThrow('cap columna de preu')
+  })
+
+  it('columnesDePreuReconegudes torna les quatre, en l’ordre canònic, quan hi són totes', () => {
+    expect(columnesDePreuReconegudes([CAPÇALERES])).toEqual(
+      ['Places', 'Preu autocar', 'Preu per alumne', 'Preu total del grup'])
+  })
+
+  it('columnesDePreuReconegudes torna només les que queden quan se’n reanomena una', () => {
+    const capçaleres = CAPÇALERES.map((c) => (c === 'Preu autocar' ? 'Preu bus' : c))
+    expect(columnesDePreuReconegudes([capçaleres])).toEqual(
+      ['Places', 'Preu per alumne', 'Preu total del grup'])
+  })
+
+  it('«Preu bus» en comptes de «Preu autocar» no peta si les columnes d’activitat hi són', () => {
+    // Encara té columnes de preu reconegudes (Places, Preu per alumne, Preu
+    // total del grup): no és el cas de «cap columna reconeguda».
+    const capçaleres = CAPÇALERES.map((c) => (c === 'Preu autocar' ? 'Preu bus' : c))
+    expect(() => interpretaPressupost(
+      [capçaleres, fila('EXC-0001', 55, 610)], [excursio()], SENSE_AUTOCARS, false, 10,
+    )).not.toThrow()
+  })
+})
+
+describe('el preu zero', () => {
+  // És una decisió, no un descuit: un servei gratuït és una resposta
+  // legítima de l'empresa, diferent de la cel·la buida (que vol dir «encara
+  // no ha contestat»).
+  it('0 € és un preu vàlid', () => {
+    const r = interpreta([fila('EXC-0001', 55, 0)])
+    expect(r[0].valid).toBe(true)
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 0 }])
   })
 })
 
