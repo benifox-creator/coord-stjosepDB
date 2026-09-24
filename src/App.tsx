@@ -12,6 +12,7 @@ import { NoAutoritzatPage } from './pages/NoAutoritzatPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { potVeureMaterialInfantil } from './modules/material-infantil/permisos'
+import { potVeureConeixement } from './modules/coneixement/permisos'
 import { useConfigStore, canAccessModul } from './store/configStore'
 import { useUsuarisStore } from './store/usuarisStore'
 import './index.css'
@@ -78,6 +79,17 @@ function MaterialInfantilGuard({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function ConeixementGuard({ children }: { children: ReactNode }) {
+  const rol = useUsuarisStore((s) => s.rol)
+  const config = useConfigStore((s) => s.config)
+  const email = useAuthStore((s) => s.user?.email)
+  const usuaris = useUsuarisStore((s) => s.usuaris)
+  if (rol === null || usuaris.length === 0) return null
+  const usuariActual = usuaris.find((u) => u.Email.toLowerCase() === (email ?? '').toLowerCase()) ?? null
+  if (!potVeureConeixement(usuariActual, rol, config)) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -97,7 +109,7 @@ function AppRoutes() {
                 <Route path="/prestecs" element={<VisibilitatGuard visKey="prestecs"><PrestecsWrapper /></VisibilitatGuard>} />
                 <Route path="/reserves" element={<VisibilitatGuard visKey="reserves"><ReservesWrapper /></VisibilitatGuard>} />
                 <Route path="/substitucions" element={<VisibilitatGuard visKey="substitucions"><SubstitucionsWrapper /></VisibilitatGuard>} />
-                <Route path="/coneixement" element={<VisibilitatGuard visKey="coneixement"><ConeixementWrapper /></VisibilitatGuard>} />
+                <Route path="/coneixement" element={<ConeixementGuard><ConeixementWrapper /></ConeixementGuard>} />
                 <Route path="/pla-accio" element={<VisibilitatGuard visKey="pla-accio"><PlaAccioWrapper /></VisibilitatGuard>} />
                 <Route path="/manteniment" element={<VisibilitatGuard visKey="manteniment"><MantenimentWrapper /></VisibilitatGuard>} />
                 <Route

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { potRedactar, potPublicar, potEliminar } from './permisos'
+import { potVeureConeixement, potRedactar, potPublicar, potEliminar } from './permisos'
 import type { Usuari } from '../usuaris/types'
 
 function usuari(canvis: Partial<Usuari> = {}): Usuari {
@@ -9,6 +9,27 @@ function usuari(canvis: Partial<Usuari> = {}): Usuari {
     PotGestionarCostosExcursions: false, PotRedactarConeixement: false, Data_alta: '2026-09-01', ...canvis,
   }
 }
+
+describe('qui veu el mòdul', () => {
+  const senseProfessorat = { 'visibilitat.coneixement': ['coordinador'] }
+  const ambProfessorat = { 'visibilitat.coneixement': ['professorat'] }
+
+  it('el coordinador, sempre', () => {
+    expect(potVeureConeixement(null, 'coordinador', {})).toBe(true)
+  })
+  it('qui té la casella marcada hi entra encara que el seu rol no tingui visibilitat configurada — la divergència que separava el servidor del client', () => {
+    expect(potVeureConeixement(usuari({ PotRedactarConeixement: true }), 'professorat', senseProfessorat)).toBe(true)
+  })
+  it('sense casella i sense visibilitat pel rol, no hi entra', () => {
+    expect(potVeureConeixement(usuari(), 'professorat', senseProfessorat)).toBe(false)
+  })
+  it('sense casella però amb visibilitat configurada pel rol, sí: aquí mana la configuració', () => {
+    expect(potVeureConeixement(usuari(), 'professorat', ambProfessorat)).toBe(true)
+  })
+  it('sense fitxa d’usuari encara carregada, la configuració de visibilitat ja hi dona accés', () => {
+    expect(potVeureConeixement(null, 'professorat', ambProfessorat)).toBe(true)
+  })
+})
 
 describe('qui redacta', () => {
   it('el coordinador, encara que no tingui la casella marcada', () => {

@@ -1,4 +1,23 @@
 import type { Rol, Usuari } from '../usuaris/types'
+import { canAccessModul } from '../../store/configStore'
+
+/**
+ * Qui veu el mòdul: ha de dir exactament el mateix que
+ * `app_private.module_visible('coneixement')` al servidor (migració
+ * `202609240001_coneixement_redaccio.sql`) — la casella de redactar dona
+ * accés per si sola encara que el rol no en tingui, i si no hi ha casella,
+ * mana la configuració de visibilitat com per a qualsevol altre mòdul.
+ * Mateix patró que `potVeureMaterialInfantil`.
+ */
+export function potVeureConeixement(
+  usuari: Usuari | null,
+  rol: Rol | null,
+  config: Record<string, string[]>,
+): boolean {
+  if (rol === 'coordinador') return true
+  if (usuari?.PotRedactarConeixement) return true
+  return canAccessModul(config, 'coneixement', rol)
+}
 
 /**
  * Qui redacta: crea, edita i veu els esborranys. No és un càrrec, és una

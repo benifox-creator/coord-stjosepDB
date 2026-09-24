@@ -27,6 +27,7 @@ import { logout } from '../services/auth'
 import { useUsuarisStore } from '../store/usuarisStore'
 import { useConfigStore, canAccessModul } from '../store/configStore'
 import { potVeureMaterialInfantil } from '../modules/material-infantil/permisos'
+import { potVeureConeixement } from '../modules/coneixement/permisos'
 
 const NAV_ITEMS = [
   { to: '/',              label: 'Inici',          icon: LayoutDashboard, end: true,  visKey: null },
@@ -68,6 +69,7 @@ export function Layout({ children }: Props) {
     if (visKey === null) return true
     if (rol === null) return false
     if (visKey === 'material-infantil') return potVeureMaterialInfantil(usuariActual, rol, config)
+    if (visKey === 'coneixement') return potVeureConeixement(usuariActual, rol, config)
     return canAccessModul(config, visKey, rol)
   })
 
