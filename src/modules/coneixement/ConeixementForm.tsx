@@ -149,7 +149,7 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
                 onChange={(e) => setCaducaEl(e.target.value)}
                 className="input w-full"
               />
-              <p className="text-xs text-gray-400 mt-1">Últim dia que es mostra l’avís.</p>
+              <p className="text-xs text-gray-500 mt-1">Últim dia que es mostra l’avís.</p>
             </div>
           )}
 
