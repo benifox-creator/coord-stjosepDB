@@ -101,8 +101,7 @@ Es descarrega l'Excel i s'envia com s'envia avui. Adjuntar fitxers al correu és
 
 Segueix el que el projecte ja fa:
 
-- **Escriure l'Excel**: `write-excel-file/browser`, carregat mandrosament, com `comandaExport.utils.ts`.
-- **Llegir-lo**: `xlsx` (SheetJS), com els dos importadors que ja hi ha.
+- **Escriure i llegir l'Excel**: `xlsx` (SheetJS), carregat mandrosament, com fa `generarPlantillaExcel` a `src/modules/usuaris/excelImport.utils.ts`. El projecte té també `write-excel-file`, que Material Infantil fa servir per a la comanda al proveïdor, però allò és un document amb estil per a llegir i això és una graella per a omplir: amb una sola llibreria per a les dues direccions n'hi ha prou, i és la mateixa que després l'ha de tornar a llegir.
 - **La lògica en mòduls purs**, fora dels components: analitzar el fitxer i decidir què és vàlid ha de poder-se provar sense DOM, perquè Vitest corre amb `environment: 'node'`. Els dos importadors existents ja ho fan així (`excelImport.utils.ts` + el seu `.test.ts`).
 - **Cap migració.** `excursio_autocars` i `excursio_finances` ja tenen tot el que cal, i escriure-hi ja està cobert per les polítiques d'ara.
 
