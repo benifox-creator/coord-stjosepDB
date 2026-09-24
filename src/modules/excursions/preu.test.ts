@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculaPreu, arrodoneixAmunt, type CostosExcursio, type ParametresPreu } from './preu'
+import { calculaPreu, arrodoneixAmunt, ambIva, type CostosExcursio, type ParametresPreu } from './preu'
 import excursionsReals from '../../../tests/fixtures/excursions-excel.json'
 
 const params: ParametresPreu = { previsio: 0.8, margePct: 12, ivaPct: 10, arrodoniment: 0.5 }
@@ -162,5 +162,28 @@ describe('contra les excursions reals del curs 2022-23', () => {
   it('i n’hi ha prou com perquè la prova signifiqui alguna cosa', () => {
     // Si el fixture es buidés, la prova anterior passaria sense comprovar res.
     expect(excursionsReals.length).toBeGreaterThanOrEqual(40)
+  })
+})
+
+describe('l’IVA que s’ensenya al costat del camp', () => {
+  it('aplica el percentatge', () => {
+    expect(ambIva(500, 10)).toBeCloseTo(550, 2)
+  })
+
+  it('amb l’IVA a zero no canvia res', () => {
+    expect(ambIva(500, 0)).toBe(500)
+  })
+
+  it('és exactament el que fa servir el càlcul per als autocars', () => {
+    // La raó de ser de la funció: si la xifra que es promet en teclejar no és
+    // la que entra al preu, l'avís enganya en comptes d'ajudar. Una sortida
+    // amb un sol autocar i cap altre cost té els costos fixos iguals al
+    // transport, així que es poden comparar directament.
+    const parametres: ParametresPreu = { previsio: 1, margePct: 0, ivaPct: 21, arrodoniment: 0.01 }
+    const costos: CostosExcursio = {
+      alumnes: 10, autocars: [406.5], preuActivitat: 0, preuActivitatTipus: 'total',
+      ampaImport: 0, ampaCobreixActivitat: false, costAcompanyants: 0,
+    }
+    expect(calculaPreu(costos, parametres).costosFixos).toBeCloseTo(ambIva(406.5, 21), 6)
   })
 })
