@@ -7,7 +7,7 @@ function usuari(canvis: Partial<Usuari> = {}): Usuari {
   return {
     id: 'u1', Email: 'algu@stjosep.org', Nom: 'Algú', Rol: 'professorat', Etapa: null,
     PotGestionarMaterial: false, PotGestionarExcursions: false,
-    PotGestionarCostosExcursions: false, Data_alta: '2026-09-01', ...canvis,
+    PotGestionarCostosExcursions: false, PotRedactarConeixement: false, Data_alta: '2026-09-01', ...canvis,
   }
 }
 

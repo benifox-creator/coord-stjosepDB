@@ -30,6 +30,7 @@ interface UsuariRow {
   pot_gestionar_material: boolean
   pot_gestionar_excursions: boolean
   pot_gestionar_costos_excursions: boolean
+  pot_redactar_coneixement: boolean
   data_alta: string
 }
 
@@ -43,6 +44,7 @@ function rowToUsuari(row: UsuariRow): Usuari {
     PotGestionarMaterial: row.pot_gestionar_material ?? false,
     PotGestionarExcursions: row.pot_gestionar_excursions ?? false,
     PotGestionarCostosExcursions: row.pot_gestionar_costos_excursions ?? false,
+    PotRedactarConeixement: row.pot_redactar_coneixement ?? false,
     Data_alta: row.data_alta,
   }
 }
@@ -82,6 +84,7 @@ interface UsuarisState {
   updatePotGestionarMaterial: (usuari: Usuari, valor: boolean) => Promise<void>
   updatePotGestionarExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
   updatePotGestionarCostosExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
+  updatePotRedactarConeixement: (usuari: Usuari, valor: boolean) => Promise<void>
   reset: () => void
 }
 
@@ -184,6 +187,13 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     await updateRowById(TABLE, usuari.id, { pot_gestionar_costos_excursions: valor })
     set((s) => ({
       usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, PotGestionarCostosExcursions: valor } : u)),
+    }))
+  },
+
+  async updatePotRedactarConeixement(usuari, valor) {
+    await updateRowById(TABLE, usuari.id, { pot_redactar_coneixement: valor })
+    set((s) => ({
+      usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, PotRedactarConeixement: valor } : u)),
     }))
   },
 

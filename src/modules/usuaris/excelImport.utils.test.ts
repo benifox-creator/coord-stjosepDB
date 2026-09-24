@@ -14,7 +14,7 @@ function excel(files: unknown[][], capçaleres: readonly string[] = CAPÇALERES_
 const existent: Usuari = {
   id: '1', Email: 'amoreno@stjosep.org', Nom: 'Andrés', Rol: 'coordinador',
   Etapa: null, PotGestionarMaterial: false, PotGestionarExcursions: false,
-  PotGestionarCostosExcursions: false, Data_alta: '2026-09-01',
+  PotGestionarCostosExcursions: false, PotRedactarConeixement: false, Data_alta: '2026-09-01',
 }
 
 describe('importació d’usuaris des d’Excel', () => {

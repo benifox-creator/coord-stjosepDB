@@ -255,8 +255,10 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
   const updatePotGestionarMaterial = useUsuarisStore((s) => s.updatePotGestionarMaterial)
   const updatePotGestionarExcursions = useUsuarisStore((s) => s.updatePotGestionarExcursions)
   const updatePotGestionarCostosExcursions = useUsuarisStore((s) => s.updatePotGestionarCostosExcursions)
+  const updatePotRedactarConeixement = useUsuarisStore((s) => s.updatePotRedactarConeixement)
   const [savingPotGestionar, setSavingPotGestionar] = useState(false)
   const [savingExcursions, setSavingExcursions] = useState(false)
+  const [savingConeixement, setSavingConeixement] = useState(false)
   const [obert, setObert] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savingEtapa, setSavingEtapa] = useState(false)
@@ -310,6 +312,15 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
     }
   }
 
+  async function handleTogglePotRedactarConeixement() {
+    setSavingConeixement(true)
+    try {
+      await updatePotRedactarConeixement(usuari, !usuari.PotRedactarConeixement)
+    } finally {
+      setSavingConeixement(false)
+    }
+  }
+
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0">
       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-semibold text-gray-600">
@@ -360,6 +371,19 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
           className="rounded border-gray-300 text-primary focus:ring-primary/30"
         />
         Costos
+      </label>
+      <label className="shrink-0 flex flex-col items-start gap-0.5 text-[11px] text-gray-500">
+        <span className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={usuari.PotRedactarConeixement}
+            onChange={handleTogglePotRedactarConeixement}
+            disabled={savingConeixement}
+            className="rounded border-gray-300 text-primary focus:ring-primary/30"
+          />
+          Pot redactar la Base de Coneixement
+        </span>
+        <span className="text-[10px] text-gray-400">Escriu esborranys; publicar-los continua sent del coordinador.</span>
       </label>
       <select
         value={usuari.Etapa ?? ''}
