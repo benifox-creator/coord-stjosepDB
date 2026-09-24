@@ -140,7 +140,7 @@ describe('importar pressupostos', () => {
 
   it('insereix un autocar per fila i esborra els que hi havia', async () => {
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [{ places: 55, preu: 610 }, { places: 40, preu: 480 }] } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }, { places: 40, preu: 480 }] } },
     ])
     const inserits = vi.mocked(db.insertRow).mock.calls.filter((c) => c[0] === 'excursio_autocars')
     expect(inserits.map((c) => c[1])).toEqual([
@@ -156,14 +156,14 @@ describe('importar pressupostos', () => {
     vi.mocked(db.insertRow).mockImplementation(async (taula: string) => { ordre.push(`insert ${taula}`); return {} as never })
     vi.mocked(db.deleteRowById).mockImplementation(async (taula: string) => { ordre.push(`delete ${taula}`) })
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [{ places: 55, preu: 610 }] } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }] } },
     ])
     expect(ordre.indexOf('insert excursio_autocars')).toBeLessThan(ordre.indexOf('delete excursio_autocars'))
   })
 
   it('el preu de l’activitat entra amb el seu tipus', async () => {
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [], preuActivitat: 8, preuActivitatTipus: 'per_alumne' } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [], preuActivitat: 8, preuActivitatTipus: 'per_alumne' } },
     ])
     expect(upsertsFets()[0]).toMatchObject({
       excursio_id: 'e1', preu_activitat: 8, preu_activitat_tipus: 'per_alumne',
@@ -173,7 +173,7 @@ describe('importar pressupostos', () => {
   it('sense preu d’activitat, el que ja hi havia no es toca', async () => {
     financesExistents({ preu_activitat: '99', preu_activitat_tipus: 'total' })
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [{ places: 55, preu: 610 }] } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }] } },
     ])
     expect(upsertsFets()[0]).toMatchObject({ preu_activitat: 99, preu_activitat_tipus: 'total' })
   })
@@ -183,7 +183,7 @@ describe('importar pressupostos', () => {
     // una importació de preus d'autocar buidaria l'aportació de l'AMPA.
     financesExistents({ ampa_import: '4', ampa_cobreix_activitat: true, cost_acompanyants: '45' })
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [{ places: 55, preu: 610 }] } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }] } },
     ])
     expect(upsertsFets()[0]).toMatchObject({
       ampa_import: 4, ampa_cobreix_activitat: true, cost_acompanyants: 45,
@@ -195,7 +195,7 @@ describe('importar pressupostos', () => {
     // d'una altra: canviar-li els costos de sota ensenyaria els d'una tercera.
     useFinances.setState({ finances: null, loading: false, error: null })
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [{ places: 55, preu: 610 }] } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }] } },
     ])
     expect(useFinances.getState()).toMatchObject({ finances: null, loading: false, error: null })
   })
@@ -206,7 +206,7 @@ describe('importar pressupostos', () => {
     // és a casa de les famílies.
     autocarsExistents([{ id: 'a1', places: 55, preu: '610' }])
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [{ places: 55, preu: 610 }] } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }] } },
     ])
     const inserits = vi.mocked(db.insertRow).mock.calls.filter((c) => c[0] === 'excursio_autocars')
     const esborrats = vi.mocked(db.deleteRowById).mock.calls.filter((c) => c[0] === 'excursio_autocars')
@@ -216,11 +216,48 @@ describe('importar pressupostos', () => {
 
   it('escriu totes les sortides de la llista', async () => {
     await useFinances.getState().importaPressupostos([
-      { excursioId: 'e1', dades: { autocars: [{ places: 55, preu: 610 }] } },
-      { excursioId: 'e2', dades: { autocars: [{ places: 30, preu: 300 }] } },
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }] } },
+      { excursioId: 'e2', codi: 'c2', dades: { autocars: [{ places: 30, preu: 300 }] } },
     ])
     const inserits = vi.mocked(db.insertRow).mock.calls.filter((c) => c[0] === 'excursio_autocars')
     expect(inserits).toHaveLength(2)
+  })
+
+  it('sense cap error, el resum diu quantes s’han escrit i cap error', async () => {
+    const resultat = await useFinances.getState().importaPressupostos([
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [{ places: 55, preu: 610 }] } },
+      { excursioId: 'e2', codi: 'c2', dades: { autocars: [{ places: 30, preu: 300 }] } },
+    ])
+    expect(resultat).toEqual({ escrites: 2, errors: [] })
+  })
+
+  it('si una sortida peta, es continua amb les següents i el resum ho reflecteix', async () => {
+    // La segona de tres peta (error de Supabase a l'`upsert`): les tres s'han
+    // d'intentar igualment, i el resum ha de dir que dues s'han escrit, amb
+    // un error que nomena el codi de la que ha fallat.
+    const upsert = vi.fn()
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ error: { message: 'sense connexió' } })
+      .mockResolvedValueOnce({ error: null })
+    vi.mocked(db.supabase.from).mockReturnValue({ upsert } as never)
+
+    const resultat = await useFinances.getState().importaPressupostos([
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [] } },
+      { excursioId: 'e2', codi: 'c2', dades: { autocars: [] } },
+      { excursioId: 'e3', codi: 'c3', dades: { autocars: [] } },
+    ])
+
+    expect(upsert).toHaveBeenCalledTimes(3)
+    expect(resultat.escrites).toBe(2)
+    expect(resultat.errors).toEqual([{ codi: 'c2', error: 'Error desant els costos: sense connexió' }])
+  })
+
+  it('un error guarda el missatge de l’excepció, no un text genèric', async () => {
+    vi.mocked(db.getAll).mockRejectedValueOnce(new Error('boom personalitzat'))
+    const resultat = await useFinances.getState().importaPressupostos([
+      { excursioId: 'e1', codi: 'c1', dades: { autocars: [] } },
+    ])
+    expect(resultat.errors).toEqual([{ codi: 'c1', error: 'boom personalitzat' }])
   })
 })
 

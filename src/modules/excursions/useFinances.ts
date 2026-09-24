@@ -15,6 +15,11 @@ interface FinancesRow {
 }
 interface AutocarRow { id: string; excursio_id: string; places: number; preu: string | number }
 
+export interface ResultatImportPressupostos {
+  escrites: number
+  errors: { codi: string; error: string }[]
+}
+
 interface FinancesState {
   finances: Finances | null
   loading: boolean
@@ -22,7 +27,7 @@ interface FinancesState {
   carrega: (excursioId: string) => Promise<void>
   desa: (excursioId: string, f: Finances) => Promise<void>
   confirma: (excursioId: string, preu: number, f: Finances, parametres: ParametresPreu) => Promise<void>
-  importaPressupostos: (items: { excursioId: string; dades: PreusImportats }[]) => Promise<void>
+  importaPressupostos: (items: { excursioId: string; codi: string; dades: PreusImportats }[]) => Promise<ResultatImportPressupostos>
 }
 
 // Si es demanen els costos de dues excursions seguides (per exemple, en obrir
@@ -129,33 +134,51 @@ export const useFinances = create<FinancesState>((set, get) => ({
    * altra, així que canviar-li els costos de sota ensenyaria els d'una tercera.
    */
   async importaPressupostos(items) {
-    for (const { excursioId, dades } of items) {
-      // La fila de finances es llegeix abans perquè l'`upsert` la reemplaça
-      // sencera: sense tornar-hi el que ja hi havia, importar preus d'autocar
-      // buidaria l'aportació de l'AMPA i el cost dels acompanyants.
-      const [actual] = await getAll<FinancesRow>(
-        'excursio_finances', 'excursio_id', { excursio_id: excursioId }, 'excursio_id')
+    const errors: { codi: string; error: string }[] = []
+    let escrites = 0
+    for (const { excursioId, codi, dades } of items) {
+      try {
+        // La fila de finances es llegeix abans perquè l'`upsert` la reemplaça
+        // sencera: sense tornar-hi el que ja hi havia, importar preus d'autocar
+        // buidaria l'aportació de l'AMPA i el cost dels acompanyants.
+        const [actual] = await getAll<FinancesRow>(
+          'excursio_finances', 'excursio_id', { excursio_id: excursioId }, 'excursio_id')
 
-      const { error } = await supabase.from('excursio_finances').upsert({
-        excursio_id: excursioId,
-        preu_activitat: dades.preuActivitat ?? Number(actual?.preu_activitat ?? 0),
-        preu_activitat_tipus: dades.preuActivitatTipus ?? actual?.preu_activitat_tipus ?? 'per_alumne',
-        ampa_import: Number(actual?.ampa_import ?? 0),
-        ampa_cobreix_activitat: actual?.ampa_cobreix_activitat ?? false,
-        cost_acompanyants: Number(actual?.cost_acompanyants ?? 0),
-      })
-      if (error) throw new Error(`Error desant els costos: ${error.message}`)
+        const { error } = await supabase.from('excursio_finances').upsert({
+          excursio_id: excursioId,
+          preu_activitat: dades.preuActivitat ?? Number(actual?.preu_activitat ?? 0),
+          preu_activitat_tipus: dades.preuActivitatTipus ?? actual?.preu_activitat_tipus ?? 'per_alumne',
+          ampa_import: Number(actual?.ampa_import ?? 0),
+          ampa_cobreix_activitat: actual?.ampa_cobreix_activitat ?? false,
+          cost_acompanyants: Number(actual?.cost_acompanyants ?? 0),
+        })
+        if (error) throw new Error(`Error desant els costos: ${error.message}`)
 
-      if (dades.autocars.length > 0) {
-        const vells = await getAll<AutocarRow>('excursio_autocars', 'id', { excursio_id: excursioId })
-        // Primer els nous i després esborrar els vells: si peta enmig, val més
-        // una sortida amb autocars duplicats —que es veuen a la fitxa i
-        // s'esborren— que una que s'ha quedat sense cap preu.
-        for (const a of dades.autocars) {
-          await insertRow('excursio_autocars', { excursio_id: excursioId, places: a.places, preu: a.preu })
+        if (dades.autocars.length > 0) {
+          const vells = await getAll<AutocarRow>('excursio_autocars', 'id', { excursio_id: excursioId })
+          // Primer els nous i després esborrar els vells: si peta enmig, val més
+          // una sortida amb autocars duplicats —que es veuen a la fitxa i
+          // s'esborren— que una que s'ha quedat sense cap preu. Aquesta garantia
+          // és per sortida i el `try/catch` de fora no l'ha de trencar: si
+          // l'inserció peta, l'excepció salta abans d'arribar als `deleteRowById`
+          // d'aquí sota, així que el catch de fora mai no executa un esborrat
+          // que hauria de dependre d'una inserció que no s'ha arribat a fer.
+          for (const a of dades.autocars) {
+            await insertRow('excursio_autocars', { excursio_id: excursioId, places: a.places, preu: a.preu })
+          }
+          for (const v of vells) await deleteRowById('excursio_autocars', v.id)
         }
-        for (const v of vells) await deleteRowById('excursio_autocars', v.id)
+        escrites++
+      } catch (err) {
+        // Es continua amb la següent sortida en comptes de tallar tot el
+        // bucle: aturar-se aquí deixaria qui ha cridat sense cap manera de
+        // saber si les sortides posteriors a la que ha petat s'havien arribat
+        // a intentar. Reintentar el fitxer sencer és segur perquè la
+        // importació és idempotent (vegeu «importar dues vegades el mateix
+        // fitxer deixa el mateix resultat» a les proves).
+        errors.push({ codi, error: err instanceof Error ? err.message : String(err) })
       }
     }
+    return { escrites, errors }
   },
 }))
