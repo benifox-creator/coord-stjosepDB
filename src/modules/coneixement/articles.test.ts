@@ -65,6 +65,17 @@ describe('agrupar per a la pantalla', () => {
       + g.avisos.length + g.caducats.length
     expect(total).toBe(tots.length)
   })
+
+  it('un tipus fora de la unió no fa petar l’agrupació ni tota l’aplicació: cau a Documents', () => {
+    // Una fila corrupta o una migració a mitges pot dur un valor que la
+    // unió no admet. `agrupaPerTipus` corre sota l'ErrorBoundary de tota
+    // l'aplicació: si llencés aquí, un sol article estrany deixaria
+    // tothom en blanc, no només aquesta pantalla.
+    const estrany = art({ id: 'z', tipus: 'faq' as ArticleLlista['tipus'] })
+    expect(() => agrupaPerTipus([estrany], AVUI)).not.toThrow()
+    const g = agrupaPerTipus([estrany], AVUI)
+    expect(g.documents.map((a) => a.id)).toEqual(['z'])
+  })
 })
 
 describe('cercar', () => {

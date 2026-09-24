@@ -53,7 +53,13 @@ export function agrupaPerTipus(articles: ArticleLlista[], avui: string): GrupsAr
       // `a.tipus` deixa de ser `never` aquí i el projecte no compila, en
       // comptes d'empassar-se el tipus nou en silenci com si fos un document.
       const tipusImpossible: never = a.tipus
-      throw new Error(`Tipus d’article desconegut: ${tipusImpossible}`)
+      // Però si, tot i això, arriba un valor de debò fora de la unió —una
+      // fila corrupta, una migració a mitges, algú que hi ha escrit
+      // directament—, llançar aquí no és segur: l'ErrorBoundary envolta
+      // TOTA l'aplicació, no només aquesta pantalla, i un sol article
+      // estrany deixaria tothom en blanc. Es tracta com un document, el
+      // calaix més neutre, en comptes de fer-hi caure la resta amb ell.
+      g.documents.push({ ...a, tipus: tipusImpossible })
     }
   }
   return g
