@@ -91,11 +91,18 @@ create or replace function app_private.coneixement_segell() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   if tg_op = 'INSERT' then
-    new.autor := app_private.email();
+    -- Fora d'una sessió amb JWT (l'editor SQL, `service_role`, un seed, un
+    -- backfill) `app_private.email()` torna nul: no és cap sessió d'usuari,
+    -- és una càrrega feta des de fora. `autor` no admet nuls, així que hi
+    -- cau un valor buit en comptes de fer petar la càrrega.
+    new.autor := coalesce(app_private.email(), '');
     new.creat_el := to_char(now() at time zone 'Europe/Madrid', 'YYYY-MM-DD');
     if not app_private.admin() then new.publicat := false; end if;
   else
-    new.autor := old.autor;
+    -- Mateix motiu: si mai hi hagués una fila amb `autor` nul (una càrrega
+    -- feta abans d'aquest `coalesce`), una actualització posterior sense
+    -- sessió no pot tornar a fer petar el not-null.
+    new.autor := coalesce(old.autor, '');
     new.creat_el := old.creat_el;
     if not app_private.admin() then new.publicat := old.publicat; end if;
   end if;

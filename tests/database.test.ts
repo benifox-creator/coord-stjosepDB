@@ -1415,6 +1415,18 @@ describe('redactar la base de coneixement', () => {
     expect((await article(id)).autor).toBe('redactor@stjosep.org')
   })
 
+  it('una càrrega sense sessió (seed, editor SQL) no fa petar l’autor', async () => {
+    // Sense `set request.jwt.claims` (com fa `asUser`), `app_private.email()`
+    // torna nul: exactament la situació d'un seed, un backfill o un insert
+    // fet des de l'editor SQL de Supabase. Abans d'aquest arreglo, aquí
+    // petava amb "null value in column autor violates not-null constraint".
+    await db.exec('reset role')
+    const id = (await db.query<{id:string}>(`
+      insert into public.coneixement(titol, categoria, contingut)
+      values('Seed', 'Administratiu', 'x') returning id`)).rows[0].id
+    expect((await article(id)).autor).toBe('')
+  })
+
   it('publicar és només del coordinador', async () => {
     const id = await unArticle()
     await asUser('redactor@stjosep.org')
