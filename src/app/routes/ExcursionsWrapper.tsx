@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ExcursionsPage } from '../../modules/excursions/ExcursionsPage'
 import { ExcursioForm } from '../../modules/excursions/ExcursioForm'
 import { ExcursioDetall } from '../../modules/excursions/ExcursioDetall'
 import { CopiarCursAnterior } from '../../modules/excursions/CopiarCursAnterior'
+import { DemanarPressupostModal } from '../../modules/excursions/DemanarPressupostModal'
+import { ImportarPressupostModal } from '../../modules/excursions/ImportarPressupostModal'
+import { pendentsDePressupost } from '../../modules/excursions/pressupostExport.utils'
 import { useExcursions } from '../../modules/excursions/useExcursions'
 import { useFinances } from '../../modules/excursions/useFinances'
+import { useAutocarsResum } from '../../modules/excursions/useAutocarsResum'
 import { potAprovar, potGestionar, potEditar, potVeureCostos } from '../../modules/excursions/permisos'
 import { parametresPreu } from '../../modules/excursions/parametres'
 import { proposaDates } from '../../modules/excursions/datesCircular'
@@ -36,17 +40,39 @@ export default function ExcursionsWrapper() {
   const diesAbansCircular = useConfigStore((s) => dies(s.getValues('excursions.dies-abans-circular'), 15))
   const diesAbansTermini = useConfigStore((s) => dies(s.getValues('excursions.dies-abans-termini'), 8))
   const confirmaPreu = useFinances((s) => s.confirma)
+  const empreses = useConfigStore((s) => s.getValues('excursions.empreses-autocar'))
+  const autocarsResum = useAutocarsResum((s) => s.resum)
+  const carregaAutocars = useAutocarsResum((s) => s.carrega)
 
   const [formObert, setFormObert] = useState(false)
   const [editant, setEditant] = useState<Excursio | null>(null)
   const [oberta, setOberta] = useState<Excursio | null>(null)
   const [copiant, setCopiant] = useState(false)
+  const [demanantPressupost, setDemanantPressupost] = useState(false)
+  const [important, setImportant] = useState(false)
 
   const cursDesti = schoolYear()
   // El curs anterior es dedueix restant un any als dos extrems: "2026-2027" → "2025-2026".
   const cursOrigen = `${Number(cursDesti.slice(0, 4)) - 1}-${Number(cursDesti.slice(5)) - 1}`
 
+  const potGestionarExcursions = potGestionar(rol, jo)
+  const potCostos = potVeureCostos(rol, jo)
+  // El pas d'arrodoniment i la previsió no afecten l'IVA: `parametresPreu`
+  // reaprofitat aquí només per l'IVA, sense repetir-ne el càlcul.
+  const ivaPct = parametresPreu(config, '').ivaPct
+
+  const pendentsDePressupostIds = useMemo(
+    () => new Set(pendentsDePressupost(excursions, autocarsResum.ambPreu).map((e) => e.id)),
+    [excursions, autocarsResum],
+  )
+
   useEffect(() => { void load() }, [load])
+  // `excursio_autocars` té l'accés restringit: a qui no en tingui, l'RLS li
+  // torna zero files, que no és el mateix que «cap sortida en té». Per això
+  // només es llegeix si `potCostos`; si no, el resum es queda buit i el
+  // filtre de pendents tracta totes les sortides amb autocar com a pendents,
+  // que és el pitjor cas segur (mai amaga una que de debò ho és).
+  useEffect(() => { if (potCostos) void carregaAutocars() }, [potCostos, carregaAutocars])
 
   async function handleDesar(data: ExcursioFormData, enviar: boolean) {
     const id = editant ? (await editar(editant.id, data), editant.id) : (await crear(data)).id
@@ -63,11 +89,15 @@ export default function ExcursionsWrapper() {
         loading={loading}
         error={error}
         potAprovar={potAprovar(rol)}
-        potVeureCostos={potVeureCostos(rol, jo)}
+        potVeureCostos={potCostos}
+        potGestionar={potGestionarExcursions}
+        pendentsDePressupostIds={pendentsDePressupostIds}
         onNova={() => setFormObert(true)}
         onObrir={setOberta}
         onRefresh={() => void load()}
         onCopiarCursAnterior={() => setCopiant(true)}
+        onDemanarPressupost={() => setDemanantPressupost(true)}
+        onImportarPressupost={() => setImportant(true)}
         onAprovar={async (ids) => {
           // D'una en una i no en paral·lel: si alguna falla, es veu quina i les
           // anteriors ja han quedat aprovades.
@@ -75,6 +105,33 @@ export default function ExcursionsWrapper() {
           await load()
         }}
       />
+
+      {demanantPressupost && (
+        <DemanarPressupostModal
+          excursions={excursions}
+          ambAutocars={autocarsResum.ambPreu}
+          empreses={empreses}
+          curs={cursDesti}
+          onClose={() => setDemanantPressupost(false)}
+        />
+      )}
+
+      {important && (
+        <ImportarPressupostModal
+          excursions={excursions}
+          ambAutocars={autocarsResum.preus}
+          ivaPct={ivaPct}
+          onImportar={async (items) => {
+            const resultat = await useFinances.getState().importaPressupostos(items)
+            // Cal rellegir excursions i autocars: si no, una sortida que
+            // acaba de rebre preu seguiria sortint com a pendent.
+            await load()
+            if (potCostos) await carregaAutocars()
+            return resultat
+          }}
+          onClose={() => setImportant(false)}
+        />
+      )}
 
       {oberta && (
         <ExcursioDetall

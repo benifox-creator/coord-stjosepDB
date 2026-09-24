@@ -133,6 +133,9 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
   'excursions.arrodoniment': ['0.5'],
   'excursions.dies-abans-circular': ['15'],
   'excursions.dies-abans-termini': ['8'],
+  // Buida a posta: el centre n'hi posa les seves. Serveix per titular el full
+  // que s'envia; no es desa a cap fila.
+  'excursions.empreses-autocar': [],
   // Textos de la circular: provenen de la carta que ja envia el centre.
   // El text de devolucions és deliberadament diferent perquè el centre va
   // demanar-ho: no és per pagar tard sinó per no assistir i avisar tard.

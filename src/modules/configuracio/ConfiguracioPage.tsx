@@ -934,6 +934,12 @@ const LLISTA_PASSOS_PAGAMENT: LlistaConfig = {
   descripcio: 'Cada entrada és un pas de la circular, en l’ordre que ha de seguir la família.',
 }
 
+const LLISTA_EMPRESES_AUTOCAR: LlistaConfig = {
+  clau: 'excursions.empreses-autocar',
+  label: 'Empreses d’autocar',
+  descripcio: 'Empreses que apareixen al desplegable en demanar un pressupost. No es desa a cap sortida, només titula el full que se’ls envia.',
+}
+
 export function ConfiguracioPage() {
   const loaded = useConfigStore((s) => s.loaded)
   const loading = useConfigStore((s) => s.loading)
@@ -1048,6 +1054,14 @@ export function ConfiguracioPage() {
                   que són comuns a totes les etapes.
                 </p>
                 <CampsNumericsEditor camps={CAMPS_PREU_EXCURSIONS} />
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pressupostos</p>
+                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                  Empreses que es poden triar en demanar un pressupost d’autocar.
+                </p>
+                <LlistaEditor llista={LLISTA_EMPRESES_AUTOCAR} />
               </div>
             </div>
           </section>
