@@ -256,13 +256,23 @@ export function ConeixementPage({
 }: Props) {
   const [textCerca, setTextCerca] = useState('')
   const [filtreTipus, setFiltreTipus] = useState<TipusArticle | ''>('')
+  const [filtreCategoria, setFiltreCategoria] = useState('')
   const [publicantId, setPublicantId] = useState<string | null>(null)
 
   const avui = useMemo(() => formatDateISO(new Date()), [])
 
+  const categories = useMemo(() => {
+    const set = new Set(articles.map((a) => a.Categoria).filter(Boolean))
+    return Array.from(set).sort()
+  }, [articles])
+
   const byId = useMemo(() => new Map(articles.map((a) => [a.id, a] as const)), [articles])
   const llistes = useMemo(() => articles.map(aLlista), [articles])
-  const trobats = useMemo(() => cerca(llistes, textCerca), [llistes, textCerca])
+  const trobatsPerText = useMemo(() => cerca(llistes, textCerca), [llistes, textCerca])
+  const trobats = useMemo(
+    () => (filtreCategoria ? trobatsPerText.filter((a) => a.categoria === filtreCategoria) : trobatsPerText),
+    [trobatsPerText, filtreCategoria],
+  )
   const grups = useMemo(() => agrupaPerTipus(trobats, avui), [trobats, avui])
 
   const stats = useMemo(() => ({
@@ -329,7 +339,7 @@ export function ConeixementPage({
           </div>
         </div>
 
-        {/* KPIs coordinador */}
+        {/* KPIs: només qui veu els esborranys en treu res, la resta ja només veu publicats */}
         {esCoordinador && (
           <div className="flex gap-5 mb-4">
             {[
@@ -367,9 +377,21 @@ export function ConeixementPage({
               <option key={valor} value={valor}>{etiqueta}</option>
             ))}
           </select>
-          {(textCerca || filtreTipus) && (
+          {categories.length > 0 && (
+            <select
+              value={filtreCategoria}
+              onChange={(e) => setFiltreCategoria(e.target.value)}
+              className="input text-sm w-48"
+            >
+              <option value="">Totes les categories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+          {(textCerca || filtreTipus || filtreCategoria) && (
             <button
-              onClick={() => { setTextCerca(''); setFiltreTipus('') }}
+              onClick={() => { setTextCerca(''); setFiltreTipus(''); setFiltreCategoria('') }}
               className="text-xs text-gray-500 hover:text-gray-700 px-2"
             >
               Netejar filtres
