@@ -112,6 +112,7 @@ export default function ExcursionsWrapper() {
           ambAutocars={autocarsResum.ambPreu}
           empreses={empreses}
           curs={cursDesti}
+          potVeureCostos={potCostos}
           onClose={() => setDemanantPressupost(false)}
         />
       )}

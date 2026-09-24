@@ -8,6 +8,14 @@ interface Props {
   ambAutocars: ReadonlySet<string>
   empreses: string[]
   curs: string
+  /**
+   * Si qui mira pot veure els costos. `ambAutocars` ve buit igualment quan no
+   * hi pot accedir —l'RLS li nega la lectura, no li diu "cap sortida en té"—
+   * i per això la llista de pendents sembla, per a ell, la mateixa que si de
+   * debò no n'hi hagués cap. Aquesta propietat és l'única manera de distingir
+   * les dues situacions: no es dedueix mai de si `ambAutocars` és buit.
+   */
+  potVeureCostos: boolean
   onClose: () => void
 }
 
@@ -17,7 +25,7 @@ const OPCIONS_DEMANA: { valor: QueEsDemana; etiqueta: string }[] = [
   { valor: 'ambdues', etiqueta: 'Ambdues' },
 ]
 
-export function DemanarPressupostModal({ excursions, ambAutocars, empreses, curs, onClose }: Props) {
+export function DemanarPressupostModal({ excursions, ambAutocars, empreses, curs, potVeureCostos, onClose }: Props) {
   const pendents = pendentsDePressupost(excursions, ambAutocars)
   const [empresa, setEmpresa] = useState(empreses[0] ?? '')
   const [demana, setDemana] = useState<QueEsDemana>('autocar')
@@ -89,6 +97,13 @@ export function DemanarPressupostModal({ excursions, ambAutocars, empreses, curs
 
           {empreses.length === 0 && (
             <p className="text-xs text-gray-500">Es pot configurar la llista d’empreses a Configuració.</p>
+          )}
+
+          {!potVeureCostos && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              No pots veure els costos: aquesta llista no pot distingir les sortides que ja tenen un pressupost
+              demanat de les que no. Pot ser que alguna de les que hi surten ja en tingui un.
+            </p>
           )}
 
           {pendents.length === 0 ? (

@@ -130,14 +130,16 @@ export function ExcursionsPage({
             <option value="">Tot el curs</option>
             {MESOS.map((m) => <option key={m.valor} value={m.valor}>{m.nom}</option>)}
           </select>
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 px-1">
-            <input
-              type="checkbox"
-              checked={nomesPendentsPressupost}
-              onChange={(e) => setNomesPendentsPressupost(e.target.checked)}
-            />
-            Només pendents de pressupost
-          </label>
+          {potVeureCostos && (
+            <label className="flex items-center gap-1.5 text-xs text-gray-600 px-1">
+              <input
+                type="checkbox"
+                checked={nomesPendentsPressupost}
+                onChange={(e) => setNomesPendentsPressupost(e.target.checked)}
+              />
+              Només pendents de pressupost
+            </label>
+          )}
           {potAprovar && aprovables.length > 0 && (
             <button
               onClick={handleAprovar}
