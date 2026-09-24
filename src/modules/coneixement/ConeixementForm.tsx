@@ -2,10 +2,19 @@ import { useState, useEffect } from 'react'
 import { X, Plus, Trash2, Loader2, Link as LinkIcon } from 'lucide-react'
 import { useConfigStore } from '../../store/configStore'
 import { parseLinks } from './coneixement.utils'
+import type { TipusArticle } from './articles'
 import type { Article, ArticleFormData, ArticleLink } from './types'
 
 const EMPTY_LINK: ArticleLink = { label: '', url: '' }
 const MAX_LINKS = 5
+
+const TIPUS_LABELS: Record<TipusArticle, string> = {
+  pregunta: 'Pregunta',
+  procediment: 'Com es fa',
+  document: 'Document',
+  avis: 'Avís',
+}
+const TIPUS_OPCIONS = Object.keys(TIPUS_LABELS) as TipusArticle[]
 
 interface Props {
   inicial?: Article
@@ -17,6 +26,7 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
   const categories = useConfigStore((s) => s.getValues('coneixement.categories'))
 
   const [titol, setTitol] = useState(inicial?.Titol ?? '')
+  const [tipus, setTipus] = useState<TipusArticle>(inicial?.Tipus ?? 'pregunta')
   const [categoria, setCategoria] = useState(inicial?.Categoria ?? '')
   const [contingut, setContingut] = useState(inicial?.Contingut ?? '')
   const [tags, setTags] = useState(inicial?.Tags ?? '')
@@ -24,9 +34,18 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
     const parsed = inicial ? parseLinks(inicial.Links) : []
     return parsed.length > 0 ? parsed : []
   })
-  const [publicat, setPublicat] = useState(inicial ? inicial.Publicat === 'true' : false)
+  const [caducaEl, setCaducaEl] = useState(inicial?.CaducaEl ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Un avís sense data quedaria a la llista per sempre, i una data en un
+  // altre tipus la base de dades la rebutja: `(tipus = 'avis') = (caduca_el
+  // is not null)`. Buidem-la en canviar de tipus perquè el desat mai xoqui
+  // amb aquesta regla.
+  function handleTipusChange(nou: TipusArticle) {
+    setTipus(nou)
+    if (nou !== 'avis') setCaducaEl('')
+  }
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -51,17 +70,19 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
   async function handleGuardar() {
     if (!titol.trim()) { setError('El títol és obligatori.'); return }
     if (!categoria) { setError('Selecciona una categoria.'); return }
+    if (tipus === 'avis' && !caducaEl) { setError('La data de caducitat és obligatòria per als avisos.'); return }
 
     setSaving(true)
     setError(null)
     try {
       await onGuardar({
         Titol: titol.trim(),
+        Tipus: tipus,
         Categoria: categoria,
         Contingut: contingut.trim(),
         Tags: tags.trim(),
         Links: links,
-        Publicat: publicat,
+        CaducaEl: tipus === 'avis' ? caducaEl : null,
       })
       onClose()
     } catch (err) {
@@ -99,6 +120,38 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
               autoFocus
             />
           </div>
+
+          {/* Tipus */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Tipus <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={tipus}
+              onChange={(e) => handleTipusChange(e.target.value as TipusArticle)}
+              className="input w-full"
+            >
+              {TIPUS_OPCIONS.map((t) => (
+                <option key={t} value={t}>{TIPUS_LABELS[t]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Data de caducitat: només els avisos */}
+          {tipus === 'avis' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                Data de caducitat <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={caducaEl}
+                onChange={(e) => setCaducaEl(e.target.value)}
+                className="input w-full"
+              />
+              <p className="text-xs text-gray-400 mt-1">Últim dia que es mostra l’avís.</p>
+            </div>
+          )}
 
           {/* Categoria */}
           <div>
@@ -185,26 +238,6 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
                 </button>
               )}
             </div>
-          </div>
-
-          {/* Publicat toggle */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <div>
-              <p className="text-sm font-medium text-text-main">Publicat</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {publicat
-                  ? 'Visible per a tots els usuaris'
-                  : 'Esborrany — només el veus tu'}
-              </p>
-            </div>
-            <button
-              onClick={() => setPublicat((v) => !v)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${publicat ? 'bg-green-500' : 'bg-gray-300'}`}
-            >
-              <span
-                className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${publicat ? 'translate-x-5' : ''}`}
-              />
-            </button>
           </div>
         </div>
 
