@@ -43,6 +43,7 @@ export default function ExcursionsWrapper() {
   const empreses = useConfigStore((s) => s.getValues('excursions.empreses-autocar'))
   const autocarsResum = useAutocarsResum((s) => s.resum)
   const carregaAutocars = useAutocarsResum((s) => s.carrega)
+  const autocarsError = useAutocarsResum((s) => s.error)
 
   const [formObert, setFormObert] = useState(false)
   const [editant, setEditant] = useState<Excursio | null>(null)
@@ -87,7 +88,10 @@ export default function ExcursionsWrapper() {
       <ExcursionsPage
         excursions={excursions}
         loading={loading}
-        error={error}
+        // Si `useAutocarsResum` peta, el filtre de pendents mentiria en
+        // silenci sense aquest avís: se sumen al mateix missatge d'error que
+        // ja ensenya la pantalla, sense afegir-hi cap element nou.
+        error={error ?? autocarsError}
         potAprovar={potAprovar(rol)}
         potVeureCostos={potCostos}
         potGestionar={potGestionarExcursions}
