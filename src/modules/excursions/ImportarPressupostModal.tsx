@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, Loader2, Upload, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import type { Excursio } from './types'
 import {
@@ -45,28 +45,36 @@ export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImp
   const [errorFull, setErrorFull] = useState('')
   const [analitzat, setAnalitzat] = useState<{ columnes: string[]; files: FilaPressupost[] } | null>(null)
   const [fallits, setFallits] = useState<ResultatImportPressupostos | null>(null)
+  const [llegint, setLlegint] = useState(false)
 
-  // Es torna a llegir cada cop que canvia la casella de l'IVA: no hi ha cap
-  // matriu guardada al component per reinterpretar en sec (tota l'E/S i la
-  // interpretació viuen juntes a `parsejaExcelPressupost`), així que un canvi
-  // a la casella torna a cridar el mòdul amb el mateix fitxer. Mentre
-  // aquesta crida és en curs, `analitzat` i `errorFull` conserven el resultat
-  // anterior; `parsing`, més avall, es dedueix de si ja hi ha fitxer i encara
-  // no hi ha ni resultat ni error del primer intent.
+  // Comptador de generació: si es tria un fitxer i tot seguit es toca la
+  // casella de l'IVA, hi ha dues lectures en curs i la primera pot arribar
+  // després de la segona. Cada gestor que engega una lectura nova l'ha de
+  // guanyar, així que només s'escriu l'estat si la resposta és de la darrera
+  // crida (mateix patró que `generacio` a useExcursions.ts).
+  const generacioRef = useRef(0)
+
+  // `analitzat`, `errorFull` i `llegint` es netegen als gestors (handleFile
+  // i el canvi de casella), no aquí: aquest efecte només fa l'E/S i, en
+  // resoldre's, escriu el resultat. Cap `setState` al cos de l'efecte.
   useEffect(() => {
     if (!file) return
-    let cancelat = false
+    const meva = ++generacioRef.current
     parsejaExcelPressupost(file, excursions, ambAutocars, portaIva, ivaPct)
-      .then((res) => { if (!cancelat) { setAnalitzat(res); setErrorFull('') } })
+      .then((res) => {
+        if (meva !== generacioRef.current) return
+        setAnalitzat(res)
+        setErrorFull('')
+        setLlegint(false)
+      })
       .catch((err) => {
-        if (cancelat) return
+        if (meva !== generacioRef.current) return
         setAnalitzat(null)
         setErrorFull(err instanceof Error ? err.message : 'Error llegint el fitxer.')
+        setLlegint(false)
       })
-    return () => { cancelat = true }
   }, [file, excursions, ambAutocars, portaIva, ivaPct])
 
-  const parsing = !!file && !analitzat && !errorFull
   const resultat = analitzat?.files ?? null
   const columnesReconegudes = analitzat?.columnes ?? []
   const columnesAbsents = COLUMNES_DE_PREU.filter((c) => !columnesReconegudes.includes(c))
@@ -81,7 +89,24 @@ export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImp
     if (!nou) return
     setError('')
     setFallits(null)
+    setAnalitzat(null)
+    setErrorFull('')
+    setLlegint(true)
     setFile(nou)
+  }
+
+  // La lectura només es torna a disparar si ja hi ha un fitxer triat (l'efecte
+  // no fa res sense fitxer): si es netegés i es marqués "llegint" igualment
+  // sense fitxer, la pantalla es quedaria carregant per sempre, perquè
+  // l'efecte mai respondria per apagar-ho.
+  function handleIva(e: React.ChangeEvent<HTMLInputElement>) {
+    const marcada = e.target.checked
+    if (file) {
+      setAnalitzat(null)
+      setErrorFull('')
+      setLlegint(true)
+    }
+    setPortaIva(marcada)
   }
 
   async function handleImportar() {
@@ -120,23 +145,23 @@ export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImp
           {!fallits && (
             <>
               <label className="flex items-center gap-2 text-xs text-gray-600">
-                <input type="checkbox" checked={portaIva} onChange={(e) => setPortaIva(e.target.checked)} disabled={important} />
+                <input type="checkbox" checked={portaIva} onChange={handleIva} disabled={important} />
                 Els preus d’aquest fitxer porten IVA
               </label>
               <p className="text-xs text-gray-500 -mt-2">Es desarà sempre el net, tingui IVA o no el full.</p>
 
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-lg py-6 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
                 <Upload size={20} className="text-gray-400" />
-                <span className="text-sm text-gray-500">{parsing ? 'Llegint el fitxer...' : 'Selecciona un fitxer .xlsx'}</span>
-                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} disabled={parsing || important} />
+                <span className="text-sm text-gray-500">{llegint ? 'Llegint el fitxer...' : 'Selecciona un fitxer .xlsx'}</span>
+                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} disabled={llegint || important} />
               </label>
             </>
           )}
 
           {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
-          {errorFull && <p role="alert" className="text-xs text-red-700">{errorFull}</p>}
+          {!llegint && errorFull && <p role="alert" className="text-xs text-red-700">{errorFull}</p>}
 
-          {analitzat && !errorFull && (
+          {!llegint && analitzat && !errorFull && (
             <div className="text-xs text-gray-500 space-y-1">
               {/* Les quatre columnes surten sempre, trobades o no: quan una
                   empresa reanomena tota una parella, l'única pista que en
@@ -183,7 +208,7 @@ export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImp
             </div>
           )}
 
-          {resultat && !fallits && (
+          {!llegint && resultat && !fallits && (
             <div>
               <p className="text-xs text-gray-500 mb-2">
                 {valides.length} {valides.length === 1 ? 'fila s’importarà' : 'files s’importaran'}
