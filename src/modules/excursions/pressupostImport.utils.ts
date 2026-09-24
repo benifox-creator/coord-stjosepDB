@@ -110,12 +110,32 @@ export function interpretaPressupost(
   if (idx.codi === -1) {
     throw new Error('El full no té la columna «Codi». Fes servir el fitxer que va sortir de l’aplicació.')
   }
-  // Que no es reconegui cap de les quatre columnes de preu no és «cap fila
-  // té preu» (legítim: l'empresa encara no ha pressupostat res), és que
+
+  // El fitxer que torna és el mateix que vam enviar, i aquell sempre porta
+  // parelles senceres: «Places» + «Preu autocar» per al transport, «Preu per
+  // alumne» + «Preu total del grup» per a l'activitat (o totes quatre). No hi
+  // ha cap full legítim amb mitja parella: si en falta una de les dues, el
+  // full està trencat (algú n'ha reanomenat una capçalera), i cal dir quina
+  // falta abans que la fila es llegeixi com «sense preu» i desaparegui en
+  // silenci.
+  const parellaTrencada = (a: number, b: number, nomA: string, nomB: string): void => {
+    if ((a === -1) === (b === -1)) return
+    const falta = a === -1 ? nomA : nomB
+    throw new Error(`El full no té la columna «${falta}». Fes servir el fitxer que va sortir de l’aplicació.`)
+  }
+  parellaTrencada(idx.places, idx.preuAutocar, 'Places', 'Preu autocar')
+  parellaTrencada(idx.perAlumne, idx.total, 'Preu per alumne', 'Preu total del grup')
+
+  // Un cop es descarten les mitges parelles, el que queda és: les dues
+  // parelles completes, només una completa (autocar o activitat: totes dues
+  // són un full vàlid), o cap. Que no es reconegui cap parella no és «cap
+  // fila té preu» (legítim: l'empresa encara no ha pressupostat res), és que
   // l'aplicació no sap llegir aquest full —per exemple algú l'ha reanomenat
   // sencer. Sense aquest tall, totes les files es llegirien com «sense preu»
   // i la sortida desapareixeria del resultat sense cap avís.
-  if (idx.places === -1 && idx.preuAutocar === -1 && idx.perAlumne === -1 && idx.total === -1) {
+  const autocarComplet = idx.places !== -1 && idx.preuAutocar !== -1
+  const activitatCompleta = idx.perAlumne !== -1 && idx.total !== -1
+  if (!autocarComplet && !activitatCompleta) {
     throw new Error(
       'El full no té cap columna de preu (Places, Preu autocar, Preu per alumne, Preu total del grup). ' +
       'Fes servir el fitxer que va sortir de l’aplicació.',

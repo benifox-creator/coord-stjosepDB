@@ -218,13 +218,65 @@ describe('cap columna de preu reconeguda', () => {
       ['Places', 'Preu per alumne', 'Preu total del grup'])
   })
 
-  it('«Preu bus» en comptes de «Preu autocar» no peta si les columnes d’activitat hi són', () => {
-    // Encara té columnes de preu reconegudes (Places, Preu per alumne, Preu
-    // total del grup): no és el cas de «cap columna reconeguda».
+  it('«Preu bus» en comptes de «Preu autocar» peta encara que les columnes d’activitat hi siguin', () => {
+    // Ronda 3: encara reconeix columnes de preu (Places, Preu per alumne,
+    // Preu total del grup), però «Places» sense la seva parella «Preu
+    // autocar» és mitja parella —el full està trencat, no és «cap columna
+    // reconeguda»— i abans es deixava passar sense avís.
     const capçaleres = CAPÇALERES.map((c) => (c === 'Preu autocar' ? 'Preu bus' : c))
     expect(() => interpretaPressupost(
       [capçaleres, fila('EXC-0001', 55, 610)], [excursio()], SENSE_AUTOCARS, false, 10,
-    )).not.toThrow()
+    )).toThrow('Preu autocar')
+  })
+})
+
+describe('les parelles de columnes de preu han de ser senceres', () => {
+  // El full que torna és el mateix que vam enviar, i aquell sempre porta
+  // parelles senceres: Places + Preu autocar per al transport, Preu per
+  // alumne + Preu total del grup per a l'activitat, o totes quatre. Mitja
+  // parella vol dir capçalera reanomenada, no «l'empresa no ha contestat».
+
+  it('«Places» reanomenada, amb «Preu autocar» present, peta nomenant «Places»', () => {
+    const capçaleres = CAPÇALERES.map((c) => (c === 'Places' ? 'Seients' : c))
+    expect(() => interpretaPressupost(
+      [capçaleres, fila('EXC-0001', 55, 610)], [excursio()], SENSE_AUTOCARS, false, 10,
+    )).toThrow('Places')
+  })
+
+  it('«Preu per alumne» present i «Preu total del grup» reanomenada peta nomenant la que falta', () => {
+    const capçaleres = CAPÇALERES.map((c) => (c === 'Preu total del grup' ? 'Total grup' : c))
+    expect(() => interpretaPressupost(
+      [capçaleres, fila('EXC-0001', '', '', 8)], [excursio()], SENSE_AUTOCARS, false, 10,
+    )).toThrow('Preu total del grup')
+  })
+
+  it('un full només amb la parella d’autocar és vàlid', () => {
+    const r = interpretaPressupost(
+      [['Codi', 'Places', 'Preu autocar'], ['EXC-0001', 55, 610]],
+      [excursio()], SENSE_AUTOCARS, false, 10,
+    )
+    expect(r[0].valid).toBe(true)
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 610 }])
+    expect(r[0].data?.preuActivitat).toBeUndefined()
+  })
+
+  it('un full només amb la parella d’activitat és vàlid', () => {
+    const r = interpretaPressupost(
+      [['Codi', 'Preu per alumne', 'Preu total del grup'], ['EXC-0001', 8, '']],
+      [excursio()], SENSE_AUTOCARS, false, 10,
+    )
+    expect(r[0].valid).toBe(true)
+    expect(r[0].data?.autocars).toEqual([])
+    expect(r[0].data?.preuActivitat).toBe(8)
+    expect(r[0].data?.preuActivitatTipus).toBe('per_alumne')
+  })
+
+  it('el full sencer amb les quatre columnes segueix funcionant', () => {
+    const r = interpretaPressupost(
+      [CAPÇALERES, fila('EXC-0001', 55, 610)], [excursio()], SENSE_AUTOCARS, false, 10,
+    )
+    expect(r[0].valid).toBe(true)
+    expect(r[0].data?.autocars).toEqual([{ places: 55, preu: 610 }])
   })
 })
 
