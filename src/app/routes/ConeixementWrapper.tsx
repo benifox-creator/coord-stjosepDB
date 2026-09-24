@@ -9,7 +9,7 @@ import { useUsuarisStore, potEliminar } from '../../store/usuarisStore'
 export default function ConeixementWrapper() {
   const rol = useUsuarisStore((s) => s.rol)
   const esCoordinador = potEliminar(rol)
-  const { articles, loading, error, crear, editar, togglePublicat, eliminar, refetch } = useConeixement(esCoordinador)
+  const { articles, loading, error, crear, editar, togglePublicat, publica, eliminar, refetch } = useConeixement(esCoordinador)
   const [formObert, setFormObert] = useState(false)
   const [editant, setEditant] = useState<Article | null>(null)
   const [seleccionat, setSeleccionat] = useState<Article | null>(null)
@@ -29,6 +29,7 @@ export default function ConeixementWrapper() {
         onNou={() => setFormObert(true)}
         onVeureDetall={setSeleccionat}
         onRefresh={refetch}
+        publica={publica}
       />
       {(formObert || editant) && (
         <ConeixementForm
