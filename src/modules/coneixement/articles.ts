@@ -47,7 +47,14 @@ export function agrupaPerTipus(articles: ArticleLlista[], avui: string): GrupsAr
     }
     if (a.tipus === 'pregunta') g.preguntes.push(a)
     else if (a.tipus === 'procediment') g.procediments.push(a)
-    else g.documents.push(a)
+    else if (a.tipus === 'document') g.documents.push(a)
+    else {
+      // Exhaustivitat a posta: si TipusArticle creix amb un cinquè valor,
+      // `a.tipus` deixa de ser `never` aquí i el projecte no compila, en
+      // comptes d'empassar-se el tipus nou en silenci com si fos un document.
+      const tipusImpossible: never = a.tipus
+      throw new Error(`Tipus d’article desconegut: ${tipusImpossible}`)
+    }
   }
   return g
 }
