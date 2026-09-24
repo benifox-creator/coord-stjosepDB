@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, RefreshCw, Copy } from 'lucide-react'
+import { Plus, RefreshCw, Copy, FileText, Upload } from 'lucide-react'
 import type { Excursio } from './types'
 import { ESTATS_EXCURSIO, ESTAT_COLORS, ETAPES_EXCURSIO } from './types'
 
@@ -17,20 +17,25 @@ interface Props {
   error: string | null
   potAprovar: boolean
   potVeureCostos: boolean
+  potGestionar: boolean
+  pendentsDePressupostIds: ReadonlySet<string>
   onNova: () => void
   onObrir: (e: Excursio) => void
   onRefresh: () => void
   onAprovar: (ids: string[]) => Promise<void>
   onCopiarCursAnterior: () => void
+  onDemanarPressupost: () => void
+  onImportarPressupost: () => void
 }
 
 export function ExcursionsPage({
-  excursions, loading, error, potAprovar, potVeureCostos,
-  onNova, onObrir, onRefresh, onAprovar, onCopiarCursAnterior,
+  excursions, loading, error, potAprovar, potVeureCostos, potGestionar, pendentsDePressupostIds,
+  onNova, onObrir, onRefresh, onAprovar, onCopiarCursAnterior, onDemanarPressupost, onImportarPressupost,
 }: Props) {
   const [etapa, setEtapa] = useState('')
   const [estat, setEstat] = useState('')
   const [mes, setMes] = useState('')
+  const [nomesPendentsPressupost, setNomesPendentsPressupost] = useState(false)
   const [seleccio, setSeleccio] = useState<string[]>([])
   const [aprovant, setAprovant] = useState(false)
 
@@ -38,7 +43,8 @@ export function ExcursionsPage({
     (!etapa || e.Etapa === etapa)
     && (!estat || e.Estat === estat)
     && (!mes || (e.Data ?? '').slice(5, 7) === mes)
-  ), [excursions, etapa, estat, mes])
+    && (!nomesPendentsPressupost || pendentsDePressupostIds.has(e.id))
+  ), [excursions, etapa, estat, mes, nomesPendentsPressupost, pendentsDePressupostIds])
 
   const pendents = excursions.filter((e) => e.Estat === 'Proposada').length
   // Només es poden aprovar en bloc les que són visibles i estan proposades: si
@@ -76,6 +82,22 @@ export function ExcursionsPage({
                 Economia
               </Link>
             )}
+            {potGestionar && (
+              <button
+                onClick={onDemanarPressupost}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5"
+              >
+                <FileText size={13} /> Demana pressupost
+              </button>
+            )}
+            {potVeureCostos && (
+              <button
+                onClick={onImportarPressupost}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5"
+              >
+                <Upload size={13} /> Importa pressupost
+              </button>
+            )}
             <button onClick={onRefresh} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Actualitza">
               <RefreshCw size={16} />
             </button>
@@ -108,6 +130,16 @@ export function ExcursionsPage({
             <option value="">Tot el curs</option>
             {MESOS.map((m) => <option key={m.valor} value={m.valor}>{m.nom}</option>)}
           </select>
+          {potVeureCostos && (
+            <label className="flex items-center gap-1.5 text-xs text-gray-600 px-1">
+              <input
+                type="checkbox"
+                checked={nomesPendentsPressupost}
+                onChange={(e) => setNomesPendentsPressupost(e.target.checked)}
+              />
+              Només pendents de pressupost
+            </label>
+          )}
           {potAprovar && aprovables.length > 0 && (
             <button
               onClick={handleAprovar}
