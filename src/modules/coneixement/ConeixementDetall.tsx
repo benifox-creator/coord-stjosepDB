@@ -10,15 +10,18 @@ interface Props {
   article: Article
   /** Crea, edita i veu els esborranys: rol coordinador o casella marcada. */
   potRedactar: boolean
-  /** Publica, retira i esborra un article publicat: només el coordinador. */
+  /** Publica i retira: només el coordinador. */
   potPublicar: boolean
+  /** Esborra aquest article concret: el coordinador sempre, qui redacta
+   * només mentre sigui un esborrany seu. Ve calculat amb `potEliminar`. */
+  potEliminar: boolean
   onClose: () => void
   onEditar: () => void
   onTogglePublicat: (article: Article) => Promise<void>
   onEliminar: (article: Article) => Promise<void>
 }
 
-export function ConeixementDetall({ article, potRedactar, potPublicar, onClose, onEditar, onTogglePublicat, onEliminar }: Props) {
+export function ConeixementDetall({ article, potRedactar, potPublicar, potEliminar, onClose, onEditar, onTogglePublicat, onEliminar }: Props) {
   const [confirmEliminar, setConfirmEliminar] = useState(false)
   const [eliminant, setEliminant] = useState(false)
   const [toggling, setToggling] = useState(false)
@@ -151,8 +154,10 @@ export function ConeixementDetall({ article, potRedactar, potPublicar, onClose, 
           )}
         </div>
 
-        {/* Footer: editar és de qui redacta; publicar i esborrar un cop
-            publicat, només del coordinador (`potPublicar`). */}
+        {/* Footer: editar és de qui redacta; publicar és només del
+            coordinador (`potPublicar`); esborrar depèn de l'article
+            concret (`potEliminar`) — un redactor pot esborrar el seu
+            esborrany, però no un cop publicat. */}
         {potRedactar && (
           <div className="border-t border-gray-200 px-6 py-4 shrink-0">
             {confirmEliminar ? (
@@ -178,7 +183,7 @@ export function ConeixementDetall({ article, potRedactar, potPublicar, onClose, 
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                {potPublicar ? (
+                {potEliminar ? (
                   <button
                     onClick={() => setConfirmEliminar(true)}
                     className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors"

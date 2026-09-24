@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { potRedactar, potPublicar } from './permisos'
+import { potRedactar, potPublicar, potEliminar } from './permisos'
 import type { Usuari } from '../usuaris/types'
 
 function usuari(canvis: Partial<Usuari> = {}): Usuari {
@@ -37,6 +37,21 @@ describe('qui publica', () => {
   })
   it('ningú sense rol', () => {
     expect(potPublicar(null)).toBe(false)
+  })
+})
+
+describe('qui esborra un article concret', () => {
+  it('el coordinador, encara que estigui publicat', () => {
+    expect(potEliminar('coordinador', usuari({ Rol: 'coordinador' }), true)).toBe(true)
+  })
+  it('el coordinador, amb un esborrany', () => {
+    expect(potEliminar('coordinador', usuari({ Rol: 'coordinador' }), false)).toBe(true)
+  })
+  it('el redactor, amb un esborrany seu', () => {
+    expect(potEliminar('professorat', usuari({ PotRedactarConeixement: true }), false)).toBe(true)
+  })
+  it('el redactor, no un cop publicat: aquí ja li cal la casella de publicar', () => {
+    expect(potEliminar('professorat', usuari({ PotRedactarConeixement: true }), true)).toBe(false)
   })
 })
 

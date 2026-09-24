@@ -3,7 +3,11 @@ import { ConeixementPage } from '../../modules/coneixement/ConeixementPage'
 import { ConeixementForm } from '../../modules/coneixement/ConeixementForm'
 import { ConeixementDetall } from '../../modules/coneixement/ConeixementDetall'
 import { useConeixement } from '../../modules/coneixement/useConeixement'
-import { potRedactar as calculaPotRedactar, potPublicar as calculaPotPublicar } from '../../modules/coneixement/permisos'
+import {
+  potRedactar as calculaPotRedactar,
+  potPublicar as calculaPotPublicar,
+  potEliminar as calculaPotEliminar,
+} from '../../modules/coneixement/permisos'
 import type { Article } from '../../modules/coneixement/types'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
@@ -52,6 +56,7 @@ export default function ConeixementWrapper() {
           article={seleccionat}
           potRedactar={potRedactar}
           potPublicar={potPublicar}
+          potEliminar={calculaPotEliminar(rol, jo, seleccionat.Publicat === 'true')}
           onClose={() => setSeleccionat(null)}
           onEditar={() => handleEditar(seleccionat)}
           onTogglePublicat={async (a) => { await togglePublicat(a); setSeleccionat(null) }}

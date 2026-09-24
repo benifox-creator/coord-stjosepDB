@@ -22,3 +22,14 @@ export function potRedactar(rol: Rol | null, usuari: Usuari | null): boolean {
 export function potPublicar(rol: Rol | null): boolean {
   return rol === 'coordinador'
 }
+
+/**
+ * Qui pot esborrar un article concret: el coordinador, sempre; qui redacta,
+ * només mentre encara és un esborrany seu — un cop publicat, ja no en fa
+ * prou amb la casella. Ha de coincidir exactament amb la política
+ * `module_delete` de la migració `202609240001_coneixement_redaccio.sql`:
+ * `admin() or (coneixement_redactor() and not publicat)`.
+ */
+export function potEliminar(rol: Rol | null, usuari: Usuari | null, publicat: boolean): boolean {
+  return potPublicar(rol) || (potRedactar(rol, usuari) && !publicat)
+}
