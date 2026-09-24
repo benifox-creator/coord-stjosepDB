@@ -20,6 +20,12 @@ export function dataLlarga(iso: string): string {
   return `${DIES[d.getUTCDay()]}, ${d.getUTCDate()} ${prep}${MESOS[mes]} de ${d.getUTCFullYear()}`
 }
 
+/** «Dimecres». Fa servir els mateixos noms que `dataLlarga`, que és l'únic lloc on estan escrits. */
+export function diaSetmana(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return ''
+  return DIES[new Date(`${iso}T00:00:00Z`).getUTCDay()]
+}
+
 export interface DadesCircular {
   curs: string
   cursEscolar: string
