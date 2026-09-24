@@ -456,4 +456,20 @@ describe('parsejaExcelPressupost', () => {
     const { columnes } = await parsejaExcelPressupost(file, [excursio()], SENSE_AUTOCARS, false, 10)
     expect(columnes).toEqual(['Places', 'Preu autocar'])
   })
+
+  it('llegeix amb cellDates: true, així que una cel·la de data a la columna del preu atura la fila', async () => {
+    // `interpretaPressupost` (la funció pura) no sap res de `cellDates`: el
+    // que la caça és el sostre de 10.000 quan rep directament el número de
+    // sèrie. Aquesta prova passa per `parsejaExcelPressupost` de cap a cap,
+    // amb una cel·la de tipus Data de debò a «Preu autocar», per protegir
+    // l'opció `cellDates: true` en si mateixa. Si algú la tragués en un
+    // refactor, la cel·la tornaria com el número de sèrie cru (>40.000),
+    // que igualment cauria pel sostre de sanitat —però per la raó
+    // equivocada, i aquesta prova ho distingeix comprovant que el motiu és
+    // «no és un número», no «sembla una data».
+    const file = excel([['EXC-0001', 55, new Date(2026, 10, 18)]], ['Codi', 'Places', 'Preu autocar'])
+    const { files } = await parsejaExcelPressupost(file, [excursio()], SENSE_AUTOCARS, false, 10)
+    expect(files[0].valid).toBe(false)
+    expect(files[0].error).toContain('número')
+  })
 })
