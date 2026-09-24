@@ -322,7 +322,7 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 last:border-0">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 border-b border-gray-100 last:border-0">
       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-semibold text-gray-600">
         {(usuari.Nom || usuari.Email).charAt(0).toUpperCase()}
       </div>
@@ -383,7 +383,7 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
           />
           Pot redactar la Base de Coneixement
         </span>
-        <span className="text-[10px] text-gray-400">Escriu esborranys; publicar-los continua sent del coordinador.</span>
+        <span className="text-xs text-gray-500">Escriu esborranys; publicar-los continua sent del coordinador.</span>
       </label>
       <select
         value={usuari.Etapa ?? ''}
