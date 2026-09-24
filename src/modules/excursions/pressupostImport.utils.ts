@@ -51,8 +51,10 @@ function numero(v: unknown): number | null {
 }
 
 // Les quatre columnes de preu que el full sap llegir, en l'ordre canònic en
-// què `capcaleresPressupost` (pressupostExport.utils.ts) les escriu.
-const COLUMNES_DE_PREU = ['Places', 'Preu autocar', 'Preu per alumne', 'Preu total del grup'] as const
+// què `capcaleresPressupost` (pressupostExport.utils.ts) les escriu. S'exporta
+// perquè la finestra d'importar pugui ensenyar les quatre —no només les que
+// hi són— i que una parella sencera absent salti a la vista.
+export const COLUMNES_DE_PREU = ['Places', 'Preu autocar', 'Preu per alumne', 'Preu total del grup'] as const
 
 // Cap preu d'una línia no arriba a aquesta xifra: un autocar de dia val entre
 // tres-cents i mil i escaig euros, i una activitat per a un grup sencer no
@@ -246,13 +248,19 @@ export function interpretaPressupost(
   return resultats
 }
 
+/**
+ * Llegeix el fitxer **una sola vegada** i, d'aquella mateixa matriu, en treu
+ * les dues coses que la finestra d'importar necessita: les columnes de preu
+ * reconegudes (per ensenyar-les, i dir quina falta) i les files interpretades.
+ * Tota l'E/S del pressupost viu aquí perquè el component no n'hagi de fer.
+ */
 export async function parsejaExcelPressupost(
   file: File,
   excursions: Excursio[],
   ambAutocars: ReadonlyMap<string, { quants: number; total: number }>,
   portaIva: boolean,
   ivaPct: number,
-): Promise<FilaPressupost[]> {
+): Promise<{ columnes: string[]; files: FilaPressupost[] }> {
   const XLSX = await import('xlsx')
   // `cellDates: true`: si Excel ha format una cel·la de preu com a data (li
   // passa sol amb certs patrons, o algú escriu «5/12» pensant en una
@@ -262,5 +270,8 @@ export async function parsejaExcelPressupost(
   const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
   const matriu = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, blankrows: false })
-  return interpretaPressupost(matriu, excursions, ambAutocars, portaIva, ivaPct)
+  return {
+    columnes: columnesDePreuReconegudes(matriu),
+    files: interpretaPressupost(matriu, excursions, ambAutocars, portaIva, ivaPct),
+  }
 }

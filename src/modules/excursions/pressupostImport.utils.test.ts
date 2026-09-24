@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { interpretaPressupost, columnesDePreuReconegudes, type FilaPressupost } from './pressupostImport.utils'
+import { describe, it, expect, vi } from 'vitest'
+import * as XLSX from 'xlsx'
+import {
+  interpretaPressupost, columnesDePreuReconegudes, parsejaExcelPressupost,
+  type FilaPressupost,
+} from './pressupostImport.utils'
 import type { Excursio } from './types'
 
 function excursio(canvis: Partial<Excursio> = {}): Excursio {
@@ -28,6 +32,15 @@ function fila(codi: string, places: unknown = '', preu: unknown = '', perAlumne:
 }
 
 const SENSE_AUTOCARS = new Map<string, { quants: number; total: number }>()
+
+/** Un fitxer `.xlsx` real, per provar `parsejaExcelPressupost` de cap a cap. */
+function excel(files: unknown[][], capçaleres: readonly string[] = CAPÇALERES): File {
+  const worksheet = XLSX.utils.aoa_to_sheet([[...capçaleres], ...files])
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Pressupost')
+  const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
+  return new File([buffer], 'pressupost.xlsx')
+}
 
 function interpreta(files: unknown[][], opcions: {
   excursions?: Excursio[]
@@ -301,5 +314,41 @@ describe('el que avisa sense aturar', () => {
 
   it('i si no en tenia, no diu res', () => {
     expect(interpreta([fila('EXC-0001', 55, 610)])[0].substitueix).toBeUndefined()
+  })
+})
+
+describe('parsejaExcelPressupost', () => {
+  it('llegeix el fitxer un cop sol i en treu alhora les columnes i les files', async () => {
+    const file = excel([fila('EXC-0001', 55, 610)])
+    const espia = vi.spyOn(file, 'arrayBuffer')
+
+    const { columnes, files } = await parsejaExcelPressupost(file, [excursio()], SENSE_AUTOCARS, false, 10)
+
+    expect(espia).toHaveBeenCalledOnce()
+    expect(columnes).toEqual(['Places', 'Preu autocar', 'Preu per alumne', 'Preu total del grup'])
+    expect(files).toHaveLength(1)
+    expect(files[0].data?.autocars).toEqual([{ places: 55, preu: 610 }])
+  })
+
+  it('quan falta una columna, torna quines s’han reconegut abans de rebutjar la mitja parella', () => {
+    // No aplica: una mitja parella peta a `interpretaPressupost`, no torna res.
+    // Es comprova aquí que `columnesDePreuReconegudes` —la part que sí que
+    // torna— ja distingeix aquest cas (vegeu «cap columna de preu
+    // reconeguda» més amunt); aquest test només fixa que
+    // `parsejaExcelPressupost` deixa passar el rebuig cap amunt en comptes
+    // d’empassar-se’l.
+    const capçaleres = CAPÇALERES.map((c) => (c === 'Preu autocar' ? 'Preu bus' : c))
+    const file = excel([fila('EXC-0001', 55, 610)], capçaleres)
+    return expect(parsejaExcelPressupost(file, [excursio()], SENSE_AUTOCARS, false, 10))
+      .rejects.toThrow('Preu autocar')
+  })
+
+  it('amb només la parella d’autocar, torna només aquestes dues columnes', async () => {
+    const file = excel(
+      [['EXC-0001', 55, 610]],
+      ['Codi', 'Places', 'Preu autocar'],
+    )
+    const { columnes } = await parsejaExcelPressupost(file, [excursio()], SENSE_AUTOCARS, false, 10)
+    expect(columnes).toEqual(['Places', 'Preu autocar'])
   })
 })

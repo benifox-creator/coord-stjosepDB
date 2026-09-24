@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { X, Loader2, Upload, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import type { Excursio } from './types'
 import {
-  interpretaPressupost, columnesDePreuReconegudes,
+  parsejaExcelPressupost, COLUMNES_DE_PREU,
   type FilaPressupost, type PreusImportats,
 } from './pressupostImport.utils'
 import { ambIva } from './preu'
@@ -38,53 +38,50 @@ function esValidaCompleta(f: FilaPressupost): f is FilaPressupost & { excursioId
 }
 
 export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImportar, onClose }: Props) {
-  const [matriu, setMatriu] = useState<unknown[][] | null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [portaIva, setPortaIva] = useState(false)
-  const [parsing, setParsing] = useState(false)
   const [important, setImportant] = useState(false)
   const [error, setError] = useState('')
+  const [errorFull, setErrorFull] = useState('')
+  const [analitzat, setAnalitzat] = useState<{ columnes: string[]; files: FilaPressupost[] } | null>(null)
   const [fallits, setFallits] = useState<ResultatImportPressupostos | null>(null)
 
-  const columnesReconegudes = useMemo(
-    () => (matriu ? columnesDePreuReconegudes(matriu) : []),
-    [matriu],
-  )
+  // Es torna a llegir cada cop que canvia la casella de l'IVA: no hi ha cap
+  // matriu guardada al component per reinterpretar en sec (tota l'E/S i la
+  // interpretació viuen juntes a `parsejaExcelPressupost`), així que un canvi
+  // a la casella torna a cridar el mòdul amb el mateix fitxer. Mentre
+  // aquesta crida és en curs, `analitzat` i `errorFull` conserven el resultat
+  // anterior; `parsing`, més avall, es dedueix de si ja hi ha fitxer i encara
+  // no hi ha ni resultat ni error del primer intent.
+  useEffect(() => {
+    if (!file) return
+    let cancelat = false
+    parsejaExcelPressupost(file, excursions, ambAutocars, portaIva, ivaPct)
+      .then((res) => { if (!cancelat) { setAnalitzat(res); setErrorFull('') } })
+      .catch((err) => {
+        if (cancelat) return
+        setAnalitzat(null)
+        setErrorFull(err instanceof Error ? err.message : 'Error llegint el fitxer.')
+      })
+    return () => { cancelat = true }
+  }, [file, excursions, ambAutocars, portaIva, ivaPct])
 
-  // Es torna a interpretar cada cop que canvia la casella de l'IVA: la matriu
-  // ja llegida no cal tornar-la a llegir del disc, només reinterpretar-la amb
-  // l'opció nova. Si no, marcar o desmarcar la casella no canviaria res de la
-  // previsualització que ja s'ha ensenyat.
-  const { resultat, errorFull } = useMemo(() => {
-    if (!matriu) return { resultat: null as FilaPressupost[] | null, errorFull: '' }
-    try {
-      return { resultat: interpretaPressupost(matriu, excursions, ambAutocars, portaIva, ivaPct), errorFull: '' }
-    } catch (err) {
-      return { resultat: null as FilaPressupost[] | null, errorFull: err instanceof Error ? err.message : 'Error interpretant el full.' }
-    }
-  }, [matriu, excursions, ambAutocars, portaIva, ivaPct])
+  const parsing = !!file && !analitzat && !errorFull
+  const resultat = analitzat?.files ?? null
+  const columnesReconegudes = analitzat?.columnes ?? []
+  const columnesAbsents = COLUMNES_DE_PREU.filter((c) => !columnesReconegudes.includes(c))
 
   const valides = useMemo(() => (resultat ?? []).filter(esValidaCompleta), [resultat])
   const ambAvis = valides.filter((f) => f.substitueix)
   const ambError = (resultat ?? []).filter((f) => !f.valid)
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const nou = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
+    if (!nou) return
     setError('')
     setFallits(null)
-    setParsing(true)
-    try {
-      const XLSX = await import('xlsx')
-      const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true })
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      setMatriu(XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, blankrows: false }))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error llegint el fitxer.')
-      setMatriu(null)
-    } finally {
-      setParsing(false)
-    }
+    setFile(nou)
   }
 
   async function handleImportar() {
@@ -100,7 +97,8 @@ export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImp
         return
       }
       setFallits(res)
-      setMatriu(null)
+      setFile(null)
+      setAnalitzat(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error important els pressupostos.')
     } finally {
@@ -130,7 +128,7 @@ export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImp
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-lg py-6 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors">
                 <Upload size={20} className="text-gray-400" />
                 <span className="text-sm text-gray-500">{parsing ? 'Llegint el fitxer...' : 'Selecciona un fitxer .xlsx'}</span>
-                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => void handleFile(e)} disabled={parsing || important} />
+                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} disabled={parsing || important} />
               </label>
             </>
           )}
@@ -138,11 +136,27 @@ export function ImportarPressupostModal({ excursions, ambAutocars, ivaPct, onImp
           {error && <p role="alert" className="text-xs text-red-700">{error}</p>}
           {errorFull && <p role="alert" className="text-xs text-red-700">{errorFull}</p>}
 
-          {matriu && !errorFull && (
-            <p className="text-xs text-gray-500">
-              Columnes de preu reconegudes: {columnesReconegudes.length > 0 ? columnesReconegudes.join(', ') : 'cap'}.
-              {' '}Si n’hi falta alguna que esperaves, revisa que l’empresa no l’hagi reanomenat.
-            </p>
+          {analitzat && !errorFull && (
+            <div className="text-xs text-gray-500 space-y-1">
+              {/* Les quatre columnes surten sempre, trobades o no: quan una
+                  empresa reanomena tota una parella, l'única pista que en
+                  queda és veure-les totes dues en vermell una al costat de
+                  l'altra, no una llista que només diu què hi ha. */}
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>Columnes de preu:</span>
+                {COLUMNES_DE_PREU.map((c) => {
+                  const trobada = columnesReconegudes.includes(c)
+                  return (
+                    <span key={c} className={`flex items-center gap-1 ${trobada ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {trobada ? <CheckCircle2 size={12} /> : <XCircle size={12} />} {c}
+                    </span>
+                  )
+                })}
+              </p>
+              {columnesAbsents.length > 0 && (
+                <p>Si n’hi falta alguna que esperaves, revisa que l’empresa no l’hagi reanomenat.</p>
+              )}
+            </div>
           )}
 
           {fallits && (
