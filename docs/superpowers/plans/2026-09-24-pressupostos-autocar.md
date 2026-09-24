@@ -306,7 +306,7 @@ export async function generaExcelPressupost(
 - [ ] **Step 5: Executa i comprova que passen**
 
 Run: `npx vitest run src/modules/excursions/pressupostExport.utils.test.ts`
-Expected: PASS, 15 proves.
+Expected: PASS, 17 proves.
 
 - [ ] **Step 6: Comprova amb una mutació que la prova dels noms prova alguna cosa**
 
@@ -746,7 +746,7 @@ export async function parsejaExcelPressupost(
 - [ ] **Step 4: Executa i comprova que passen**
 
 Run: `npx vitest run src/modules/excursions/pressupostImport.utils.test.ts`
-Expected: PASS, 22 proves.
+Expected: PASS, 23 proves.
 
 - [ ] **Step 5: Comprova amb dues mutacions**
 
