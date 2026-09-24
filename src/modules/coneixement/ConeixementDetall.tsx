@@ -13,7 +13,8 @@ interface Props {
   /** Publica i retira: només el coordinador. */
   potPublicar: boolean
   /** Esborra aquest article concret: el coordinador sempre, qui redacta
-   * només mentre sigui un esborrany seu. Ve calculat amb `potEliminar`. */
+   * mentre sigui un esborrany —de qui l'hagi escrit, no cal que sigui
+   * seu—, mai un cop publicat. Ve calculat amb `potEliminar`. */
   potEliminar: boolean
   onClose: () => void
   onEditar: () => void
@@ -156,8 +157,10 @@ export function ConeixementDetall({ article, potRedactar, potPublicar, potElimin
 
         {/* Footer: editar és de qui redacta; publicar és només del
             coordinador (`potPublicar`); esborrar depèn de l'article
-            concret (`potEliminar`) — un redactor pot esborrar el seu
-            esborrany, però no un cop publicat. */}
+            concret (`potEliminar`) — un redactor pot esborrar qualsevol
+            esborrany, no només el seu, però no un cop publicat: és a
+            posta, l'spec (§2) rebutja la maquinària de «els meus contra
+            els altres». */}
         {potRedactar && (
           <div className="border-t border-gray-200 px-6 py-4 shrink-0">
             {confirmEliminar ? (

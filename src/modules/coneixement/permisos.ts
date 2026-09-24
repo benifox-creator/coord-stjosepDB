@@ -44,9 +44,11 @@ export function potPublicar(rol: Rol | null): boolean {
 
 /**
  * Qui pot esborrar un article concret: el coordinador, sempre; qui redacta,
- * només mentre encara és un esborrany seu — un cop publicat, ja no en fa
- * prou amb la casella. Ha de coincidir exactament amb la política
- * `module_delete` de la migració `202609240001_coneixement_redaccio.sql`:
+ * mentre l'article encara sigui un esborrany —de qui l'hagi escrit, no cal
+ * que sigui seu—, mai un cop publicat. És a posta: l'spec (§2) rebutja
+ * expressament la maquinària de «els meus esborranys contra els dels
+ * altres». Ha de coincidir exactament amb la política `module_delete` de la
+ * migració `202609240001_coneixement_redaccio.sql`:
  * `admin() or (coneixement_redactor() and not publicat)`.
  */
 export function potEliminar(rol: Rol | null, usuari: Usuari | null, publicat: boolean): boolean {
