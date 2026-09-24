@@ -15,7 +15,7 @@
 ## Global Constraints
 
 - **Tot en català**: noms, comentaris, missatges i textos de pantalla.
-- **Apòstrof tipogràfic `’` dins cometes dobles.** Mai un apòstrof recte tancant una cadena de cometes simples — ja ha trencat la compilació dues vegades en aquest projecte.
+- **Apòstrof tipogràfic `’` a tot el text de cara a l'usuari** —missatges, etiquetes, títols de prova— i **mai un apòstrof recte tancant una cadena de cometes simples**, que ja ha trencat la compilació dues vegades en aquest projecte. **Als comentaris de codi, l'apòstrof recte és la convenció del repositori** (`preu.ts` i `balanc.ts` en tenen) i **no és un defecte**: allà no hi ha cap cadena que es pugui tancar sense voler.
 - **TypeScript estricte** (`verbatimModuleSyntax`, `noUnusedLocals`); tipus amb `import type`.
 - **No hi ha proves de components**: Vitest corre amb `environment: 'node'`, sense DOM. Tota lògica provable viu en un mòdul pur, mai dins un `.tsx`.
 - **`supabase/schema.sql` no es toca.** Els canvis d'esquema van en una migració nova.
