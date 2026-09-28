@@ -28,22 +28,52 @@ import { useUsuarisStore } from '../store/usuarisStore'
 import { useConfigStore, canAccessModul } from '../store/configStore'
 import { potVeureMaterialInfantil } from '../modules/material-infantil/permisos'
 import { potVeureConeixement } from '../modules/coneixement/permisos'
+import type { LucideIcon } from 'lucide-react'
+import { grupsVisibles, type GrupMenu } from './navGrups'
 
-const NAV_ITEMS = [
-  { to: '/',              label: 'Inici',          icon: LayoutDashboard, end: true,  visKey: null },
-  { to: '/incidencies',   label: 'Incidències',        icon: AlertTriangle,               visKey: 'incidencies' },
-  { to: '/inventari',     label: 'Inventari',          icon: Package,                     visKey: 'inventari' },
-  { to: '/material',      label: 'Material i Stock',   icon: Archive,                     visKey: 'material' },
-  { to: '/prestecs',      label: 'Préstecs',           icon: Smartphone,                  visKey: 'prestecs' },
-  { to: '/reserves',      label: 'Reserves',           icon: CalendarDays,                visKey: 'reserves' },
-  { to: '/substitucions', label: 'Absències i substitucions',       icon: UserCheck,                   visKey: 'substitucions' },
-  { to: '/coneixement',   label: 'Base Coneixement',   icon: BookOpen,                    visKey: 'coneixement' },
-  { to: '/pla-accio',     label: "Pla d'Acció",        icon: Target,                      visKey: 'pla-accio' },
-  { to: '/manteniment',   label: 'Manteniment',        icon: Wrench,                      visKey: 'manteniment' },
-  { to: '/material-infantil', label: 'Material Infantil', icon: Boxes, visKey: 'material-infantil' },
-  { to: '/horaris', label: 'Horaris', icon: Clock, visKey: 'horaris' },
-  { to: '/excursions', label: 'Excursions', icon: MapPin, visKey: 'excursions' },
-  { to: '/notificacions', label: 'Correus', icon: Send, visKey: 'notificacions' },
+interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  end?: boolean
+  visKey: string | null
+}
+
+// Tres blocs en comptes d'una llista plana de catorze entrades que ningú no
+// va decidir: havia crescut per acumulació, i per això Horaris i Material
+// Infantil acabaven al final, que és el pitjor lloc per al que el professorat
+// mira més sovint. «Base Coneixement» va a Dia a dia i no a Gestió TIC: des
+// del redisseny és on el claustre consulta, no una eina de manteniment.
+const NAV_GROUPS: GrupMenu<NavItem>[] = [
+  {
+    titol: 'Dia a dia',
+    items: [
+      { to: '/',              label: 'Inici',                     icon: LayoutDashboard, end: true, visKey: null },
+      { to: '/horaris',       label: 'Horaris',                   icon: Clock,           visKey: 'horaris' },
+      { to: '/substitucions', label: 'Absències i substitucions', icon: UserCheck,       visKey: 'substitucions' },
+      { to: '/excursions',    label: 'Excursions',                icon: MapPin,          visKey: 'excursions' },
+      { to: '/coneixement',   label: 'Base Coneixement',          icon: BookOpen,        visKey: 'coneixement' },
+      { to: '/reserves',      label: 'Reserves',                  icon: CalendarDays,    visKey: 'reserves' },
+      { to: '/incidencies',   label: 'Incidències',               icon: AlertTriangle,   visKey: 'incidencies' },
+    ],
+  },
+  {
+    titol: 'Recursos',
+    items: [
+      { to: '/prestecs',          label: 'Préstecs',          icon: Smartphone, visKey: 'prestecs' },
+      { to: '/inventari',         label: 'Inventari',         icon: Package,    visKey: 'inventari' },
+      { to: '/material',          label: 'Material i Stock',  icon: Archive,    visKey: 'material' },
+      { to: '/material-infantil', label: 'Material Infantil', icon: Boxes,      visKey: 'material-infantil' },
+    ],
+  },
+  {
+    titol: 'Gestió TIC',
+    items: [
+      { to: '/manteniment',   label: 'Manteniment',  icon: Wrench, visKey: 'manteniment' },
+      { to: '/pla-accio',     label: "Pla d'Acció",  icon: Target, visKey: 'pla-accio' },
+      { to: '/notificacions', label: 'Correus',       icon: Send,   visKey: 'notificacions' },
+    ],
+  },
 ]
 
 const NAV_SETTINGS = [
@@ -65,7 +95,7 @@ export function Layout({ children }: Props) {
   const config = useConfigStore((s) => s.config)
 
   // Mentre el rol carrega (null), mostrem tots els ítems optimistament
-  const itemsVisibles = NAV_ITEMS.filter(({ visKey }) => {
+  const grupsMostrats = grupsVisibles(NAV_GROUPS, ({ visKey }) => {
     if (visKey === null) return true
     if (rol === null) return false
     if (visKey === 'material-infantil') return potVeureMaterialInfantil(usuariActual, rol, config)
@@ -116,30 +146,38 @@ export function Layout({ children }: Props) {
           </button>
         </div>
 
-        {/* Navegació */}
+        {/* Navegació, en blocs — un títol es dibuixa només si li queda algun
+            element visible: `grupsVisibles` ja n'ha tret els buits. */}
         <nav className="flex-1 overflow-y-auto py-3">
-          {itemsVisibles.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              onClick={closeSidebar}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={18} className={isActive ? 'text-primary' : 'text-gray-400'} />
-                  <span className="flex-1">{label}</span>
-                  {isActive && <ChevronRight size={14} className="text-primary" />}
-                </>
-              )}
-            </NavLink>
+          {grupsMostrats.map(({ titol, items }) => (
+            <div key={titol} className="mt-4 first:mt-0">
+              <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                {titol}
+              </p>
+              {items.map(({ to, label, icon: Icon, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  onClick={closeSidebar}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors ${
+                      isActive
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon size={18} className={isActive ? 'text-primary' : 'text-gray-400'} />
+                      <span className="flex-1">{label}</span>
+                      {isActive && <ChevronRight size={14} className="text-primary" />}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
