@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Plus, Trash2, Loader2, Link as LinkIcon } from 'lucide-react'
 import { useConfigStore } from '../../store/configStore'
 import { parseLinks } from './coneixement.utils'
+import { MarkdownContent } from './MarkdownContent'
 import type { TipusArticle } from './articles'
 import type { Article, ArticleFormData, ArticleLink } from './types'
 
@@ -37,6 +38,7 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
   const [caducaEl, setCaducaEl] = useState(inicial?.CaducaEl ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [vista, setVista] = useState<'escriu' | 'previsualitza'>('escriu')
 
   // Un avís sense data quedaria a la llista per sempre, i una data en un
   // altre tipus la base de dades la rebutja: `(tipus = 'avis') = (caduca_el
@@ -170,16 +172,56 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
             </select>
           </div>
 
-          {/* Contingut */}
+          {/* Contingut, amb Markdown */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contingut</label>
-            <textarea
-              value={contingut}
-              onChange={(e) => setContingut(e.target.value)}
-              placeholder="Escriu el cos de l'article..."
-              className="input w-full resize-y"
-              rows={8}
-            />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-gray-600">Contingut</label>
+              <div className="inline-flex bg-gray-100 rounded-lg p-0.5 gap-0.5" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={vista === 'escriu'}
+                  onClick={() => setVista('escriu')}
+                  className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
+                    vista === 'escriu' ? 'bg-white text-text-main font-medium shadow-sm' : 'text-gray-500'
+                  }`}
+                >
+                  Escriu
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={vista === 'previsualitza'}
+                  onClick={() => setVista('previsualitza')}
+                  className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
+                    vista === 'previsualitza' ? 'bg-white text-text-main font-medium shadow-sm' : 'text-gray-500'
+                  }`}
+                >
+                  Previsualitza
+                </button>
+              </div>
+            </div>
+
+            {vista === 'escriu' ? (
+              <textarea
+                value={contingut}
+                onChange={(e) => setContingut(e.target.value)}
+                placeholder="Escriu el cos de l'article..."
+                className="input w-full resize-y"
+                rows={8}
+              />
+            ) : (
+              <div className="border border-gray-200 rounded-lg px-4 py-3 min-h-48 bg-gray-50">
+                <MarkdownContent text={contingut} />
+              </div>
+            )}
+
+            <p className="text-xs text-gray-500 mt-1">
+              Admet Markdown: <code className="px-1 bg-gray-100 rounded">##</code> per a un títol,{' '}
+              <code className="px-1 bg-gray-100 rounded">**text**</code> per a negreta,{' '}
+              <code className="px-1 bg-gray-100 rounded">-</code> per a una llista, i{' '}
+              <code className="px-1 bg-gray-100 rounded">![descripció](url)</code> per a una imatge.
+            </p>
           </div>
 
           {/* Tags */}

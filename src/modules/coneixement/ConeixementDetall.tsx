@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import type { Article } from './types'
 import { parseTags, parseLinks } from './coneixement.utils'
+import { MarkdownContent } from './MarkdownContent'
 
 interface Props {
   article: Article
@@ -99,17 +100,13 @@ export function ConeixementDetall({ article, potRedactar, potPublicar, potElimin
             )}
           </div>
 
-          {/* Contingut */}
-          {article.Contingut ? (
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contingut</p>
-              <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-xl p-4 border border-gray-100">
-                {article.Contingut}
-              </div>
+          {/* Contingut, en Markdown */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contingut</p>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <MarkdownContent text={article.Contingut} />
             </div>
-          ) : (
-            <p className="text-sm text-gray-400 italic">Sense contingut.</p>
-          )}
+          </div>
 
           {/* Links */}
           {links.length > 0 && (
