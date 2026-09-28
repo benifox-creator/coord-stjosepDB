@@ -1,7 +1,12 @@
 import type { ArticleLink } from './types'
 
 export function formatDateISO(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  // `toISOString()` dona la data en UTC, però la base de dades segella
+  // `creat_el`, `actualitzat_el` i `caduca_el` en Europe/Madrid (migració
+  // `202609240001_coneixement_redaccio.sql`). Entre mitjanit i les dues de
+  // la matinada les dues zones discrepen: sense això, «avui» encara seria
+  // ahir i un avís ja caducat sortiria com a vigent.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' }).format(d)
 }
 
 export function parseLinks(raw: string): ArticleLink[] {

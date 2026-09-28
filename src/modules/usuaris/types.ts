@@ -13,6 +13,7 @@ export interface Usuari {
   PotGestionarMaterial: boolean
   PotGestionarExcursions: boolean
   PotGestionarCostosExcursions: boolean
+  PotRedactarConeixement: boolean
   Data_alta: string
 }
 

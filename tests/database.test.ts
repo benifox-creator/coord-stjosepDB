@@ -1,6 +1,8 @@
 import { PGlite } from '@electric-sql/pglite'
 import { readFile, readdir } from 'node:fs/promises'
 import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect } from 'vitest'
+import { potRedactar, potPublicar, potEliminar } from '../src/modules/coneixement/permisos'
+import type { Rol, Usuari } from '../src/modules/usuaris/types'
 
 let db: PGlite
 async function asUser(email: string, verified = true) {
@@ -43,7 +45,8 @@ beforeEach(async () => {
     insert into public.usuaris(email,nom,rol) values
     ('admin@stjosep.org','Admin','coordinador'),('director@stjosep.org','Director','direccio'),
     ('teacher@stjosep.org','Teacher','professorat'),('other@stjosep.org','Other','professorat'),
-    ('guest@stjosep.org','Guest','convidat');
+    ('guest@stjosep.org','Guest','convidat'),('redactor@stjosep.org','Redactor','professorat');
+    update public.usuaris set pot_redactar_coneixement=true where email='redactor@stjosep.org';
     insert into public.material(codi,nom,quantitat_total,quantitat_disponible) values('TEST-001','Cable',3,3);`)
 })
 afterEach(async () => { await db.exec('rollback; reset role;') })
@@ -395,11 +398,17 @@ describe('confirmed orders', () => {
 
 describe('permission and transaction regressions', () => {
   it('limits knowledge drafts and publishing to the coordinator', async () => {
+    // Des de la migració 202609240001, `publicat` no és una columna que
+    // s'escrigui per insert/update directe (privilegi de columna revocat per
+    // a tothom): publicar passa sempre per `public.publica_article`.
     await asUser('admin@stjosep.org')
-    await db.exec("insert into public.coneixement(titol,publicat) values('Draft',false),('Published',true)")
+    const published = (await db.query<{id:string}>(
+      "insert into public.coneixement(titol) values('Published') returning id")).rows[0].id
+    await db.query("insert into public.coneixement(titol) values('Draft')")
+    await db.query('select public.publica_article($1, true)', [published])
     await asUser('director@stjosep.org')
     expect((await db.query('select * from public.coneixement')).rows).toHaveLength(1)
-    expect((await db.query("update public.coneixement set publicat=true returning id")).rows).toHaveLength(0)
+    expect((await db.query("update public.coneixement set contingut='x' returning id")).rows).toHaveLength(0)
   })
   it('retains departmental configuration without granting user administration', async () => {
     await asUser('director@stjosep.org')
@@ -1343,5 +1352,221 @@ describe('apuntar els pagaments', () => {
       'select alumnes_previstos,alumnes_finals from public.excursio_grups where id=$1',[grup])).rows[0]
     expect(g.alumnes_previstos).toBe(26)
     expect(g.alumnes_finals).toBe(24)
+  })
+})
+
+describe('redactar la base de coneixement', () => {
+  async function unArticle(publicat = false) {
+    await asUser('admin@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.coneixement(titol, tipus, categoria, contingut)
+      values('Com es reserva el carro','procediment','Procediments','Primer...') returning id`)).rows[0].id
+    if (publicat) await db.query('select public.publica_article($1, true)', [id])
+    await db.exec('reset role')
+    return id
+  }
+  const article = async (id: string) => (await db.query<{publicat:boolean; autor:string; tipus:string}>(
+    'select publicat, autor, tipus from public.coneixement where id=$1', [id])).rows[0]
+
+  it('un redactor pot crear un article', async () => {
+    await asUser('redactor@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.coneixement(titol, tipus, categoria, contingut)
+      values('Qui obre el gimnàs','pregunta','Administratiu','El conserge.') returning id`)).rows[0].id
+    expect((await article(id)).tipus).toBe('pregunta')
+  })
+
+  it('i li surt com a esborrany, encara que digui el contrari', async () => {
+    // La prova que sosté tota la tasca: la política és per fila i el
+    // deixaria escriure la columna sencera si no fos pels privilegis.
+    await asUser('redactor@stjosep.org')
+    await db.exec('savepoint intent')
+    await expect(db.query(`
+      insert into public.coneixement(titol, tipus, categoria, contingut, publicat)
+      values('Trampa','pregunta','Administratiu','x', true)`)).rejects.toThrow('permission denied')
+    await db.exec('rollback to savepoint intent')
+    await db.exec('reset role')
+  })
+
+  it('ni tocant-ho després', async () => {
+    const id = await unArticle()
+    await asUser('redactor@stjosep.org')
+    await db.exec('savepoint intent2')
+    await expect(db.query('update public.coneixement set publicat=true where id=$1', [id]))
+      .rejects.toThrow('permission denied')
+    await db.exec('rollback to savepoint intent2')
+    await db.exec('reset role')
+    expect((await article(id)).publicat).toBe(false)
+  })
+
+  it('pot editar el text d’un article', async () => {
+    const id = await unArticle()
+    await asUser('redactor@stjosep.org')
+    await db.query('update public.coneixement set contingut=$2 where id=$1', [id, 'Ara millor'])
+    await db.exec('reset role')
+    expect((await db.query<{contingut:string}>('select contingut from public.coneixement where id=$1',[id]))
+      .rows[0].contingut).toBe('Ara millor')
+  })
+
+  it('l’autor el posa la base de dades, no qui escriu', async () => {
+    await asUser('redactor@stjosep.org')
+    const id = (await db.query<{id:string}>(`
+      insert into public.coneixement(titol, tipus, categoria, contingut)
+      values('Meu','pregunta','Administratiu','x') returning id`)).rows[0].id
+    await db.exec('reset role')
+    expect((await article(id)).autor).toBe('redactor@stjosep.org')
+  })
+
+  it('una càrrega sense sessió (seed, editor SQL) no fa petar l’autor', async () => {
+    // Sense `set request.jwt.claims` (com fa `asUser`), `app_private.email()`
+    // torna nul: exactament la situació d'un seed, un backfill o un insert
+    // fet des de l'editor SQL de Supabase. Abans d'aquest arreglo, aquí
+    // petava amb "null value in column autor violates not-null constraint".
+    await db.exec('reset role')
+    const id = (await db.query<{id:string}>(`
+      insert into public.coneixement(titol, categoria, contingut)
+      values('Seed', 'Administratiu', 'x') returning id`)).rows[0].id
+    expect((await article(id)).autor).toBe('')
+  })
+
+  it('publicar és només del coordinador', async () => {
+    const id = await unArticle()
+    await asUser('redactor@stjosep.org')
+    await db.exec('savepoint intent6')
+    await expect(db.query('select public.publica_article($1, true)', [id])).rejects.toThrow('No autoritzat')
+    await db.exec('rollback to savepoint intent6')
+    await db.exec('reset role')
+  })
+
+  it('el coordinador sí', async () => {
+    const id = await unArticle()
+    await asUser('admin@stjosep.org')
+    await db.query('select public.publica_article($1, true)', [id])
+    await db.exec('reset role')
+    expect((await article(id)).publicat).toBe(true)
+  })
+
+  it('un docent corrent només veu els publicats', async () => {
+    const esborrany = await unArticle(false)
+    const publicat = await unArticle(true)
+    await asUser('teacher@stjosep.org')
+    const vistos = (await db.query<{id:string}>('select id from public.coneixement')).rows.map((r) => r.id)
+    await db.exec('reset role')
+    expect(vistos).toContain(publicat)
+    expect(vistos).not.toContain(esborrany)
+  })
+
+  it('i el redactor veu també els esborranys', async () => {
+    const esborrany = await unArticle(false)
+    await asUser('redactor@stjosep.org')
+    const vistos = (await db.query<{id:string}>('select id from public.coneixement')).rows.map((r) => r.id)
+    await db.exec('reset role')
+    expect(vistos).toContain(esborrany)
+  })
+
+  it('un redactor pot esborrar un esborrany però no un article publicat', async () => {
+    const esborrany = await unArticle(false)
+    const publicat = await unArticle(true)
+    await asUser('redactor@stjosep.org')
+    expect((await db.query('delete from public.coneixement where id=$1 returning id',[esborrany])).rows)
+      .toHaveLength(1)
+    expect((await db.query('delete from public.coneixement where id=$1 returning id',[publicat])).rows)
+      .toHaveLength(0)
+    await db.exec('reset role')
+  })
+
+  it('un avís sense data de caducitat no s’hi pot desar', async () => {
+    // Sense això, l'avís del gener continua al mig de la llista al juny.
+    await asUser('admin@stjosep.org')
+    await db.exec('savepoint intent3')
+    await expect(db.query(`
+      insert into public.coneixement(titol, tipus, categoria, contingut)
+      values('Novetat','avis','Administratiu','x')`)).rejects.toThrow()
+    await db.exec('rollback to savepoint intent3')
+    await db.exec('reset role')
+  })
+
+  it('i una pregunta amb data, tampoc', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec('savepoint intent4')
+    await expect(db.query(`
+      insert into public.coneixement(titol, tipus, categoria, contingut, caduca_el)
+      values('Pregunta','pregunta','Administratiu','x','2027-01-01')`)).rejects.toThrow()
+    await db.exec('rollback to savepoint intent4')
+    await db.exec('reset role')
+  })
+
+  it('un tipus que no existeix es rebutja', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec('savepoint intent5')
+    await expect(db.query(`
+      insert into public.coneixement(titol, tipus, categoria, contingut)
+      values('X','apunt','Administratiu','x')`)).rejects.toThrow()
+    await db.exec('rollback to savepoint intent5')
+    await db.exec('reset role')
+  })
+
+  it('qui té la casella veu el mòdul encara que el seu rol no li’n doni', async () => {
+    await db.query(`update public.config set valors='["coordinador"]'::jsonb where clau='visibilitat.coneixement'`)
+    await asUser('redactor@stjosep.org')
+    const visible = (await db.query<{v:boolean}>(`select app_private.module_visible('coneixement') as v`)).rows[0].v
+    await db.exec('reset role')
+    expect(visible).toBe(true)
+  })
+
+  // La promesa central d'aquesta branca: que `potRedactar`, `potPublicar` i
+  // `potEliminar` (src/modules/coneixement/permisos.ts) diguin exactament el
+  // mateix que `coneixement_redactor()`, `admin()` i la política
+  // `module_delete`. Sense aquesta prova, les dues bandes es poden
+  // desincronitzar sense que res ho detecti — que és exactament el que va
+  // passar amb `MaterialInfantilGuard` i `canAccessModul` (FIX 1).
+  describe('el client i el servidor diuen el mateix (permisos.ts vs SQL)', () => {
+    const ROLS: Rol[] = ['coordinador', 'direccio', 'titular', 'cap_estudis', 'professorat', 'convidat']
+    const usuariAmb = (casella: boolean): Usuari => ({
+      id: 'combo', Email: 'combo@stjosep.org', Nom: 'Combo', Rol: 'professorat', Etapa: null,
+      PotGestionarMaterial: false, PotGestionarExcursions: false, PotGestionarCostosExcursions: false,
+      PotRedactarConeixement: casella, Data_alta: '2026-09-01',
+    })
+
+    it('potRedactar i potPublicar, per a tota combinació de rol × casella', async () => {
+      for (const rol of ROLS) {
+        for (const casella of [true, false]) {
+          await asUser('admin@stjosep.org')
+          await db.query(`update public.usuaris set rol=$1, pot_redactar_coneixement=$2 where email='teacher@stjosep.org'`, [rol, casella])
+          await asUser('teacher@stjosep.org')
+          const fila = (await db.query<{ redactor: boolean; admin: boolean }>(
+            `select app_private.coneixement_redactor() as redactor, app_private.admin() as admin`)).rows[0]
+          await db.exec('reset role')
+          const combo = `rol=${rol} casella=${casella}`
+          expect(fila.redactor, combo).toBe(potRedactar(rol, usuariAmb(casella)))
+          expect(fila.admin, combo).toBe(potPublicar(rol))
+        }
+      }
+    })
+
+    it('potEliminar, per a tota combinació de rol × casella × publicat', async () => {
+      await asUser('admin@stjosep.org')
+      const esborrany = (await db.query<{ id: string }>(`
+        insert into public.coneixement(titol, categoria, contingut) values('E','Administratiu','x') returning id`)).rows[0].id
+      const publicatId = (await db.query<{ id: string }>(`
+        insert into public.coneixement(titol, categoria, contingut) values('P','Administratiu','x') returning id`)).rows[0].id
+      await db.query('select public.publica_article($1, true)', [publicatId])
+      await db.exec('reset role')
+
+      for (const rol of ROLS) {
+        for (const casella of [true, false]) {
+          for (const [id, publicat] of [[esborrany, false], [publicatId, true]] as const) {
+            await asUser('admin@stjosep.org')
+            await db.query(`update public.usuaris set rol=$1, pot_redactar_coneixement=$2 where email='teacher@stjosep.org'`, [rol, casella])
+            await asUser('teacher@stjosep.org')
+            await db.exec('savepoint intent_fix3')
+            const esborrat = (await db.query('delete from public.coneixement where id=$1 returning id', [id])).rows.length > 0
+            await db.exec('rollback to savepoint intent_fix3')
+            await db.exec('reset role')
+            expect(esborrat, `rol=${rol} casella=${casella} publicat=${publicat}`).toBe(potEliminar(rol, usuariAmb(casella), publicat))
+          }
+        }
+      }
+    })
   })
 })
