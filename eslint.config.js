@@ -18,5 +18,18 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // El Markdown de la Base de Coneixement es pinta com a elements de
+      // React i mai com a HTML: és el que fa que la injecció de codi no
+      // estigui filtrada, sinó que no sigui possible. Aquesta regla ho manté
+      // cert per a tot el projecte, no només per a qui ho recordi avui.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXAttribute[name.name="dangerouslySetInnerHTML"]',
+          message: 'Aquest projecte no fa servir dangerouslySetInnerHTML: tot el contingut de l\'usuari es pinta com a elements de React.',
+        },
+      ],
+    },
   },
 ])
