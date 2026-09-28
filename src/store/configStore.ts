@@ -64,8 +64,16 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Aula informàtica', 'Sala de professors', 'Secretaria',
     'Biblioteca', 'Laboratori', "Sala d'actes", 'Altra',
   ],
+  // Deu categories per departament, no per tipus de contingut: van néixer per
+  // a una base de coneixement de TIC i el mòdul ara és d'on el claustre sencer
+  // busca respostes. Decidides el 2026-09-28 com a llista plana a propòsit
+  // —sense subcategories—: amb el mòdul encara a zero articles, partir-les
+  // més fi ara mateix deixaria la majoria buides molt de temps.
   'coneixement.categories': [
-    'Procediments', 'Infraestructura', 'Dispositius', 'Incidències freqüents', 'Administratiu',
+    'Organització i funcionament del centre', 'Docència i aula', 'Avaluació',
+    'Alumnat i famílies', 'Convivència i benestar', 'Gestió i tràmits',
+    'Espais i recursos', 'Eines digitals i TIC', 'Seguretat i emergències',
+    'Comunicació i identitat del centre',
   ],
   'pla-accio.categories': [
     'Xarxa', 'Equipament', 'Programari', 'Seguretat', 'Formació', 'Infraestructura',
