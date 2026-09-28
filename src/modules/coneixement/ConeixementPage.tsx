@@ -8,6 +8,7 @@ import type { Article } from './types'
 import type { TipusArticle } from './articles'
 import { agrupaPerTipus, cerca, filtraPerCategoria, aLlista } from './articles'
 import { parseTags, parseLinks, formatDateISO } from './coneixement.utils'
+import { MarkdownContent } from './MarkdownContent'
 
 const TIPUS_FILTRE_OPCIONS: { valor: TipusArticle; etiqueta: string }[] = [
   { valor: 'avis', etiqueta: 'Avisos' },
@@ -183,11 +184,7 @@ function ArticleDesplegable({
       </summary>
 
       <div className="mt-3 space-y-3">
-        {article.Contingut ? (
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{article.Contingut}</p>
-        ) : (
-          <p className="text-sm text-gray-500 italic">Sense contingut.</p>
-        )}
+        <MarkdownContent text={article.Contingut} />
 
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
