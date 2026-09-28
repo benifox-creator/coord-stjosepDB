@@ -964,6 +964,15 @@ const LLISTA_EMPRESES_AUTOCAR: LlistaConfig = {
   descripcio: 'Empreses que apareixen al desplegable en demanar un pressupost. No es desa a cap sortida, només titula el full que se’ls envia.',
 }
 
+interface Categoria {
+  id: string
+  label: string
+  icona: React.ReactNode
+  contingut: React.ReactNode
+  /** Cert al primer element d'un bloc que ha d'anar separat del que el precedeix. */
+  separadorAbans?: boolean
+}
+
 export function ConfiguracioPage() {
   const loaded = useConfigStore((s) => s.loaded)
   const loading = useConfigStore((s) => s.loading)
@@ -972,6 +981,118 @@ export function ConfiguracioPage() {
   const emailActual = useAuthStore((s) => s.user?.email ?? '')
   const esCoordinador = rolActual === 'coordinador'
 
+  // Catorze seccions que abans es veien totes de cop en una sola pantalla que
+  // calia baixar sencera per arribar a l'última. Es reconstrueix a cada
+  // render —és una pantalla de configuració, no un lloc on el cost importi—
+  // perquè cada categoria és senzillament la que ja hi havia, ara amagada
+  // fins que algú la tria.
+  const categories: Categoria[] = []
+
+  if (esCoordinador) {
+    categories.push(
+      {
+        id: 'usuaris',
+        label: 'Usuaris i permisos',
+        icona: <Users size={14} className="text-gray-500" />,
+        contingut: <GestioUsuaris emailActual={emailActual} />,
+      },
+      {
+        id: 'visibilitat',
+        label: 'Visibilitat de mòduls',
+        icona: <Eye size={14} className="text-gray-500" />,
+        contingut: (
+          <>
+            <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+              Activa o desactiva quins mòduls pot veure cada perfil. Les caselles marcades indiquen que el mòdul és visible per aquell perfil.
+            </p>
+            <VisibilitatModuls />
+          </>
+        ),
+      },
+      {
+        id: 'correus',
+        label: 'Correus automàtics',
+        icona: <Mail size={14} className="text-gray-500" />,
+        contingut: <FirmaEmailEditor />,
+      },
+      {
+        id: 'manteniment',
+        label: 'Manteniment',
+        icona: <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />,
+        contingut: <MantenimentEmailEditor />,
+      },
+      {
+        // Tota la configuració del centre és de la coordinació: escriure a
+        // `public.config` demana `app_private.admin()`, que només té el rol
+        // `coordinador`. Abans aquesta categoria es mostrava a qualsevol que
+        // gestionés excursions, que hi trobava camps editables i un servidor
+        // que els rebutjava tots.
+        id: 'excursions',
+        label: 'Excursions',
+        icona: <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#059669' }} />,
+        contingut: (
+          <div className="space-y-6">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Circular</p>
+              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                Terminis i textos fixos de la circular que reben les famílies. Els valors surten
+                a totes les circulars del centre, així que, com la resta de la configuració,
+                només els pot canviar la coordinació.
+              </p>
+              <div className="space-y-3">
+                <CampsNumericsEditor camps={CAMPS_DIES_CIRCULAR} />
+                {CAMPS_TEXT_CIRCULAR.map((camp) => (
+                  <CampTextLlargEditor key={camp.clau} camp={camp} />
+                ))}
+                <LlistaEditor llista={LLISTA_PASSOS_PAGAMENT} />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preu</p>
+              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                Paràmetres del càlcul del preu per alumne, per etapa: quants matriculats s'espera
+                que hi vagin i el marge de seguretat, més l'IVA del transport i el pas d'arrodoniment,
+                que són comuns a totes les etapes.
+              </p>
+              <CampsNumericsEditor camps={CAMPS_PREU_EXCURSIONS} />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pressupostos</p>
+              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                Empreses que es poden triar en demanar un pressupost d’autocar.
+              </p>
+              <LlistaEditor llista={LLISTA_EMPRESES_AUTOCAR} />
+            </div>
+          </div>
+        ),
+      },
+    )
+  }
+
+  GRUPS.forEach((grup, i) => {
+    categories.push({
+      id: `grup-${grup.modul}`,
+      label: grup.modul,
+      icona: <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: grup.color }} />,
+      contingut: (
+        <div className="space-y-3">
+          {grup.llistes.map((llista) => (
+            <LlistaEditor key={llista.clau} llista={llista} />
+          ))}
+        </div>
+      ),
+      // Només davant de la primera: separa les categories de sempre —usuaris,
+      // visibilitat, correus...— de les llistes per mòdul, que no calen que
+      // les vegi ningú per resoldre les cinc primeres.
+      separadorAbans: i === 0 && categories.length > 0,
+    })
+  })
+
+  const [actiuId, setActiuId] = useState(categories[0]?.id ?? '')
+  const categoriaActiva = categories.find((c) => c.id === actiuId) ?? categories[0] ?? null
+
   return (
     <div className="flex flex-col h-full bg-surface">
       <div className="bg-white border-b border-gray-200 px-6 py-5">
@@ -979,131 +1100,64 @@ export function ConfiguracioPage() {
           <Settings size={20} className="text-primary" />
           <div>
             <h1 className="text-lg font-semibold text-text-main">Configuració</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Gestiona les opcions dels desplegables de cada mòdul</p>
+            <p className="text-xs text-gray-500 mt-0.5">Gestiona les opcions dels desplegables de cada mòdul</p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-6 py-6 space-y-8 max-w-2xl">
+      {!loaded && loading && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 px-6 py-4">
+          <Loader2 size={16} className="animate-spin" /> Carregant configuració...
+        </div>
+      )}
 
-        {!loaded && loading && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Loader2 size={16} className="animate-spin" /> Carregant configuració...
-          </div>
-        )}
+      {error && (
+        <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+          <AlertCircle size={14} /> {error}
+        </div>
+      )}
 
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
-            <AlertCircle size={14} /> {error}
-          </div>
-        )}
-
-        {esCoordinador && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Users size={14} className="text-gray-500" />
-              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Usuaris i permisos</h2>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Categories, com el menú lateral de l'aplicació però un nivell més
+            endins: mateix estil de fila activa, per no inventar-ne un altre. */}
+        <nav
+          role="tablist"
+          aria-orientation="vertical"
+          aria-label="Categories de configuració"
+          className="w-56 shrink-0 border-r border-gray-200 overflow-y-auto py-3"
+        >
+          {categories.map((cat) => (
+            <div key={cat.id}>
+              {cat.separadorAbans && <div className="my-2 mx-4 border-t border-gray-100" />}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={cat.id === categoriaActiva?.id}
+                onClick={() => setActiuId(cat.id)}
+                className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm text-left transition-colors ${
+                  cat.id === categoriaActiva?.id
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {cat.icona}
+                <span className="flex-1 truncate">{cat.label}</span>
+              </button>
             </div>
-            <GestioUsuaris emailActual={emailActual} />
-          </section>
-        )}
+          ))}
+        </nav>
 
-        {esCoordinador && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Eye size={14} className="text-gray-500" />
-              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Visibilitat de mòduls</h2>
-            </div>
-            <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-              Activa o desactiva quins mòduls pot veure cada perfil. Les caselles marcades indiquen que el mòdul és visible per aquell perfil.
-            </p>
-            <VisibilitatModuls />
-          </section>
-        )}
-
-        {esCoordinador && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Mail size={14} className="text-gray-500" />
-              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Correus automàtics</h2>
-            </div>
-            <FirmaEmailEditor />
-          </section>
-        )}
-
-        {esCoordinador && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Manteniment</h2>
-            </div>
-            <MantenimentEmailEditor />
-          </section>
-        )}
-
-        {/* Tota la configuració del centre és de la coordinació: escriure a
-            `public.config` demana `app_private.admin()`, que només té el rol
-            `coordinador`. Abans aquesta secció es mostrava a qualsevol que
-            gestionés excursions, que hi trobava camps editables i un servidor
-            que els rebutjava tots. */}
-        {esCoordinador && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#059669' }} />
-              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">Excursions</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Circular</p>
-                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                  Terminis i textos fixos de la circular que reben les famílies. Els valors surten
-                  a totes les circulars del centre, així que, com la resta de la configuració,
-                  només els pot canviar la coordinació.
-                </p>
-                <div className="space-y-3">
-                  <CampsNumericsEditor camps={CAMPS_DIES_CIRCULAR} />
-                  {CAMPS_TEXT_CIRCULAR.map((camp) => (
-                    <CampTextLlargEditor key={camp.clau} camp={camp} />
-                  ))}
-                  <LlistaEditor llista={LLISTA_PASSOS_PAGAMENT} />
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preu</p>
-                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                  Paràmetres del càlcul del preu per alumne, per etapa: quants matriculats s'espera
-                  que hi vagin i el marge de seguretat, més l'IVA del transport i el pas d'arrodoniment,
-                  que són comuns a totes les etapes.
-                </p>
-                <CampsNumericsEditor camps={CAMPS_PREU_EXCURSIONS} />
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pressupostos</p>
-                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                  Empreses que es poden triar en demanar un pressupost d’autocar.
-                </p>
-                <LlistaEditor llista={LLISTA_EMPRESES_AUTOCAR} />
-              </div>
-            </div>
-          </section>
-        )}
-
-        {GRUPS.map((grup) => (
-          <section key={grup.modul}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: grup.color }} />
-              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide">{grup.modul}</h2>
-            </div>
-            <div className="space-y-3">
-              {grup.llistes.map((llista) => (
-                <LlistaEditor key={llista.clau} llista={llista} />
-              ))}
-            </div>
-          </section>
-        ))}
+        {/* Contingut de la categoria activa */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {categoriaActiva && (
+            <section role="tabpanel" className="max-w-2xl">
+              <h2 className="text-sm font-bold text-text-main uppercase tracking-wide mb-3">
+                {categoriaActiva.label}
+              </h2>
+              {categoriaActiva.contingut}
+            </section>
+          )}
+        </div>
       </div>
     </div>
   )
