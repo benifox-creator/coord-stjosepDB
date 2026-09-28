@@ -249,6 +249,84 @@ function RolBadge({ rol }: { rol: Rol }) {
   )
 }
 
+// El text sencer de cada permís com a capçalera de columna, en lloc d'amagar-lo
+// dins d'un `title` que només es veu passant el ratolí per sobre.
+const COLUMNES_PERMISOS = [
+  {
+    key: 'material',
+    curt: 'Material Infantil',
+    llarg: 'Pot gestionar el mòdul Material Infantil',
+  },
+  {
+    key: 'excursions',
+    curt: 'Organitzar excursions',
+    llarg: 'Pot organitzar excursions: reservar, circular i cancel·lar. No veu cap cost.',
+  },
+  {
+    key: 'costos',
+    curt: 'Costos d’excursions',
+    llarg: 'Pot veure i editar els costos i el preu de les excursions',
+  },
+  {
+    key: 'coneixement',
+    curt: 'Redactar la Base de Coneixement',
+    llarg: 'Pot redactar la Base de Coneixement. Escriu esborranys; publicar-los continua sent del coordinador.',
+  },
+] as const
+
+const GRID_PERMISOS_USUARIS = `minmax(200px, 1fr) repeat(${COLUMNES_PERMISOS.length}, 100px)`
+
+function UsuarisCapcalera() {
+  return (
+    <div className="grid border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: GRID_PERMISOS_USUARIS }}>
+      <div className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuari</div>
+      {COLUMNES_PERMISOS.map((c) => (
+        <div key={c.key} className="px-1.5 py-2 text-[10px] font-semibold text-gray-500 leading-tight text-center">
+          {c.llarg}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** La casella d'un permís: mateix botó quadrat amb el check en SVG que fa
+ * servir Visibilitat de mòduls, compartit perquè és exactament el mateix
+ * disseny en dues graelles diferents. */
+function CasellaPermis({
+  actiu,
+  saving,
+  onToggle,
+  title,
+}: {
+  actiu: boolean
+  saving: boolean
+  onToggle: () => void
+  title: string
+}) {
+  return (
+    <div className="flex items-center justify-center py-3">
+      {saving ? (
+        <Loader2 size={14} className="animate-spin text-gray-400" />
+      ) : (
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+            actiu ? 'border-primary bg-primary text-white' : 'border-gray-300 bg-white hover:border-gray-400'
+          }`}
+          title={title}
+        >
+          {actiu && (
+            <svg viewBox="0 0 10 8" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 4l3 3 5-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean }) {
   const updateRol = useUsuarisStore((s) => s.updateRol)
   const updateEtapa = useUsuarisStore((s) => s.updateEtapa)
@@ -322,105 +400,83 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 border-b border-gray-100 last:border-0">
-      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-semibold text-gray-600">
-        {(usuari.Nom || usuari.Email).charAt(0).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-text-main truncate">
-          {usuari.Nom || '—'}
-          {esJoMateix && <span className="ml-1.5 text-xs text-gray-400">(tu)</span>}
-        </p>
-        <p className="text-xs text-gray-400 truncate">{usuari.Email}</p>
-      </div>
-      <label
-        className="shrink-0 flex items-center gap-1 text-[11px] text-gray-500"
-        title="Pot gestionar el mòdul Material Infantil"
-      >
-        <input
-          type="checkbox"
-          checked={usuari.PotGestionarMaterial}
-          onChange={handleTogglePotGestionarMaterial}
-          disabled={savingPotGestionar}
-          className="rounded border-gray-300 text-primary focus:ring-primary/30"
-        />
-        Material
-      </label>
-      <label
-        className="shrink-0 flex items-center gap-1 text-[11px] text-gray-500"
-        title="Pot organitzar excursions: reservar, circular i cancel·lar. No veu cap cost."
-      >
-        <input
-          type="checkbox"
-          checked={usuari.PotGestionarExcursions}
-          onChange={() => handleToggleExcursions('logistica')}
-          disabled={savingExcursions}
-          className="rounded border-gray-300 text-primary focus:ring-primary/30"
-        />
-        Excursions
-      </label>
-      <label
-        className="shrink-0 flex items-center gap-1 text-[11px] text-gray-500"
-        title="Pot veure i editar els costos i el preu de les excursions"
-      >
-        <input
-          type="checkbox"
-          checked={usuari.PotGestionarCostosExcursions}
-          onChange={() => handleToggleExcursions('costos')}
-          disabled={savingExcursions}
-          className="rounded border-gray-300 text-primary focus:ring-primary/30"
-        />
-        Costos
-      </label>
-      <label className="shrink-0 flex flex-col items-start gap-0.5 text-[11px] text-gray-500">
-        <span className="flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={usuari.PotRedactarConeixement}
-            onChange={handleTogglePotRedactarConeixement}
-            disabled={savingConeixement}
-            className="rounded border-gray-300 text-primary focus:ring-primary/30"
-          />
-          Pot redactar la Base de Coneixement
-        </span>
-        <span className="text-xs text-gray-500">Escriu esborranys; publicar-los continua sent del coordinador.</span>
-      </label>
-      <select
-        value={usuari.Etapa ?? ''}
-        onChange={handleCanviarEtapa}
-        disabled={savingEtapa}
-        title="Etapa"
-        className="shrink-0 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 disabled:opacity-60"
-      >
-        <option value="">Sense etapa</option>
-        {ETAPES_USUARI.map((e) => (
-          <option key={e} value={e}>{e}</option>
-        ))}
-      </select>
-      <div id={`rol-dropdown-${usuari.Email}`} className="relative shrink-0">
-        <button
-          onClick={() => setObert((o) => !o)}
-          disabled={saving || esJoMateix}
-          className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:cursor-default disabled:opacity-70"
+    <div
+      className="grid items-center border-b border-gray-100 last:border-0"
+      style={{ gridTemplateColumns: GRID_PERMISOS_USUARIS }}
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-semibold text-gray-600">
+          {(usuari.Nom || usuari.Email).charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-text-main truncate">
+            {usuari.Nom || '—'}
+            {esJoMateix && <span className="ml-1.5 text-xs text-gray-400">(tu)</span>}
+          </p>
+          <p className="text-xs text-gray-400 truncate">{usuari.Email}</p>
+        </div>
+        <select
+          value={usuari.Etapa ?? ''}
+          onChange={handleCanviarEtapa}
+          disabled={savingEtapa}
+          title="Etapa"
+          className="shrink-0 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 disabled:opacity-60"
         >
-          {saving ? <Loader2 size={12} className="animate-spin text-gray-400" /> : <RolBadge rol={usuari.Rol} />}
-          {!esJoMateix && <ChevronDown size={12} className={`text-gray-400 transition-transform ${obert ? 'rotate-180' : ''}`} />}
-        </button>
-        {obert && (
-          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[220px] overflow-hidden">
-            {ROLS.map((r) => (
-              <button
-                key={r}
-                onClick={() => handleCanviarRol(r)}
-                className={`w-full flex flex-col items-start gap-0.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left ${r === usuari.Rol ? 'bg-gray-50' : ''}`}
-              >
-                <RolBadge rol={r} />
-                <p className="text-xs text-gray-400 mt-0.5 leading-snug">{ROL_DESCRIPCIONS[r]}</p>
-              </button>
-            ))}
-          </div>
-        )}
+          <option value="">Sense etapa</option>
+          {ETAPES_USUARI.map((e) => (
+            <option key={e} value={e}>{e}</option>
+          ))}
+        </select>
+        <div id={`rol-dropdown-${usuari.Email}`} className="relative shrink-0">
+          <button
+            onClick={() => setObert((o) => !o)}
+            disabled={saving || esJoMateix}
+            className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:cursor-default disabled:opacity-70"
+          >
+            {saving ? <Loader2 size={12} className="animate-spin text-gray-400" /> : <RolBadge rol={usuari.Rol} />}
+            {!esJoMateix && <ChevronDown size={12} className={`text-gray-400 transition-transform ${obert ? 'rotate-180' : ''}`} />}
+          </button>
+          {obert && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[220px] overflow-hidden">
+              {ROLS.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => handleCanviarRol(r)}
+                  className={`w-full flex flex-col items-start gap-0.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left ${r === usuari.Rol ? 'bg-gray-50' : ''}`}
+                >
+                  <RolBadge rol={r} />
+                  <p className="text-xs text-gray-400 mt-0.5 leading-snug">{ROL_DESCRIPCIONS[r]}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      <CasellaPermis
+        actiu={usuari.PotGestionarMaterial}
+        saving={savingPotGestionar}
+        onToggle={handleTogglePotGestionarMaterial}
+        title={`${usuari.PotGestionarMaterial ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[0].curt}`}
+      />
+      <CasellaPermis
+        actiu={usuari.PotGestionarExcursions}
+        saving={savingExcursions}
+        onToggle={() => handleToggleExcursions('logistica')}
+        title={`${usuari.PotGestionarExcursions ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[1].curt}`}
+      />
+      <CasellaPermis
+        actiu={usuari.PotGestionarCostosExcursions}
+        saving={savingExcursions}
+        onToggle={() => handleToggleExcursions('costos')}
+        title={`${usuari.PotGestionarCostosExcursions ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[2].curt}`}
+      />
+      <CasellaPermis
+        actiu={usuari.PotRedactarConeixement}
+        saving={savingConeixement}
+        onToggle={handleTogglePotRedactarConeixement}
+        title={`${usuari.PotRedactarConeixement ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[3].curt}`}
+      />
     </div>
   )
 }
@@ -596,13 +652,16 @@ function GestioUsuaris({ emailActual }: { emailActual: string }) {
           onClose={() => setImportant(false)}
         />
       )}
-      <div className="bg-white border border-gray-200 rounded-xl">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
         {usuaris.length === 0 ? (
           <p className="text-sm text-gray-400 italic px-4 py-3">Sense usuaris registrats.</p>
         ) : (
-          usuaris.map((u) => (
-            <UsuariRow key={u.Email} usuari={u} esJoMateix={u.Email.toLowerCase() === emailActual.toLowerCase()} />
-          ))
+          <>
+            <UsuarisCapcalera />
+            {usuaris.map((u) => (
+              <UsuariRow key={u.Email} usuari={u} esJoMateix={u.Email.toLowerCase() === emailActual.toLowerCase()} />
+            ))}
+          </>
         )}
       </div>
       <AfegirUsuariForm />
@@ -761,29 +820,14 @@ function VisibilitatModuls() {
             <div className="px-4 py-3 text-sm text-text-main font-medium">{label}</div>
             {ROLS_VISIBILITAT.map((rol) => {
               const actiu = actuals.includes(rol)
-              const isSaving = saving === `${key}-${rol}`
               return (
-                <div key={rol} className="flex items-center justify-center py-3">
-                  {isSaving ? (
-                    <Loader2 size={14} className="animate-spin text-gray-400" />
-                  ) : (
-                    <button
-                      onClick={() => handleToggle(key, rol, !actiu)}
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                        actiu
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-gray-300 bg-white hover:border-gray-400'
-                      }`}
-                      title={actiu ? `Amagar ${label} a ${ROL_VIS_LABELS[rol]}` : `Mostrar ${label} a ${ROL_VIS_LABELS[rol]}`}
-                    >
-                      {actiu && (
-                        <svg viewBox="0 0 10 8" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 4l3 3 5-6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </button>
-                  )}
-                </div>
+                <CasellaPermis
+                  key={rol}
+                  actiu={actiu}
+                  saving={saving === `${key}-${rol}`}
+                  onToggle={() => handleToggle(key, rol, !actiu)}
+                  title={actiu ? `Amagar ${label} a ${ROL_VIS_LABELS[rol]}` : `Mostrar ${label} a ${ROL_VIS_LABELS[rol]}`}
+                />
               )
             })}
           </div>
@@ -971,6 +1015,10 @@ interface Categoria {
   contingut: React.ReactNode
   /** Cert al primer element d'un bloc que ha d'anar separat del que el precedeix. */
   separadorAbans?: boolean
+  /** Cert quan el contingut necessita més amplada que el `max-w-2xl` habitual
+   * (per exemple, una graella amb columnes fixes que si no es queda sense
+   * espai per al nom i el correu). */
+  ampleComplet?: boolean
 }
 
 export function ConfiguracioPage() {
@@ -995,6 +1043,7 @@ export function ConfiguracioPage() {
         label: 'Usuaris i permisos',
         icona: <Users size={14} className="text-gray-500" />,
         contingut: <GestioUsuaris emailActual={emailActual} />,
+        ampleComplet: true,
       },
       {
         id: 'visibilitat',
@@ -1150,7 +1199,7 @@ export function ConfiguracioPage() {
         {/* Contingut de la categoria activa */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {categoriaActiva && (
-            <section role="tabpanel" className="max-w-2xl">
+            <section role="tabpanel" className={categoriaActiva.ampleComplet ? '' : 'max-w-2xl'}>
               <h2 className="text-sm font-bold text-text-main uppercase tracking-wide mb-3">
                 {categoriaActiva.label}
               </h2>
