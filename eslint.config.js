@@ -27,7 +27,7 @@ export default defineConfig([
         'error',
         {
           selector: 'JSXAttribute[name.name="dangerouslySetInnerHTML"]',
-          message: "Aquest projecte no fa servir dangerouslySetInnerHTML: tot el contingut de l'usuari es pinta com a elements de React.",
+          message: "Aquest projecte no fa servir dangerouslySetInnerHTML: tot el contingut de l’usuari es pinta com a elements de React.",
         },
       ],
     },
