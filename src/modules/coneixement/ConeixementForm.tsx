@@ -17,6 +17,20 @@ const TIPUS_LABELS: Record<TipusArticle, string> = {
 }
 const TIPUS_OPCIONS = Object.keys(TIPUS_LABELS) as TipusArticle[]
 
+// Tot el subconjunt que entén `markdown.ts`: si un cas no surt aquí, qui
+// escriu no sap que existeix.
+const AJUDA_MARKDOWN: [sintaxi: string, efecte: string][] = [
+  ['## / ###', 'títol'],
+  ['**text**', 'negreta'],
+  ['*text*', 'cursiva'],
+  ['`codi`', 'codi'],
+  ['[text](url)', 'enllaç'],
+  ['-', 'llista'],
+  ['1.', 'llista numerada'],
+  ['>', 'cita'],
+  ['![descripció](url)', 'imatge, sola en una línia'],
+]
+
 interface Props {
   inicial?: Article
   onClose: () => void
@@ -216,11 +230,14 @@ export function ConeixementForm({ inicial, onClose, onGuardar }: Props) {
               </div>
             )}
 
-            <p className="text-xs text-gray-500 mt-1">
-              Admet Markdown: <code className="px-1 bg-gray-100 rounded">##</code> per a un títol,{' '}
-              <code className="px-1 bg-gray-100 rounded">**text**</code> per a negreta,{' '}
-              <code className="px-1 bg-gray-100 rounded">-</code> per a una llista, i{' '}
-              <code className="px-1 bg-gray-100 rounded">![descripció](url)</code> per a una imatge.
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Admet Markdown:{' '}
+              {AJUDA_MARKDOWN.map(([sintaxi, efecte], i) => (
+                <span key={sintaxi}>
+                  <code className="px-1 bg-gray-100 rounded">{sintaxi}</code> {efecte}
+                  {i < AJUDA_MARKDOWN.length - 1 ? ' · ' : '.'}
+                </span>
+              ))}
             </p>
           </div>
 
