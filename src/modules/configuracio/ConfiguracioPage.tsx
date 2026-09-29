@@ -274,14 +274,18 @@ const COLUMNES_PERMISOS = [
   },
 ] as const
 
-const GRID_PERMISOS_USUARIS = `minmax(200px, 1fr) repeat(${COLUMNES_PERMISOS.length}, 100px)`
+type ClauPermis = (typeof COLUMNES_PERMISOS)[number]['key']
+
+// Més amples que les de Visibilitat de mòduls: allà la capçalera és el nom
+// d'un rol, aquí és una frase sencera que s'ha de poder llegir.
+const GRID_PERMISOS_USUARIS = `minmax(200px, 1fr) repeat(${COLUMNES_PERMISOS.length}, 150px)`
 
 function UsuarisCapcalera() {
   return (
     <div className="grid border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: GRID_PERMISOS_USUARIS }}>
       <div className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuari</div>
       {COLUMNES_PERMISOS.map((c) => (
-        <div key={c.key} className="px-1.5 py-2 text-[10px] font-semibold text-gray-500 leading-tight text-center">
+        <div key={c.key} className="px-2 py-2 text-[11px] font-semibold text-gray-500 leading-snug text-center">
           {c.llarg}
         </div>
       ))}
@@ -399,6 +403,15 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
     }
   }
 
+  // Per clau i no per posició: la capçalera i les caselles surten de la mateixa
+  // llista, així que reordenar-la no pot desaparellar un títol de la seva casella.
+  const permisos: Record<ClauPermis, { actiu: boolean; saving: boolean; onToggle: () => void }> = {
+    material: { actiu: usuari.PotGestionarMaterial, saving: savingPotGestionar, onToggle: handleTogglePotGestionarMaterial },
+    excursions: { actiu: usuari.PotGestionarExcursions, saving: savingExcursions, onToggle: () => handleToggleExcursions('logistica') },
+    costos: { actiu: usuari.PotGestionarCostosExcursions, saving: savingExcursions, onToggle: () => handleToggleExcursions('costos') },
+    coneixement: { actiu: usuari.PotRedactarConeixement, saving: savingConeixement, onToggle: handleTogglePotRedactarConeixement },
+  }
+
   return (
     <div
       className="grid items-center border-b border-gray-100 last:border-0"
@@ -453,30 +466,18 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
         </div>
       </div>
 
-      <CasellaPermis
-        actiu={usuari.PotGestionarMaterial}
-        saving={savingPotGestionar}
-        onToggle={handleTogglePotGestionarMaterial}
-        title={`${usuari.PotGestionarMaterial ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[0].curt}`}
-      />
-      <CasellaPermis
-        actiu={usuari.PotGestionarExcursions}
-        saving={savingExcursions}
-        onToggle={() => handleToggleExcursions('logistica')}
-        title={`${usuari.PotGestionarExcursions ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[1].curt}`}
-      />
-      <CasellaPermis
-        actiu={usuari.PotGestionarCostosExcursions}
-        saving={savingExcursions}
-        onToggle={() => handleToggleExcursions('costos')}
-        title={`${usuari.PotGestionarCostosExcursions ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[2].curt}`}
-      />
-      <CasellaPermis
-        actiu={usuari.PotRedactarConeixement}
-        saving={savingConeixement}
-        onToggle={handleTogglePotRedactarConeixement}
-        title={`${usuari.PotRedactarConeixement ? 'Treure' : 'Donar'}: ${COLUMNES_PERMISOS[3].curt}`}
-      />
+      {COLUMNES_PERMISOS.map((c) => {
+        const p = permisos[c.key]
+        return (
+          <CasellaPermis
+            key={c.key}
+            actiu={p.actiu}
+            saving={p.saving}
+            onToggle={p.onToggle}
+            title={`${p.actiu ? 'Treure' : 'Donar'}: ${c.curt}`}
+          />
+        )
+      })}
     </div>
   )
 }

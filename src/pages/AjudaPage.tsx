@@ -269,7 +269,7 @@ export function AjudaPage() {
       <section id="navegacio" className="scroll-mt-6 pt-10 border-t border-gray-200 space-y-3">
         <h2 className="text-lg font-semibold text-text-main">Navegació general</h2>
         <p className="text-gray-500">
-          El menú lateral esquerre s'organitza en tres blocs, de dalt a baix:
+          El menú lateral esquerre s’organitza en tres blocs, de dalt a baix:
         </p>
         <ul className="space-y-2 text-sm text-gray-600 list-disc pl-5">
           <li>
@@ -283,7 +283,7 @@ export function AjudaPage() {
           </li>
           <li>
             <strong className="text-text-main">Gestió TIC</strong> — eines més de coordinació que de consulta diària:{' '}
-            <Term>Manteniment</Term>, <Term>Pla d'Acció</Term> i <Term>Correus</Term> (la cua d'enviaments,
+            <Term>Manteniment</Term>, <Term>Pla d’Acció</Term> i <Term>Correus</Term> (la cua d’enviaments,
             vegeu <a className="text-secondary underline" href="#notificacions">Correus automàtics</a>).
           </li>
         </ul>
@@ -292,7 +292,7 @@ export function AjudaPage() {
           Coordinador TIC, <Term>Configuració</Term>.
         </p>
         <ul className="space-y-2 text-sm text-gray-600 list-disc pl-5">
-          <li>L'Inici (Dashboard) és sempre visible per a tothom; la resta de mòduls es mostren o s'amaguen segons la visibilitat configurada per rol.</li>
+          <li>L’Inici (Dashboard) és sempre visible per a tothom; la resta de mòduls es mostren o s’amaguen segons la visibilitat configurada per rol.</li>
           <li>
             Un bloc desapareix sencer si cap dels seus mòduls és visible per al teu rol — mai queda un títol de
             bloc sense res a sota.
@@ -323,20 +323,20 @@ export function AjudaPage() {
       </ModuleSection>
 
       {/* HORARIS */}
-      <ModuleSection id="mod-horaris" icon={Clock} title="Horaris" purpose="L'horari setmanal de classes de cada professor: la base sobre la qual Absències i Substitucions calculen soles quin grup i quina matèria queden sense professor.">
+      <ModuleSection id="mod-horaris" icon={Clock} title="Horaris" purpose="L’horari setmanal de classes de cada professor: la base sobre la qual Absències i Substitucions calculen soles quin grup i quina matèria queden sense professor.">
         <SubHeading>Què hi trobaràs</SubHeading>
         <ul className="space-y-1.5 text-sm text-gray-600 list-disc pl-5">
           <li>Pestanya <Term>El meu horari</Term>: la teva pròpia graella setmanal, per etapa.</li>
-          <li>Si pots veure-ho tot: pestanya <Term>Tots els horaris</Term>, amb un selector per consultar (i, si ets Coordinador TIC, editar) l'horari de qualsevol altra persona.</li>
-          <li>Un selector de data ("Horari vigent el...") per consultar com era, o com serà, l'horari en una data concreta — útil quan hi ha canvis a mig curs.</li>
+          <li>Si pots veure-ho tot: pestanya <Term>Tots els horaris</Term>, amb un selector per consultar (i, si ets Coordinador TIC, editar) l’horari de qualsevol altra persona.</li>
+          <li>Un selector de data ("Horari vigent el...") per consultar com era, o com serà, l’horari en una data concreta — útil quan hi ha canvis a mig curs.</li>
         </ul>
-        <SubHeading>En afegir un període a l'horari</SubHeading>
+        <SubHeading>En afegir un període a l’horari</SubHeading>
         <FieldList rows={[
           { term: 'Etapa', desc: 'Determina quines franges horàries es poden triar (cada etapa té els seus propis horaris de referència).' },
-          { term: 'Franja horària', desc: "Es tria d'una llista fixa segons l'etapa, no és text lliure." },
+          { term: 'Franja horària', desc: "Es tria d’una llista fixa segons l’etapa, no és text lliure." },
           { term: 'Tipus', desc: 'Lectiva o No lectiva (per exemple, una hora de guàrdia o de coordinació).' },
           { term: 'Grup / Matèria', desc: 'Obligatoris si el període és Lectiva.' },
-          { term: 'Vigència', desc: "Des de quina data i fins a quina és vàlid aquest període — permet fer canvis d'horari a mig curs sense perdre l'històric." },
+          { term: 'Vigència', desc: "Des de quina data i fins a quina és vàlid aquest període — permet fer canvis d’horari a mig curs sense perdre l’històric." },
         ]} />
         <PermBox rows={[
           { label: 'Veure el propi horari', value: 'Qualsevol persona amb accés al mòdul' },
@@ -345,8 +345,8 @@ export function AjudaPage() {
           { label: 'Editar l’horari d’una altra persona', value: 'Només Coordinador TIC' },
         ]} />
         <Callout title="Per què és important mantenir-lo al dia">
-          Quan algú reporta una absència amb períodes concrets, l'aplicació els llegeix directament del
-          seu horari — si l'horari no reflecteix la realitat, l'absència i les substitucions que en
+          Quan algú reporta una absència amb períodes concrets, l’aplicació els llegeix directament del
+          seu horari — si l’horari no reflecteix la realitat, l’absència i les substitucions que en
           surtin tampoc ho faran.
         </Callout>
       </ModuleSection>
@@ -577,22 +577,22 @@ export function AjudaPage() {
       </ModuleSection>
 
       {/* EXCURSIONS */}
-      <ModuleSection id="mod-excursions" icon={MapPin} title="Excursions" purpose="Tota la gestió d'una sortida escolar: des de la proposta inicial fins al cost final per alumne i l'enviament de la circular a les famílies.">
-        <SubHeading>El recorregut d'una excursió</SubHeading>
+      <ModuleSection id="mod-excursions" icon={MapPin} title="Excursions" purpose="Tota la gestió d’una sortida escolar: des de la proposta inicial fins al cost final per alumne i l’enviament de la circular a les famílies.">
+        <SubHeading>El recorregut d’una excursió</SubHeading>
         <p className="text-sm text-gray-600">
-          Cada excursió passa per una sèrie d'estats, en aquest ordre:{' '}
+          Cada excursió passa per una sèrie d’estats, en aquest ordre:{' '}
           <Term>Esborrany</Term> → <Term>Proposada</Term> → <Term>Aprovada</Term> → <Term>Reservada</Term> →{' '}
-          <Term>Circular enviada</Term> (o <Term>Cancel·lada</Term> en qualsevol moment). Cada canvi d'estat
-          queda registrat amb qui l'ha fet i quan.
+          <Term>Circular enviada</Term> (o <Term>Cancel·lada</Term> en qualsevol moment). Cada canvi d’estat
+          queda registrat amb qui l’ha fet i quan.
         </p>
         <SubHeading>Què pots fer</SubHeading>
         <ul className="space-y-1.5 text-sm text-gray-600 list-disc pl-5">
-          <li>Qualsevol persona amb accés pot proposar una excursió nova (queda en Esborrany) i editar-la mentre ningú l'hagi aprovat.</li>
+          <li>Qualsevol persona amb accés pot proposar una excursió nova (queda en Esborrany) i editar-la mentre ningú l’hagi aprovat.</li>
           <li>Qui pot aprovar-la la passa a Aprovada o la rebutja amb un motiu.</li>
           <li>Qui gestiona logística pot marcar-la com a Reservada, enviar la circular a les famílies i cancel·lar-la si cal.</li>
-          <li>Qui pot veure costos hi introdueix el preu per alumne, el cost de l'autocar i si l'AMPA hi col·labora.</li>
+          <li>Qui pot veure costos hi introdueix el preu per alumne, el cost de l’autocar i si l’AMPA hi col·labora.</li>
         </ul>
-        <SubHeading>Fitxa d'una excursió</SubHeading>
+        <SubHeading>Fitxa d’una excursió</SubHeading>
         <FieldList rows={[
           { term: 'Etapa / Grups', desc: 'Un o més grups, cadascun amb el nombre d’alumnes previstos.' },
           { term: 'Lloc / Activitat / Data', desc: 'Dades bàsiques de la sortida.' },
@@ -608,17 +608,17 @@ export function AjudaPage() {
         ]} />
         <Callout title="Dues caselles independents">
           A Configuració → Usuaris i permisos hi ha dues caselles pensades per a aquest mòdul: una dona
-          accés a la logística (reservar, circular, cancel·lar) i l'altra, als costos. Tenir la de
+          accés a la logística (reservar, circular, cancel·lar) i l’altra, als costos. Tenir la de
           costos activada ja inclou la logística; no cal marcar les dues.
         </Callout>
         <Callout>
           El panell econòmic de cada excursió compara la previsió amb els pagaments reals rebuts per
-          grup, i el conjunt del mòdul manté l'historial de totes les excursions de cursos anteriors.
+          grup, i el conjunt del mòdul manté l’historial de totes les excursions de cursos anteriors.
         </Callout>
       </ModuleSection>
 
       {/* CONEIXEMENT */}
-      <ModuleSection id="mod-coneixement" icon={BookOpen} title="Base de Coneixement" purpose="Una petita wiki interna, organitzada per departaments, amb procediments i respostes habituals per a consulta de tot el claustre.">
+      <ModuleSection id="mod-coneixement" icon={BookOpen} title="Base de Coneixement" purpose="Una petita wiki interna, organitzada per temes, amb procediments i respostes habituals per a consulta de tot el claustre.">
         <SubHeading>Què pots fer</SubHeading>
         <ul className="space-y-1.5 text-sm text-gray-600 list-disc pl-5">
           <li>Cercar per títol, etiquetes o contingut, i filtrar per categoria.</li>
@@ -750,8 +750,8 @@ export function AjudaPage() {
         </div>
         <p className="text-gray-500">
           Aquest mòdul només apareix al menú, i només s'hi pot entrar, si el teu rol és Coordinador
-          TIC. És des d'aquí que es personalitza tota l'aplicació per al centre: una columna de
-          categories a l'esquerra i, a la dreta, el contingut de la que tinguis triada.
+          TIC. És des d’aquí que es personalitza tota l’aplicació per al centre: una columna de
+          categories a l’esquerra i, a la dreta, el contingut de la que tinguis triada.
         </p>
         <SubHeading>Cinc categories de gestió general</SubHeading>
         <div className="overflow-x-auto bg-white border border-gray-200 rounded-xl">
@@ -764,7 +764,7 @@ export function AjudaPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {[
-                ['Usuaris i permisos', "Donar d'alta persones abans que iniciïn sessió (Email, Nom opcional, Rol i Etapa), i canviar-los el rol o l'etapa. Aquí també hi ha les caselles independents del rol: \"Pot gestionar Material Infantil\", \"Pot organitzar excursions\", \"Pot veure i editar els costos\" i \"Pot redactar la Base de Coneixement\", una columna per cadascuna amb el text sencer de què fa. L'Etapa (EI, EP, ESO, BATX, GM) s'utilitza per agrupar el recompte d'hores d'absències per Infantil/Primària o Secundària."],
+                ['Usuaris i permisos', "Donar d’alta persones abans que iniciïn sessió (Email, Nom opcional, Rol i Etapa), i canviar-los el rol o l’etapa. Aquí també hi ha les caselles independents del rol: \"Pot gestionar Material Infantil\", \"Pot organitzar excursions\", \"Pot veure i editar els costos\" i \"Pot redactar la Base de Coneixement\", una columna per cadascuna amb el text sencer de què fa. L’Etapa (EI, EP, ESO, BATX, GM) s’utilitza per agrupar el recompte d’hores d’absències per Infantil/Primària o Secundària."],
                 ['Visibilitat de mòduls', 'Taula de caselles per marcar quins mòduls veu cada rol (Direcció, Titular, Cap d’Estudis, Professorat, Convidat). El Coordinador TIC sempre té accés a tots.'],
                 ['Correus automàtics', 'Text de la firma que apareix al peu dels correus que envia l’aplicació (absències, substitucions, incidències...). Es pot canviar sense tocar codi.'],
                 ['Manteniment', 'Correu del responsable de manteniment, on arriben els avisos de desperfectes.'],
@@ -781,7 +781,7 @@ export function AjudaPage() {
 
         <SubHeading>Deu categories amb les llistes editables de cada mòdul</SubHeading>
         <p className="text-sm text-gray-600 mb-2">
-          Després d'un separador, una categoria per mòdul amb desplegables configurables. Cada llista
+          Després d’un separador, una categoria per mòdul amb desplegables configurables. Cada llista
           es pot restaurar als valors per defecte amb un sol clic.
         </p>
         <div className="overflow-x-auto bg-white border border-gray-200 rounded-xl">
@@ -814,8 +814,8 @@ export function AjudaPage() {
           </table>
         </div>
         <Callout tone="warn" title="Encara no configurable des de la pantalla">
-          Les categories de Pla d'Acció tenen valors per defecte al sistema, però de moment no es
-          poden editar des d'aquesta pantalla. El nombre d'alumnes, el marge de seguretat, el
+          Les categories de Pla d’Acció tenen valors per defecte al sistema, però de moment no es
+          poden editar des d’aquesta pantalla. El nombre d’alumnes, el marge de seguretat, el
           pressupost i el curs actiu de{' '}
           <a className="text-secondary underline" href="#mod-material-infantil">Material Infantil</a>{' '}
           tampoc: es configuren des de la pròpia pestanya Configuració d'aquell mòdul, no des d'aquí.
@@ -863,8 +863,8 @@ export function AjudaPage() {
         <SubHeading>La pantalla Correus</SubHeading>
         <p className="text-gray-500 text-sm">
           Al bloc <Term>Gestió TIC</Term> del menú hi ha <Term>Correus</Term>: la cua real de tots
-          aquests avisos, amb el seu estat (pendent, enviat, fallat o cancel·lat), filtrable per estat
-          i per data. Des d'aquí es pot reintentar un enviament fallat o cancel·lar-ne un que ja no
+          aquests avisos, amb el seu estat (pendent, enviant-se, enviat, ha fallat o cancel·lat), filtrable per estat
+          i per data. Des d’aquí es pot reintentar un enviament fallat o cancel·lar-ne un que ja no
           calgui.
         </p>
         <Callout>
@@ -911,7 +911,7 @@ export function AjudaPage() {
             aprovar-les ni rebutjar-les.
           </FaqItem>
           <FaqItem q="Quina diferència hi ha entre «Pot organitzar excursions» i «Pot veure i editar els costos»?">
-            La primera dona accés a la logística d'Excursions: reservar, enviar la circular i
+            La primera dona accés a la logística d’Excursions: reservar, enviar la circular i
             cancel·lar, però sense veure cap import. La segona hi afegeix els costos i el preu per
             alumne. Tenir activada la de costos ja inclou la logística — no cal marcar-les totes dues.
           </FaqItem>
