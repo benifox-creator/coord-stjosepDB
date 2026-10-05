@@ -54,7 +54,7 @@ L'Andrés vol que tot això visqui a SJO Hub. El mòdul d'Inventari actual no ho
 Es desen a `public.config` i també a `CONFIG_DEFAULTS`, perquè «restaurar per defecte» torni aquests valors.
 
 - **`inventari.categories`** (Tipus) — substitueix la llista actual:
-  Alarma, Altaveus, Altaveus Bluetooth, Càmera de seguretat, Impressora, Mòbil, NAS, PC, Pissarra digital, Portàtil, Projector, Punt d'accés, Ràdio CD, Router, Servidor, Switch, Switch gestionable, Tauleta, Televisió, Videogravador, Webcam.
+  Alarma, Altaveus, Altaveus Bluetooth, Càmera de seguretat, Impressora, Mòbil, NAS, PC, Pissarra digital, Portàtil, Projector, Punt d'accés, Ràdio CD, Router, Servidor, Switch, Switch gestionable, Tauleta, Televisió, Videogravador, Webcam, i **Altre** al final: el formulari el fa servir per escriure un tipus lliure.
 - **`inventari.accions`**: Reparar, Registrar, Retirar, Revisar, Substituir.
 - **`inventari.sistemes-operatius`**: Android OS, ChromeOS, DSM (Synology), Linux, Windows 7, Windows 8, Windows 11, Windows Vista, Windows X, Windows X Pro Education.
 
@@ -65,7 +65,8 @@ Es desen a `public.config` i també a `CONFIG_DEFAULTS`, perquè «restaurar per
 - **Formulari**:
   - **Ubicació**: es tria del catàleg i, a sota, es veu `edifici · planta`.
   - **Estat**: els 9 valors.
-  - **Acció pendent** i **Sistema operatiu**: desplegables de les seves llistes, amb opció buida.
+  - **Acció pendent** i **Sistema operatiu**: desplegables de les seves llistes, amb opció buida. Si el valor d'un dispositiu ja no és a la llista, es continua mostrant, perquè desar no l'esborri.
+  - **Marca, Model i Ubicació deixen de ser obligatoris.** Els dispositius importats no sempre en tenen, i el coordinador els ha de poder editar igualment.
   - La resta de camps no canvia.
 - **Fitxa**: mostra la ubicació completa (`A21-ESO-2A · A-EscC · PTA1`), l'acció pendent (destacada si n'hi ha) i el sistema operatiu.
 - **Llistat**: filtres nous per ubicació i per acció pendent, al costat dels d'estat i categoria actuals.
