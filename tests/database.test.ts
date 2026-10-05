@@ -1570,3 +1570,65 @@ describe('redactar la base de coneixement', () => {
     })
   })
 })
+
+describe("inventari: catàleg d'ubicacions i estats nous", () => {
+  async function ubicacio(codi = 'A21-ESO-2A') {
+    await asUser('admin@stjosep.org')
+    await db.query("insert into public.ubicacions(codi,edifici,planta) values($1,'A-EscC','PTA1')", [codi])
+  }
+
+  it("el coordinador dona d'alta una ubicació i el professorat la llegeix", async () => {
+    await ubicacio()
+    await asUser('teacher@stjosep.org')
+    expect((await db.query('select codi, edifici, planta from public.ubicacions')).rows)
+      .toEqual([{ codi: 'A21-ESO-2A', edifici: 'A-EscC', planta: 'PTA1' }])
+  })
+
+  it("el professorat no pot crear ubicacions", async () => {
+    await asUser('teacher@stjosep.org')
+    await expect(db.query("insert into public.ubicacions(codi) values('Aula X')")).rejects.toThrow()
+  })
+
+  it("un dispositiu només pot anar a una ubicació del catàleg", async () => {
+    await asUser('admin@stjosep.org')
+    await expect(db.query("insert into public.inventari(nom,ubicacio) values('PC','No existeix')"))
+      .rejects.toThrow(/foreign key/)
+  })
+
+  it("un dispositiu pot no tenir ubicació", async () => {
+    await asUser('admin@stjosep.org')
+    const r = await db.query<{ ubicacio: string | null }>("insert into public.inventari(nom) values('Tauleta') returning ubicacio")
+    expect(r.rows[0].ubicacio).toBeNull()
+  })
+
+  it("reanomenar una ubicació arriba als seus dispositius", async () => {
+    await ubicacio()
+    await db.query("insert into public.inventari(nom,ubicacio) values('Pissarra','A21-ESO-2A')")
+    await db.query("update public.ubicacions set codi='A21-ESO-2B' where codi='A21-ESO-2A'")
+    expect((await db.query("select ubicacio from public.inventari where nom='Pissarra'")).rows)
+      .toEqual([{ ubicacio: 'A21-ESO-2B' }])
+  })
+
+  it("no es pot esborrar una ubicació que encara té dispositius", async () => {
+    await ubicacio()
+    await db.query("insert into public.inventari(nom,ubicacio) values('Pissarra','A21-ESO-2A')")
+    await expect(db.query("delete from public.ubicacions where codi='A21-ESO-2A'")).rejects.toThrow(/foreign key/)
+  })
+
+  it("admet els nou estats i rebutja els que no hi són", async () => {
+    await asUser('admin@stjosep.org')
+    for (const estat of ['Actiu', 'Avariat', 'En reparació', 'En préstec', 'En proves',
+      'No desplegat', 'Retirat temporalment', 'De baixa', 'Robat']) {
+      await db.query("insert into public.inventari(nom,estat) values('X',$1)", [estat])
+    }
+    await expect(db.query("insert into public.inventari(nom,estat) values('X','Perdut')"))
+      .rejects.toThrow(/inventari_estat_check/)
+  })
+
+  it("guarda l'acció pendent i el sistema operatiu", async () => {
+    await asUser('admin@stjosep.org')
+    const r = await db.query<{ accio: string; sistema_operatiu: string }>(
+      "insert into public.inventari(nom,accio,sistema_operatiu) values('PC','Revisar','Windows 11') returning accio, sistema_operatiu")
+    expect(r.rows[0]).toEqual({ accio: 'Revisar', sistema_operatiu: 'Windows 11' })
+  })
+})
