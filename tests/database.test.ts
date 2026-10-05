@@ -1571,13 +1571,13 @@ describe('redactar la base de coneixement', () => {
   })
 })
 
-describe("inventari: catàleg d'ubicacions i estats nous", () => {
+describe('inventari: catàleg d’ubicacions i estats nous', () => {
   async function ubicacio(codi = 'A21-ESO-2A') {
     await asUser('admin@stjosep.org')
     await db.query("insert into public.ubicacions(codi,edifici,planta) values($1,'A-EscC','PTA1')", [codi])
   }
 
-  it("el coordinador dona d'alta una ubicació i el professorat la llegeix", async () => {
+  it('el coordinador dona d’alta una ubicació i el professorat la llegeix', async () => {
     await ubicacio()
     await asUser('teacher@stjosep.org')
     expect((await db.query('select codi, edifici, planta from public.ubicacions')).rows)
@@ -1625,7 +1625,7 @@ describe("inventari: catàleg d'ubicacions i estats nous", () => {
       .rejects.toThrow(/inventari_estat_check/)
   })
 
-  it("guarda l'acció pendent i el sistema operatiu", async () => {
+  it('guarda l’acció pendent i el sistema operatiu', async () => {
     await asUser('admin@stjosep.org')
     const r = await db.query<{ accio: string; sistema_operatiu: string }>(
       "insert into public.inventari(nom,accio,sistema_operatiu) values('PC','Revisar','Windows 11') returning accio, sistema_operatiu")
