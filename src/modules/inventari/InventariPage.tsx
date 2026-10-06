@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react'
-import { Plus, Search, RefreshCw, Package } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Plus, Search, RefreshCw, Package, SlidersHorizontal, X } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { useConfigStore } from '../../store/configStore'
-import type { ItemInventari, CategoriaInventari } from './types'
-import type { EstatInventari } from './estats'
+import type { ItemInventari } from './types'
 import { ESTATS_INVENTARI, esAvariat } from './estats'
 import type { Ubicacio } from './ubicacions'
 import { formatDate, garantiaEstat } from './inventari.utils'
 import { ubicacioCompleta } from './ubicacions'
+import type { FiltresInventari, FiltreEstat, ClauFiltre } from './filtres'
+import { FILTRES_BUITS, filtraInventari, filtresActius } from './filtres'
 
 function SkeletonRow() {
   return (
@@ -18,6 +19,15 @@ function SkeletonRow() {
         </td>
       ))}
     </tr>
+  )
+}
+
+function CampFiltre({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-gray-500">{label}</span>
+      {children}
+    </label>
   )
 }
 
@@ -42,53 +52,83 @@ export function InventariPage({
 }: Props) {
   const categories = useConfigStore((s) => s.getValues('inventari.categories'))
   const accions = useConfigStore((s) => s.getValues('inventari.accions'))
-  const [filtreUbicacio, setFiltreUbicacio] = useState('')
-  // '' = totes; 'qualsevol' = només les que tenen alguna acció pendent.
-  const [filtreAccio, setFiltreAccio] = useState('')
-  const [cerca, setCerca] = useState('')
-  const [filtreEstat, setFiltreEstat] = useState<EstatInventari | ''>('')
-  const [filtreCategoria, setFiltreCategoria] = useState<CategoriaInventari | ''>('')
+  const [filtres, setFiltres] = useState<FiltresInventari>(FILTRES_BUITS)
+  const [panellObert, setPanellObert] = useState(false)
+  const panellRef = useRef<HTMLDivElement>(null)
 
-  const filtrats = useMemo(() => {
-    const q = cerca.toLowerCase()
-    return [...items]
-      .sort((a, b) => a.ID.localeCompare(b.ID))
-      .filter((item) => {
-        if (filtreEstat && item.Estat !== filtreEstat) return false
-        if (filtreCategoria && item.Categoria !== filtreCategoria) return false
-        if (filtreUbicacio && item.Ubicació !== filtreUbicacio) return false
-        if (filtreAccio === 'qualsevol' && !item.Accio) return false
-        if (filtreAccio && filtreAccio !== 'qualsevol' && item.Accio !== filtreAccio) return false
-        if (q) {
-          const h = `${item.ID} ${item.Nom} ${item.Marca} ${item.Model} ${item.Ubicació} ${item['Núm_sèrie']} ${item.SistemaOperatiu} ${item.Accio}`.toLowerCase()
-          if (!h.includes(q)) return false
-        }
-        return true
-      })
-  }, [items, filtreEstat, filtreCategoria, cerca, filtreUbicacio, filtreAccio])
+  const filtrats = useMemo(() => filtraInventari(items, filtres), [items, filtres])
+  const actius = filtresActius(filtres)
 
-  const comptadors = useMemo(() => ({
-    actiu: items.filter((i) => i.Estat === 'Actiu').length,
-    reparacio: items.filter((i) => esAvariat(i.Estat)).length,
-    prestec: items.filter((i) => i.Estat === 'En préstec').length,
-    baixa: items.filter((i) => i.Estat === 'De baixa').length,
-  }), [items])
+  function canvia<K extends keyof FiltresInventari>(clau: K, valor: FiltresInventari[K]) {
+    setFiltres((f) => ({ ...f, [clau]: valor }))
+  }
+  function treu(clau: ClauFiltre) {
+    canvia(clau, '')
+  }
+  function esborraFiltres() {
+    setFiltres((f) => ({ ...FILTRES_BUITS, cerca: f.cerca }))
+  }
+
+  // El panell es tanca clicant fora o amb Esc, com qualsevol menú.
+  useEffect(() => {
+    if (!panellObert) return
+    function clic(e: MouseEvent) {
+      if (panellRef.current && !panellRef.current.contains(e.target as Node)) setPanellObert(false)
+    }
+    function tecla(e: KeyboardEvent) {
+      if (e.key === 'Escape') setPanellObert(false)
+    }
+    document.addEventListener('mousedown', clic)
+    document.addEventListener('keydown', tecla)
+    return () => {
+      document.removeEventListener('mousedown', clic)
+      document.removeEventListener('keydown', tecla)
+    }
+  }, [panellObert])
+
+  // Les píndoles comptadores són també el filtre ràpid d'estat.
+  const pindoles: { valor: FiltreEstat; label: string; val: number; color: string }[] = useMemo(() => [
+    { valor: 'Actiu', label: 'Actius', val: items.filter((i) => i.Estat === 'Actiu').length, color: '#15803d' },
+    { valor: 'avariats', label: 'Avariats o en reparació', val: items.filter((i) => esAvariat(i.Estat)).length, color: '#ca8a04' },
+    { valor: 'En préstec', label: 'En préstec', val: items.filter((i) => i.Estat === 'En préstec').length, color: '#0c71c3' },
+    { valor: 'De baixa', label: 'De baixa', val: items.filter((i) => i.Estat === 'De baixa').length, color: '#861414' },
+  ], [items])
 
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Capçalera */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Títol, comptadors (que també filtren) i accions */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
             <Package size={20} className="text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold text-text-main">Inventari</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {loading ? 'Carregant...' : `${filtrats.length} de ${items.length} dispositius`}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold text-text-main">Inventari</h1>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${filtrats.length} de ${items.length} dispositius`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {pindoles.map(({ valor, label, val, color }) => {
+              const actiu = filtres.estat === valor
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={actiu}
+                  onClick={() => canvia('estat', actiu ? '' : valor)}
+                  title={actiu ? 'Treu aquest filtre' : `Mostra només: ${label}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs transition-colors ${
+                    actiu ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  style={actiu ? { backgroundColor: color } : undefined}
+                >
+                  <span className="font-bold" style={actiu ? undefined : { color }}>{val}</span>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
             {onRefresh && (
               <button
                 onClick={onRefresh}
@@ -111,69 +151,101 @@ export function InventariPage({
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="flex gap-5 mb-4">
-          {[
-            { label: 'Actius',       val: comptadors.actiu,    color: '#15803d' },
-            { label: 'Avariats o en reparació', val: comptadors.reparacio, color: '#ca8a04' },
-            { label: 'En préstec',   val: comptadors.prestec,  color: '#0c71c3' },
-            { label: 'De baixa',     val: comptadors.baixa,    color: '#861414' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className="text-xl font-bold" style={{ color }}>{val}</span>
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Filtres */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-52">
+        {/* Cerca i botó de filtres */}
+        <div className="flex gap-2 mt-3">
+          <div className="relative flex-1">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              value={cerca}
-              onChange={(e) => setCerca(e.target.value)}
+              value={filtres.cerca}
+              onChange={(e) => canvia('cerca', e.target.value)}
               placeholder="Cercar per nom, marca, ubicació, núm. sèrie..."
               className="input pl-8 text-sm w-full"
             />
           </div>
-          <select
-            value={filtreEstat}
-            onChange={(e) => setFiltreEstat(e.target.value as EstatInventari | '')}
-            className="input text-sm w-40"
-          >
-            <option value="">Tots els estats</option>
-            {ESTATS_INVENTARI.map((e) => <option key={e}>{e}</option>)}
-          </select>
-          <select
-            value={filtreCategoria}
-            onChange={(e) => setFiltreCategoria(e.target.value as CategoriaInventari | '')}
-            className="input text-sm w-44"
-          >
-            <option value="">Totes les categories</option>
-            {categories.map((c) => <option key={c}>{c}</option>)}
-          </select>
-          <select
-            value={filtreUbicacio}
-            onChange={(e) => setFiltreUbicacio(e.target.value)}
-            className="input text-sm w-44"
-            aria-label="Filtra per ubicació"
-          >
-            <option value="">Totes les ubicacions</option>
-            {ubicacions.map((u) => <option key={u.id} value={u.Codi}>{u.Codi}</option>)}
-          </select>
-          <select
-            value={filtreAccio}
-            onChange={(e) => setFiltreAccio(e.target.value)}
-            className="input text-sm w-44"
-            aria-label="Filtra per acció pendent"
-          >
-            <option value="">Totes les accions</option>
-            <option value="qualsevol">Amb alguna acció pendent</option>
-            {accions.map((a) => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <div ref={panellRef} className="relative">
+            <button
+              type="button"
+              aria-expanded={panellObert}
+              onClick={() => setPanellObert((o) => !o)}
+              className={`flex items-center gap-1.5 h-full px-3 text-sm font-medium border rounded-lg transition-colors ${
+                actius.length > 0 ? 'border-primary/40 text-primary bg-primary/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <SlidersHorizontal size={14} />
+              Filtres
+              {actius.length > 0 && (
+                <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">
+                  {actius.length}
+                </span>
+              )}
+            </button>
+            {panellObert && (
+              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 space-y-2.5">
+                <CampFiltre label="Estat">
+                  <select value={filtres.estat} onChange={(e) => canvia('estat', e.target.value as FiltreEstat)} className="input text-sm w-full">
+                    <option value="">Tots</option>
+                    <option value="avariats">Avariats o en reparació</option>
+                    {ESTATS_INVENTARI.map((e) => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                </CampFiltre>
+                <CampFiltre label="Tipus">
+                  <select value={filtres.categoria} onChange={(e) => canvia('categoria', e.target.value)} className="input text-sm w-full">
+                    <option value="">Tots</option>
+                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </CampFiltre>
+                <CampFiltre label="Ubicació">
+                  <select value={filtres.ubicacio} onChange={(e) => canvia('ubicacio', e.target.value)} className="input text-sm w-full">
+                    <option value="">Totes</option>
+                    {ubicacions.map((u) => <option key={u.id} value={u.Codi}>{ubicacioCompleta(u.Codi, ubicacions)}</option>)}
+                  </select>
+                </CampFiltre>
+                <CampFiltre label="Acció pendent">
+                  <select value={filtres.accio} onChange={(e) => canvia('accio', e.target.value)} className="input text-sm w-full">
+                    <option value="">Totes</option>
+                    <option value="qualsevol">Amb alguna acció pendent</option>
+                    {accions.map((a) => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </CampFiltre>
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={esborraFiltres}
+                    disabled={actius.length === 0}
+                    className="text-xs text-primary hover:underline disabled:opacity-40 disabled:no-underline"
+                  >
+                    Esborra filtres
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Xips dels filtres actius */}
+        {actius.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            {actius.map(({ clau, etiqueta }) => (
+              <span key={clau} className="flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-gray-100 text-xs text-gray-700">
+                {etiqueta}
+                <button
+                  type="button"
+                  onClick={() => treu(clau)}
+                  aria-label={`Treu el filtre ${etiqueta}`}
+                  className="p-0.5 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+            {actius.length > 1 && (
+              <button type="button" onClick={esborraFiltres} className="text-xs text-primary hover:underline ml-1">
+                Esborra-ho tot
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Error */}
