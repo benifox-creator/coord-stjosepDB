@@ -314,7 +314,7 @@ export function AjudaPage() {
         <ul className="space-y-1.5 text-sm text-gray-600 list-disc pl-5">
           <li>Salutació personalitzada amb la data d'avui.</li>
           <li>Un avís destacat si hi ha préstecs vençuts o incidències de prioritat alta pendents.</li>
-          <li>Targetes numèriques clicables: incidències obertes, alta prioritat, préstecs actius, préstecs vençuts, reserves d'avui i dispositius en reparació.</li>
+          <li>Targetes numèriques clicables: incidències obertes, alta prioritat, préstecs actius, préstecs vençuts, reserves d'avui i dispositius avariats o en reparació.</li>
           <li>Accessos ràpids a Incidències, Inventari, Préstecs, Material i Reserves.</li>
           <li>Taules amb les incidències obertes i els préstecs actius/vençuts més recents.</li>
           <li>Reserves dels propers 7 dies, amb el dia d'avui ressaltat.</li>
@@ -383,7 +383,7 @@ export function AjudaPage() {
       <ModuleSection id="mod-inventari" icon={Package} title="Inventari" purpose="El catàleg de tots els dispositius TIC del centre: portàtils, ordinadors, tauletes, projectors, impressores, switches, monitors, servidors...">
         <SubHeading>Què pots fer</SubHeading>
         <ul className="space-y-1.5 text-sm text-gray-600 list-disc pl-5">
-          <li>Cercar per nom, marca, ubicació o número de sèrie, i filtrar per estat o categoria.</li>
+          <li>Cercar per nom, marca, ubicació, número de sèrie o sistema operatiu, i filtrar per estat, categoria, ubicació o acció pendent.</li>
           <li>Consultar la fitxa completa de cada dispositiu.</li>
           <li>Si ets Coordinador TIC: donar d'alta nous dispositius, editar-ne les dades i eliminar-los.</li>
         </ul>
@@ -797,7 +797,7 @@ export function AjudaPage() {
                 ['Calendari del centre', 'Els dies no lectius del curs — no generen períodes d’absència des de l’horari.'],
                 ['Reserves', 'Els espais que apareixen al desplegable de nova reserva.'],
                 ['Material i Stock', 'Les categories del catàleg de material fungible i accessoris.'],
-                ['Inventari', 'Els tipus de dispositius que es poden registrar.'],
+                ['Inventari', 'Els tipus de dispositius, les accions pendents, els sistemes operatius i el catàleg d’ubicacions (codi, edifici i planta).'],
                 ['Incidències', 'Els tipus de problema i les localitzacions suggerides al formulari.'],
                 ['Base de Coneixement', 'Les categories que apareixen en crear un article nou.'],
                 ['Absències', 'Els motius disponibles en reportar una absència.'],
