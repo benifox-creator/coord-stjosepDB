@@ -3,7 +3,9 @@ import { Plus, Search, RefreshCw, Package } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { useConfigStore } from '../../store/configStore'
 import type { ItemInventari, EstatInventari, CategoriaInventari } from './types'
+import type { Ubicacio } from './ubicacions'
 import { formatDate, garantiaEstat } from './inventari.utils'
+import { ubicacioCompleta } from './ubicacions'
 
 const ESTATS: Array<EstatInventari | ''> = ['', 'Actiu', 'En reparació', 'En préstec', 'De baixa']
 function SkeletonRow() {
@@ -25,6 +27,7 @@ interface Props {
   items?: ItemInventari[]
   error?: string | null
   onRefresh?: () => void
+  ubicacions?: Ubicacio[]
 }
 
 export function InventariPage({
@@ -34,6 +37,7 @@ export function InventariPage({
   items = [],
   error = null,
   onRefresh,
+  ubicacions = [],
 }: Props) {
   const categories = useConfigStore((s) => s.getValues('inventari.categories'))
   const [cerca, setCerca] = useState('')
@@ -199,7 +203,7 @@ export function InventariPage({
                     <p className="text-sm text-gray-700">{item.Marca}</p>
                     <p className="text-xs text-gray-400">{item.Model}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{item.Ubicació || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{ubicacioCompleta(item.Ubicació, ubicacions) || '—'}</td>
                   <td className="px-4 py-3">
                     <Badge label={item.Estat} variant="inventari-estat" />
                   </td>
