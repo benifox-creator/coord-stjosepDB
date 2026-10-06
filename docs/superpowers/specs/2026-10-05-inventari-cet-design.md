@@ -26,7 +26,8 @@ L'Andrés vol que tot això visqui a SJO Hub. El mòdul d'Inventari actual no ho
 
 | Columna | Tipus | Notes |
 |---|---|---|
-| `codi` | `text` PK | `A21-ESO-2A`, `Informàtica 1`, `Aula Portàtil`... |
+| `id` | `uuid` PK | `default gen_random_uuid()` |
+| `codi` | `text not null unique` | `A21-ESO-2A`, `Informàtica 1`, `Aula Portàtil`... |
 | `edifici` | `text not null default ''` | `A-EscC`, `B-Pas`, `Principal`... |
 | `planta` | `text not null default ''` | `SOT`, `PB`, `PTA1`, `PubillaC`... |
 
@@ -63,7 +64,7 @@ Es desen a `public.config` i també a `CONFIG_DEFAULTS`, perquè «restaurar per
 ### 4.1 Inventari
 
 - **Formulari**:
-  - **Ubicació**: es tria del catàleg i, a sota, es veu `edifici · planta`.
+  - **Ubicació**: es tria del catàleg; cada opció del desplegable ja mostra `edifici · planta`.
   - **Estat**: els 9 valors.
   - **Acció pendent** i **Sistema operatiu**: desplegables de les seves llistes, amb opció buida. Si el valor d'un dispositiu ja no és a la llista, es continua mostrant, perquè desar no l'esborri.
   - **Marca, Model i Ubicació deixen de ser obligatoris.** Els dispositius importats no sempre en tenen, i el coordinador els ha de poder editar igualment.

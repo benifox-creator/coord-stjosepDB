@@ -47,7 +47,7 @@ const GRUPS: GrupConfig[] = [
     modul: 'Inventari',
     color: '#15803d',
     llistes: [
-      { clau: 'inventari.categories', label: 'Tipus de dispositius', descripcio: 'Tipus de dispositius que es poden registrar a l\'inventari.' },
+      { clau: 'inventari.categories', label: 'Tipus de dispositius', descripcio: 'Tipus de dispositius que es poden registrar a l’inventari.' },
       { clau: 'inventari.accions', label: 'Accions pendents', descripcio: 'Què cal fer amb un dispositiu (reparar-lo, revisar-lo...). Apareix a la fitxa i es pot filtrar al llistat.' },
       { clau: 'inventari.sistemes-operatius', label: 'Sistemes operatius', descripcio: 'Opcions del desplegable de sistema operatiu de la fitxa d’un dispositiu.' },
     ],

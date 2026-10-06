@@ -182,8 +182,8 @@ export function IncidenciaForm({
                 >
                   <option value="">Selecciona un dispositiu...</option>
                   {inventari.map((item) => (
-                    <option key={item.id} value={`${item.id} ${item.nom} — ${item.ubicacio}`}>
-                      {item.id} {item.nom} — {item.ubicacio}
+                    <option key={item.id} value={item.ubicacio ? `${item.id} ${item.nom} — ${item.ubicacio}` : `${item.id} ${item.nom}`}>
+                      {item.id} {item.nom}{item.ubicacio ? ` — ${item.ubicacio}` : ''}
                     </option>
                   ))}
                   <option value="__altre__">Altre (escriu-ho manualment)</option>

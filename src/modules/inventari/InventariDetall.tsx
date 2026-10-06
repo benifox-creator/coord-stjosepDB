@@ -154,7 +154,9 @@ export function InventariDetall({
           <section className="space-y-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Identificació</p>
             <InfoRow icon={<Package size={14} />} label="Categoria" value={item.Categoria} />
-            <InfoRow icon={<Cpu size={14} />} label="Marca / Model" value={`${item.Marca} ${item.Model}`} />
+            {(item.Marca || item.Model) && (
+              <InfoRow icon={<Cpu size={14} />} label="Marca / Model" value={`${item.Marca} ${item.Model}`.trim()} />
+            )}
             {item['Núm_sèrie'] && (
               <InfoRow icon={<Hash size={14} />} label="Núm. sèrie" value={item['Núm_sèrie']} />
             )}
@@ -201,14 +203,14 @@ export function InventariDetall({
                   className="flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors group"
                 >
                   <MapPin size={14} className="text-gray-400 group-hover:text-primary shrink-0" />
-                  {ubicacioCompleta(item.Ubicació, ubicacions) || <span className="text-gray-400 italic">Sense ubicació — clic per editar</span>}
+                  {ubicacioCompleta(item.Ubicació, ubicacions) || <span className="text-gray-500 italic">Sense ubicació — clic per editar</span>}
                   <Pencil size={11} className="text-gray-300 group-hover:text-primary ml-1" />
                 </button>
               )
             ) : (
               <p className="text-sm text-gray-700 flex items-center gap-2">
                 <MapPin size={14} className="text-gray-400 shrink-0" />
-                {ubicacioCompleta(item.Ubicació, ubicacions) || <span className="text-gray-400 italic">Sense ubicació</span>}
+                {ubicacioCompleta(item.Ubicació, ubicacions) || <span className="text-gray-500 italic">Sense ubicació</span>}
               </p>
             )}
           </section>
