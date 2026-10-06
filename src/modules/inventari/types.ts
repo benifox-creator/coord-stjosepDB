@@ -1,4 +1,6 @@
-export type EstatInventari = 'Actiu' | 'En reparació' | 'De baixa' | 'En préstec'
+import type { EstatInventari } from './estats'
+
+export type { EstatInventari }
 
 // Llista editable des de Configuració (clau 'inventari.categories'), no un
 // conjunt fix — per això és `string` i no un union de literals.
@@ -12,8 +14,10 @@ export interface ItemInventari {
   Marca: string
   Model: string
   'Núm_sèrie': string
-  Ubicació: string
+  Ubicació: string         // codi del catàleg d'ubicacions; '' si no en té
   Estat: EstatInventari
+  Accio: string            // acció pendent; '' si no n'hi ha cap
+  SistemaOperatiu: string
   'Data_compra': string    // ISO date
   'Garantia_fins': string  // ISO date
   MAC_LAN: string

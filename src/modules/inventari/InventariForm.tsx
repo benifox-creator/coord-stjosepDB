@@ -25,6 +25,8 @@ export function InventariForm({ onClose, onGuardar, inicial }: Props) {
     'Núm_sèrie': inicial?.['Núm_sèrie'] ?? '',
     Ubicació: inicial?.Ubicació ?? '',
     Estat: inicial?.Estat ?? 'Actiu',
+    Accio: inicial?.Accio ?? '',
+    SistemaOperatiu: inicial?.SistemaOperatiu ?? '',
     Data_compra: inicial?.Data_compra ?? '',
     Garantia_fins: inicial?.Garantia_fins ?? '',
     MAC_LAN: inicial?.MAC_LAN ?? '',
@@ -340,8 +342,13 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 }
 
 const ESTAT_ACTIVE: Record<EstatInventari, string> = {
-  'Actiu':        'bg-green-50 border-green-400 text-green-700',
-  'En reparació': 'bg-yellow-50 border-yellow-400 text-yellow-700',
-  'En préstec':   'bg-blue-50 border-blue-400 text-blue-700',
-  'De baixa':     'bg-red-50 border-red-400 text-red-700',
+  'Actiu':                'bg-green-50 border-green-400 text-green-700',
+  'Avariat':              'bg-orange-50 border-orange-400 text-orange-700',
+  'En reparació':         'bg-yellow-50 border-yellow-400 text-yellow-700',
+  'En préstec':           'bg-blue-50 border-blue-400 text-blue-700',
+  'En proves':            'bg-violet-50 border-violet-400 text-violet-700',
+  'No desplegat':         'bg-gray-50 border-gray-400 text-gray-600',
+  'Retirat temporalment': 'bg-slate-50 border-slate-400 text-slate-600',
+  'De baixa':             'bg-red-50 border-red-400 text-red-700',
+  'Robat':                'bg-red-100 border-red-500 text-red-800',
 }
