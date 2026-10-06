@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react'
 import { Plus, Search, RefreshCw, Package } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { useConfigStore } from '../../store/configStore'
-import type { ItemInventari, EstatInventari, CategoriaInventari } from './types'
+import type { ItemInventari, CategoriaInventari } from './types'
+import type { EstatInventari } from './estats'
+import { ESTATS_INVENTARI, esAvariat } from './estats'
 import type { Ubicacio } from './ubicacions'
 import { formatDate, garantiaEstat } from './inventari.utils'
 import { ubicacioCompleta } from './ubicacions'
 
-const ESTATS: Array<EstatInventari | ''> = ['', 'Actiu', 'En reparació', 'En préstec', 'De baixa']
 function SkeletonRow() {
   return (
     <tr className="border-b border-gray-100">
@@ -40,6 +41,10 @@ export function InventariPage({
   ubicacions = [],
 }: Props) {
   const categories = useConfigStore((s) => s.getValues('inventari.categories'))
+  const accions = useConfigStore((s) => s.getValues('inventari.accions'))
+  const [filtreUbicacio, setFiltreUbicacio] = useState('')
+  // '' = totes; 'qualsevol' = només les que tenen alguna acció pendent.
+  const [filtreAccio, setFiltreAccio] = useState('')
   const [cerca, setCerca] = useState('')
   const [filtreEstat, setFiltreEstat] = useState<EstatInventari | ''>('')
   const [filtreCategoria, setFiltreCategoria] = useState<CategoriaInventari | ''>('')
@@ -51,17 +56,20 @@ export function InventariPage({
       .filter((item) => {
         if (filtreEstat && item.Estat !== filtreEstat) return false
         if (filtreCategoria && item.Categoria !== filtreCategoria) return false
+        if (filtreUbicacio && item.Ubicació !== filtreUbicacio) return false
+        if (filtreAccio === 'qualsevol' && !item.Accio) return false
+        if (filtreAccio && filtreAccio !== 'qualsevol' && item.Accio !== filtreAccio) return false
         if (q) {
-          const h = `${item.ID} ${item.Nom} ${item.Marca} ${item.Model} ${item.Ubicació} ${item['Núm_sèrie']}`.toLowerCase()
+          const h = `${item.ID} ${item.Nom} ${item.Marca} ${item.Model} ${item.Ubicació} ${item['Núm_sèrie']} ${item.SistemaOperatiu} ${item.Accio}`.toLowerCase()
           if (!h.includes(q)) return false
         }
         return true
       })
-  }, [items, filtreEstat, filtreCategoria, cerca])
+  }, [items, filtreEstat, filtreCategoria, cerca, filtreUbicacio, filtreAccio])
 
   const comptadors = useMemo(() => ({
     actiu: items.filter((i) => i.Estat === 'Actiu').length,
-    reparacio: items.filter((i) => i.Estat === 'En reparació').length,
+    reparacio: items.filter((i) => esAvariat(i.Estat)).length,
     prestec: items.filter((i) => i.Estat === 'En préstec').length,
     baixa: items.filter((i) => i.Estat === 'De baixa').length,
   }), [items])
@@ -107,7 +115,7 @@ export function InventariPage({
         <div className="flex gap-5 mb-4">
           {[
             { label: 'Actius',       val: comptadors.actiu,    color: '#15803d' },
-            { label: 'En reparació', val: comptadors.reparacio, color: '#ca8a04' },
+            { label: 'Avariats o en reparació', val: comptadors.reparacio, color: '#ca8a04' },
             { label: 'En préstec',   val: comptadors.prestec,  color: '#0c71c3' },
             { label: 'De baixa',     val: comptadors.baixa,    color: '#861414' },
           ].map(({ label, val, color }) => (
@@ -136,7 +144,7 @@ export function InventariPage({
             className="input text-sm w-40"
           >
             <option value="">Tots els estats</option>
-            {ESTATS.slice(1).map((e) => <option key={e}>{e}</option>)}
+            {ESTATS_INVENTARI.map((e) => <option key={e}>{e}</option>)}
           </select>
           <select
             value={filtreCategoria}
@@ -145,6 +153,25 @@ export function InventariPage({
           >
             <option value="">Totes les categories</option>
             {categories.map((c) => <option key={c}>{c}</option>)}
+          </select>
+          <select
+            value={filtreUbicacio}
+            onChange={(e) => setFiltreUbicacio(e.target.value)}
+            className="input text-sm w-44"
+            aria-label="Filtra per ubicació"
+          >
+            <option value="">Totes les ubicacions</option>
+            {ubicacions.map((u) => <option key={u.id} value={u.Codi}>{u.Codi}</option>)}
+          </select>
+          <select
+            value={filtreAccio}
+            onChange={(e) => setFiltreAccio(e.target.value)}
+            className="input text-sm w-44"
+            aria-label="Filtra per acció pendent"
+          >
+            <option value="">Totes les accions</option>
+            <option value="qualsevol">Amb alguna acció pendent</option>
+            {accions.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
       </div>
@@ -197,6 +224,7 @@ export function InventariPage({
                   <td className="px-4 py-3">
                     <p className="text-sm font-medium text-text-main">{item.Nom}</p>
                     <p className="text-xs text-gray-400 mt-0.5 md:hidden">{item.Categoria}</p>
+                    {item.Accio && <p className="text-xs text-amber-700 mt-0.5">Acció pendent: {item.Accio}</p>}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">{item.Categoria}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">
