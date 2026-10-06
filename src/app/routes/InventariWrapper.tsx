@@ -3,11 +3,13 @@ import { InventariPage } from '../../modules/inventari/InventariPage'
 import { InventariForm } from '../../modules/inventari/InventariForm'
 import { InventariDetall } from '../../modules/inventari/InventariDetall'
 import { useInventari } from '../../modules/inventari/useInventari'
+import { useUbicacions } from '../../modules/inventari/useUbicacions'
 import type { ItemInventari } from '../../modules/inventari/types'
 import { useUsuarisStore, potEliminar } from '../../store/usuarisStore'
 
 export default function InventariWrapper() {
   const { items, loading, error, crear, editar, canviarEstat, editarUbicacio, editarNotes, eliminar, refetch } = useInventari()
+  const { ubicacions } = useUbicacions()
   const rol = useUsuarisStore((s) => s.rol)
   // Inventari: només coordinador pot afegir, editar i eliminar; direcció sols veu
   const pEditarInventari = potEliminar(rol)
@@ -34,12 +36,14 @@ export default function InventariWrapper() {
         items={items}
         error={error}
         onRefresh={refetch}
+        ubicacions={ubicacions}
       />
       {(formObert || editant) && (
         <InventariForm
           onClose={() => { setFormObert(false); setEditant(null) }}
           onGuardar={editant ? (data) => editar(editant, data) : crear}
           inicial={editant ?? undefined}
+          ubicacions={ubicacions}
         />
       )}
       {seleccionat && (
@@ -53,6 +57,7 @@ export default function InventariWrapper() {
           onEditarNotes={editarNotes}
           onEditar={handleEditar}
           onEliminar={async (item) => { await eliminar(item); setSeleccionat(null) }}
+          ubicacions={ubicacions}
         />
       )}
     </>

@@ -2,56 +2,13 @@ import { useState, useMemo } from 'react'
 import { Plus, Search, RefreshCw, Package } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { useConfigStore } from '../../store/configStore'
-import type { ItemInventari, EstatInventari, CategoriaInventari } from './types'
+import type { ItemInventari, CategoriaInventari } from './types'
+import type { EstatInventari } from './estats'
+import { ESTATS_INVENTARI, esAvariat } from './estats'
+import type { Ubicacio } from './ubicacions'
 import { formatDate, garantiaEstat } from './inventari.utils'
+import { ubicacioCompleta } from './ubicacions'
 
-// ── Mock temporal — es substituirà per dades reals al punt 6 ─────────────────
-const MOCK: ItemInventari[] = [
-  {
-    ID: 'INV-001', Nom: 'HP EliteBook 840 G8', Categoria: 'Portàtil',
-    Marca: 'HP', Model: 'EliteBook 840 G8', 'Núm_sèrie': 'SN-HP-001',
-    Ubicació: 'Aula 55', Estat: 'Actiu', 'Data_compra': '2022-09-01',
-    'Garantia_fins': '2025-09-01', MAC_LAN: 'AA:BB:CC:DD:EE:01', MAC_WAN: '', IP_LAN: '', IP_WAN: '', Notes: '',
-    id: "mock-0",
-  },
-  {
-    ID: 'INV-002', Nom: 'iMac 27" 2021', Categoria: 'Ordinador',
-    Marca: 'Apple', Model: 'iMac 27" M1', 'Núm_sèrie': 'SN-AP-002',
-    Ubicació: 'BAXT-1A', Estat: 'Actiu', 'Data_compra': '2021-06-15',
-    'Garantia_fins': '2027-06-15', MAC_LAN: 'AA:BB:CC:DD:EE:02', MAC_WAN: '', IP_LAN: '', IP_WAN: '', Notes: '',
-    id: "mock-1",
-  },
-  {
-    ID: 'INV-003', Nom: 'Epson EB-X41', Categoria: 'Projector',
-    Marca: 'Epson', Model: 'EB-X41', 'Núm_sèrie': 'SN-EP-003',
-    Ubicació: 'Aula 32', Estat: 'En reparació', 'Data_compra': '2020-01-10',
-    'Garantia_fins': '2023-01-10', MAC_LAN: '', MAC_WAN: '', IP_LAN: '', IP_WAN: '', Notes: 'Cable HDMI defectuós',
-    id: "mock-2",
-  },
-  {
-    ID: 'INV-004', Nom: 'HP LaserJet Pro M404', Categoria: 'Impressora',
-    Marca: 'HP', Model: 'LaserJet Pro M404', 'Núm_sèrie': 'SN-HP-004',
-    Ubicació: 'Secretaria', Estat: 'Actiu', 'Data_compra': '2021-03-22',
-    'Garantia_fins': '2024-03-22', MAC_LAN: 'AA:BB:CC:DD:EE:04', MAC_WAN: '', IP_LAN: '', IP_WAN: '', Notes: '',
-    id: "mock-3",
-  },
-  {
-    ID: 'INV-005', Nom: 'MacBook Air M2', Categoria: 'Portàtil',
-    Marca: 'Apple', Model: 'MacBook Air M2', 'Núm_sèrie': 'SN-AP-005',
-    Ubicació: 'Sala Professors', Estat: 'En préstec', 'Data_compra': '2023-09-01',
-    'Garantia_fins': '2026-09-01', MAC_LAN: 'AA:BB:CC:DD:EE:05', MAC_WAN: 'AA:BB:CC:DD:FF:05', IP_LAN: '192.168.1.15', IP_WAN: '', Notes: '',
-    id: "mock-4",
-  },
-  {
-    ID: 'INV-006', Nom: 'Cisco SG110-16', Categoria: 'Switch/Router',
-    Marca: 'Cisco', Model: 'SG110-16', 'Núm_sèrie': 'SN-CI-006',
-    Ubicació: 'Rack Principal', Estat: 'Actiu', 'Data_compra': '2019-05-10',
-    'Garantia_fins': '2022-05-10', MAC_LAN: 'AA:BB:CC:DD:EE:06', MAC_WAN: 'AA:BB:CC:DD:FF:06', IP_LAN: '192.168.1.1', IP_WAN: '85.123.45.67', Notes: '',
-    id: "mock-5",
-  },
-]
-
-const ESTATS: Array<EstatInventari | ''> = ['', 'Actiu', 'En reparació', 'En préstec', 'De baixa']
 function SkeletonRow() {
   return (
     <tr className="border-b border-gray-100">
@@ -71,17 +28,23 @@ interface Props {
   items?: ItemInventari[]
   error?: string | null
   onRefresh?: () => void
+  ubicacions?: Ubicacio[]
 }
 
 export function InventariPage({
   onNou,
   onVeureDetall,
   loading = false,
-  items = MOCK,
+  items = [],
   error = null,
   onRefresh,
+  ubicacions = [],
 }: Props) {
   const categories = useConfigStore((s) => s.getValues('inventari.categories'))
+  const accions = useConfigStore((s) => s.getValues('inventari.accions'))
+  const [filtreUbicacio, setFiltreUbicacio] = useState('')
+  // '' = totes; 'qualsevol' = només les que tenen alguna acció pendent.
+  const [filtreAccio, setFiltreAccio] = useState('')
   const [cerca, setCerca] = useState('')
   const [filtreEstat, setFiltreEstat] = useState<EstatInventari | ''>('')
   const [filtreCategoria, setFiltreCategoria] = useState<CategoriaInventari | ''>('')
@@ -93,17 +56,20 @@ export function InventariPage({
       .filter((item) => {
         if (filtreEstat && item.Estat !== filtreEstat) return false
         if (filtreCategoria && item.Categoria !== filtreCategoria) return false
+        if (filtreUbicacio && item.Ubicació !== filtreUbicacio) return false
+        if (filtreAccio === 'qualsevol' && !item.Accio) return false
+        if (filtreAccio && filtreAccio !== 'qualsevol' && item.Accio !== filtreAccio) return false
         if (q) {
-          const h = `${item.ID} ${item.Nom} ${item.Marca} ${item.Model} ${item.Ubicació} ${item['Núm_sèrie']}`.toLowerCase()
+          const h = `${item.ID} ${item.Nom} ${item.Marca} ${item.Model} ${item.Ubicació} ${item['Núm_sèrie']} ${item.SistemaOperatiu} ${item.Accio}`.toLowerCase()
           if (!h.includes(q)) return false
         }
         return true
       })
-  }, [items, filtreEstat, filtreCategoria, cerca])
+  }, [items, filtreEstat, filtreCategoria, cerca, filtreUbicacio, filtreAccio])
 
   const comptadors = useMemo(() => ({
     actiu: items.filter((i) => i.Estat === 'Actiu').length,
-    reparacio: items.filter((i) => i.Estat === 'En reparació').length,
+    reparacio: items.filter((i) => esAvariat(i.Estat)).length,
     prestec: items.filter((i) => i.Estat === 'En préstec').length,
     baixa: items.filter((i) => i.Estat === 'De baixa').length,
   }), [items])
@@ -149,7 +115,7 @@ export function InventariPage({
         <div className="flex gap-5 mb-4">
           {[
             { label: 'Actius',       val: comptadors.actiu,    color: '#15803d' },
-            { label: 'En reparació', val: comptadors.reparacio, color: '#ca8a04' },
+            { label: 'Avariats o en reparació', val: comptadors.reparacio, color: '#ca8a04' },
             { label: 'En préstec',   val: comptadors.prestec,  color: '#0c71c3' },
             { label: 'De baixa',     val: comptadors.baixa,    color: '#861414' },
           ].map(({ label, val, color }) => (
@@ -178,7 +144,7 @@ export function InventariPage({
             className="input text-sm w-40"
           >
             <option value="">Tots els estats</option>
-            {ESTATS.slice(1).map((e) => <option key={e}>{e}</option>)}
+            {ESTATS_INVENTARI.map((e) => <option key={e}>{e}</option>)}
           </select>
           <select
             value={filtreCategoria}
@@ -187,6 +153,25 @@ export function InventariPage({
           >
             <option value="">Totes les categories</option>
             {categories.map((c) => <option key={c}>{c}</option>)}
+          </select>
+          <select
+            value={filtreUbicacio}
+            onChange={(e) => setFiltreUbicacio(e.target.value)}
+            className="input text-sm w-44"
+            aria-label="Filtra per ubicació"
+          >
+            <option value="">Totes les ubicacions</option>
+            {ubicacions.map((u) => <option key={u.id} value={u.Codi}>{u.Codi}</option>)}
+          </select>
+          <select
+            value={filtreAccio}
+            onChange={(e) => setFiltreAccio(e.target.value)}
+            className="input text-sm w-44"
+            aria-label="Filtra per acció pendent"
+          >
+            <option value="">Totes les accions</option>
+            <option value="qualsevol">Amb alguna acció pendent</option>
+            {accions.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
       </div>
@@ -239,13 +224,14 @@ export function InventariPage({
                   <td className="px-4 py-3">
                     <p className="text-sm font-medium text-text-main">{item.Nom}</p>
                     <p className="text-xs text-gray-400 mt-0.5 md:hidden">{item.Categoria}</p>
+                    {item.Accio && <p className="text-xs text-amber-700 mt-0.5">Acció pendent: {item.Accio}</p>}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">{item.Categoria}</td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <p className="text-sm text-gray-700">{item.Marca}</p>
                     <p className="text-xs text-gray-400">{item.Model}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{item.Ubicació || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{ubicacioCompleta(item.Ubicació, ubicacions) || '—'}</td>
                   <td className="px-4 py-3">
                     <Badge label={item.Estat} variant="inventari-estat" />
                   </td>

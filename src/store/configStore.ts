@@ -53,9 +53,18 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Cable', 'Adaptador', 'Àudio/Vídeo', 'Perifèric',
     'Emmagatzematge', 'Bateria/Carregador', 'Projecció', 'Altre',
   ],
+  // Els tipus del full CET (pestanya Barems), en català. «Altre» al final
+  // conserva l'opció de text lliure que fa servir el formulari.
   'inventari.categories': [
-    'Portàtil', 'Ordinador', 'Tauleta', 'Projector',
-    'Impressora', 'Switch/Router', 'Monitor', 'Servidor', 'Altre',
+    'Alarma', 'Altaveus', 'Altaveus Bluetooth', 'Càmera de seguretat', 'Impressora', 'Mòbil',
+    'NAS', 'PC', 'Pissarra digital', 'Portàtil', 'Projector', 'Punt d’accés', 'Ràdio CD',
+    'Router', 'Servidor', 'Switch', 'Switch gestionable', 'Tauleta', 'Televisió',
+    'Videogravador', 'Webcam', 'Altre',
+  ],
+  'inventari.accions': ['Reparar', 'Registrar', 'Retirar', 'Revisar', 'Substituir'],
+  'inventari.sistemes-operatius': [
+    'Android OS', 'ChromeOS', 'DSM (Synology)', 'Linux', 'Windows 7', 'Windows 8',
+    'Windows 11', 'Windows Vista', 'Windows X', 'Windows X Pro Education',
   ],
   'incidencies.tipus': [
     'Maquinari', 'Programari', 'Xarxa', 'Projector/Pantalla', 'Impressora', 'Altre',

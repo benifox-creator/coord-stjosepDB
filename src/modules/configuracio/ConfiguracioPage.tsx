@@ -8,6 +8,7 @@ import type { Usuari, Rol, EtapaSubstitucio } from '../usuaris/types'
 import { ETAPA_FRANJA_KEY, ETAPES_SUBSTITUCIO } from '../substitucions/types'
 import { ImportarUsuarisModal, type ResultatImportacio } from '../usuaris/ImportarUsuarisModal'
 import type { DadesUsuariImportat } from '../usuaris/excelImport.utils'
+import { UbicacionsEditor } from '../inventari/UbicacionsEditor'
 
 interface LlistaConfig {
   clau: string
@@ -19,6 +20,8 @@ interface GrupConfig {
   modul: string
   color: string
   llistes: LlistaConfig[]
+  /** Contingut propi del mòdul que no és una llista, pintat sota les llistes. */
+  extra?: React.ReactNode
 }
 
 const GRUPS: GrupConfig[] = [
@@ -44,8 +47,11 @@ const GRUPS: GrupConfig[] = [
     modul: 'Inventari',
     color: '#15803d',
     llistes: [
-      { clau: 'inventari.categories', label: 'Categories de dispositius', descripcio: 'Tipus de dispositius que es poden registrar a l\'inventari.' },
+      { clau: 'inventari.categories', label: 'Tipus de dispositius', descripcio: 'Tipus de dispositius que es poden registrar a l’inventari.' },
+      { clau: 'inventari.accions', label: 'Accions pendents', descripcio: 'Què cal fer amb un dispositiu (reparar-lo, revisar-lo...). Apareix a la fitxa i es pot filtrar al llistat.' },
+      { clau: 'inventari.sistemes-operatius', label: 'Sistemes operatius', descripcio: 'Opcions del desplegable de sistema operatiu de la fitxa d’un dispositiu.' },
     ],
+    extra: <UbicacionsEditor />,
   },
   {
     modul: 'Incidències',
@@ -1131,6 +1137,7 @@ export function ConfiguracioPage() {
           {grup.llistes.map((llista) => (
             <LlistaEditor key={llista.clau} llista={llista} />
           ))}
+          {grup.extra}
         </div>
       ),
       // Només davant de la primera: separa les categories de sempre —usuaris,

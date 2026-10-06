@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { X, AlertCircle, Loader2 } from 'lucide-react'
-import type { ItemInventariFormData, EstatInventari } from './types'
+import type { ItemInventariFormData } from './types'
+import type { EstatInventari } from './estats'
+import type { Ubicacio } from './ubicacions'
+import { ESTATS_INVENTARI } from './estats'
+import { ubicacioCompleta } from './ubicacions'
 import { useConfigStore } from '../../store/configStore'
-const ESTATS: EstatInventari[] = ['Actiu', 'En reparació', 'En préstec', 'De baixa']
 
 type Errors = Partial<Record<keyof ItemInventariFormData, string>>
 
@@ -13,10 +16,13 @@ interface Props {
   onClose: () => void
   onGuardar: (data: ItemInventariFormData) => Promise<void>
   inicial?: Partial<ItemInventariFormData>
+  ubicacions: Ubicacio[]
 }
 
-export function InventariForm({ onClose, onGuardar, inicial }: Props) {
+export function InventariForm({ onClose, onGuardar, inicial, ubicacions }: Props) {
   const categories = useConfigStore((s) => s.getValues('inventari.categories'))
+  const accions = useConfigStore((s) => s.getValues('inventari.accions'))
+  const sistemes = useConfigStore((s) => s.getValues('inventari.sistemes-operatius'))
   const [form, setForm] = useState<ItemInventariFormData>({
     Nom: inicial?.Nom ?? '',
     Categoria: inicial?.Categoria ?? '' as ItemInventariFormData['Categoria'],
@@ -25,6 +31,8 @@ export function InventariForm({ onClose, onGuardar, inicial }: Props) {
     'Núm_sèrie': inicial?.['Núm_sèrie'] ?? '',
     Ubicació: inicial?.Ubicació ?? '',
     Estat: inicial?.Estat ?? 'Actiu',
+    Accio: inicial?.Accio ?? '',
+    SistemaOperatiu: inicial?.SistemaOperatiu ?? '',
     Data_compra: inicial?.Data_compra ?? '',
     Garantia_fins: inicial?.Garantia_fins ?? '',
     MAC_LAN: inicial?.MAC_LAN ?? '',
@@ -63,9 +71,6 @@ export function InventariForm({ onClose, onGuardar, inicial }: Props) {
     if (!form.Categoria && !(categoriaAltre && categoriaAltreText.trim())) {
       e.Categoria = categoriaAltre ? 'Escriu la categoria.' : 'La categoria és obligatòria.'
     }
-    if (!form.Marca.trim()) e.Marca = 'La marca és obligatòria.'
-    if (!form.Model.trim()) e.Model = 'El model és obligatori.'
-    if (!form.Ubicació.trim()) e.Ubicació = "La ubicació és obligatòria."
     if (form.MAC_LAN && !MAC_REGEX.test(form.MAC_LAN)) {
       e.MAC_LAN = 'Format invàlid. Exemple: AA:BB:CC:DD:EE:FF'
     }
@@ -158,7 +163,7 @@ export function InventariForm({ onClose, onGuardar, inicial }: Props) {
 
           {/* Marca + Model */}
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Marca *" error={errors.Marca}>
+            <FormField label="Marca" error={errors.Marca}>
               <input
                 type="text"
                 value={form.Marca}
@@ -167,7 +172,7 @@ export function InventariForm({ onClose, onGuardar, inicial }: Props) {
                 className={cls(!!errors.Marca)}
               />
             </FormField>
-            <FormField label="Model *" error={errors.Model}>
+            <FormField label="Model" error={errors.Model}>
               <input
                 type="text"
                 value={form.Model}
@@ -189,21 +194,24 @@ export function InventariForm({ onClose, onGuardar, inicial }: Props) {
                 className={cls(false)}
               />
             </FormField>
-            <FormField label="Ubicació *" error={errors.Ubicació}>
-              <input
-                type="text"
+            <FormField label="Ubicació">
+              <select
                 value={form.Ubicació}
                 onChange={(e) => setField('Ubicació', e.target.value)}
-                placeholder="Ex: Aula 55"
-                className={cls(!!errors.Ubicació)}
-              />
+                className={cls(false)}
+              >
+                <option value="">Sense ubicació</option>
+                {ubicacions.map((u) => (
+                  <option key={u.id} value={u.Codi}>{ubicacioCompleta(u.Codi, ubicacions)}</option>
+                ))}
+              </select>
             </FormField>
           </div>
 
           {/* Estat */}
           <FormField label="Estat">
             <div className="flex gap-2 flex-wrap">
-              {ESTATS.map((e) => (
+              {ESTATS_INVENTARI.map((e) => (
                 <button
                   key={e}
                   type="button"
@@ -217,6 +225,34 @@ export function InventariForm({ onClose, onGuardar, inicial }: Props) {
               ))}
             </div>
           </FormField>
+
+          {/* Acció pendent + Sistema operatiu */}
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Acció pendent">
+              <select
+                value={form.Accio}
+                onChange={(e) => setField('Accio', e.target.value)}
+                className={cls(false)}
+              >
+                <option value="">Cap</option>
+                {form.Accio && !accions.includes(form.Accio) && <option value={form.Accio}>{form.Accio}</option>}
+                {accions.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Sistema operatiu">
+              <select
+                value={form.SistemaOperatiu}
+                onChange={(e) => setField('SistemaOperatiu', e.target.value)}
+                className={cls(false)}
+              >
+                <option value="">—</option>
+                {form.SistemaOperatiu && !sistemes.includes(form.SistemaOperatiu) && (
+                  <option value={form.SistemaOperatiu}>{form.SistemaOperatiu}</option>
+                )}
+                {sistemes.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </FormField>
+          </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
@@ -340,8 +376,13 @@ function FormField({ label, error, children }: { label: string; error?: string; 
 }
 
 const ESTAT_ACTIVE: Record<EstatInventari, string> = {
-  'Actiu':        'bg-green-50 border-green-400 text-green-700',
-  'En reparació': 'bg-yellow-50 border-yellow-400 text-yellow-700',
-  'En préstec':   'bg-blue-50 border-blue-400 text-blue-700',
-  'De baixa':     'bg-red-50 border-red-400 text-red-700',
+  'Actiu':                'bg-green-50 border-green-400 text-green-700',
+  'Avariat':              'bg-orange-50 border-orange-400 text-orange-700',
+  'En reparació':         'bg-yellow-50 border-yellow-400 text-yellow-700',
+  'En préstec':           'bg-blue-50 border-blue-400 text-blue-700',
+  'En proves':            'bg-violet-50 border-violet-400 text-violet-700',
+  'No desplegat':         'bg-gray-50 border-gray-400 text-gray-600',
+  'Retirat temporalment': 'bg-slate-50 border-slate-400 text-slate-600',
+  'De baixa':             'bg-red-50 border-red-400 text-red-700',
+  'Robat':                'bg-red-100 border-red-500 text-red-800',
 }

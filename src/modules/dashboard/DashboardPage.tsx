@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, BookOpen, Calendar, Monitor, Package, ChevronRight } from 'lucide-react'
 import { useIncidencies } from '../incidencies/useIncidencies'
 import { useInventari } from '../inventari/useInventari'
+import { esAvariat } from '../inventari/estats'
 import { usePrestecs } from '../prestecs/usePrestecs'
 import { useReserves } from '../reserves/useReserves'
 import { useMaterial } from '../material/useMaterial'
@@ -118,7 +119,7 @@ export function DashboardPage() {
       .filter((r) => r.Data >= TODAY && r.Estat !== 'Cancel·lada')
       .sort((a, b) => a.Data.localeCompare(b.Data) || a.Hora_inici.localeCompare(b.Hora_inici))
 
-    const invEnReparacio = inventari.filter((i) => i.Estat === 'En reparació')
+    const invEnReparacio = inventari.filter((i) => esAvariat(i.Estat))
     const matSenseEstoc = material.filter((m) => m.Quantitat_disponible === 0)
 
     // Lists for detail tables
@@ -242,7 +243,7 @@ export function DashboardPage() {
         )}
         {canAccess.inventari && (
           <KpiCard
-            label="En reparació"
+            label="Avariats o en reparació"
             value={stats.invEnReparacio}
             sublabel="Inventari"
             onClick={() => navigate('/inventari')}

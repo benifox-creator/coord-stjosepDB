@@ -12,8 +12,10 @@ interface InventariRow {
   marca: string
   model: string
   num_serie: string
-  ubicacio: string
+  ubicacio: string | null
   estat: string
+  accio: string
+  sistema_operatiu: string
   data_compra: string
   garantia_fins: string
   mac_lan: string
@@ -32,8 +34,10 @@ function rowToItem(row: InventariRow): ItemInventari {
     Marca: row.marca,
     Model: row.model,
     'Núm_sèrie': row.num_serie,
-    Ubicació: row.ubicacio,
+    Ubicació: row.ubicacio ?? '',
     Estat: (row.estat as EstatInventari) || 'Actiu',
+    Accio: row.accio,
+    SistemaOperatiu: row.sistema_operatiu,
     Data_compra: row.data_compra,
     Garantia_fins: row.garantia_fins,
     MAC_LAN: row.mac_lan,
@@ -47,7 +51,8 @@ function rowToItem(row: InventariRow): ItemInventari {
 function formToInsert(data: ItemInventariFormData): Record<string, unknown> {
   return {
     nom: data.Nom, categoria: data.Categoria, marca: data.Marca, model: data.Model,
-    num_serie: data['Núm_sèrie'], ubicacio: data.Ubicació, estat: data.Estat,
+    num_serie: data['Núm_sèrie'], ubicacio: data.Ubicació || null, estat: data.Estat,
+    accio: data.Accio, sistema_operatiu: data.SistemaOperatiu,
     data_compra: data.Data_compra, garantia_fins: data.Garantia_fins,
     mac_lan: data.MAC_LAN, mac_wan: data.MAC_WAN, ip_lan: data.IP_LAN, ip_wan: data.IP_WAN,
     notes: data.Notes,
@@ -92,7 +97,7 @@ export function useInventari() {
   }
 
   async function editarUbicacio(item: ItemInventari, ubicacio: string): Promise<void> {
-    await updateRowById(TABLE, item.id, { ubicacio })
+    await updateRowById(TABLE, item.id, { ubicacio: ubicacio || null })
     await fetchData()
   }
 

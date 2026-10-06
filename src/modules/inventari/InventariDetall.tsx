@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import {
-  X, Package, Calendar, MapPin, Hash, Cpu, Wifi,
+  X, Package, Calendar, MapPin, Hash, Cpu, Wifi, Monitor, Wrench,
   ChevronDown, CheckCircle, Loader2, Pencil, MessageSquare, Trash2,
 } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { formatDate, garantiaEstat } from './inventari.utils'
 import type { ItemInventari, EstatInventari } from './types'
-
-const ESTATS: EstatInventari[] = ['Actiu', 'En reparació', 'En préstec', 'De baixa']
+import type { Ubicacio } from './ubicacions'
+import { ESTATS_INVENTARI } from './estats'
+import { ubicacioCompleta } from './ubicacions'
 
 interface Props {
   item: ItemInventari
@@ -19,6 +20,7 @@ interface Props {
   onEditar: (item: ItemInventari) => void
   onEliminar?: (item: ItemInventari) => Promise<void>
   potEliminar?: boolean
+  ubicacions: Ubicacio[]
 }
 
 export function InventariDetall({
@@ -31,6 +33,7 @@ export function InventariDetall({
   onEditar,
   onEliminar,
   potEliminar = false,
+  ubicacions,
 }: Props) {
   const [estatObert, setEstatObert] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
@@ -127,7 +130,7 @@ export function InventariDetall({
               </button>
               {estatObert && isCoordinador && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
-                  {ESTATS.map((e) => (
+                  {ESTATS_INVENTARI.map((e) => (
                     <button
                       key={e}
                       onClick={() => handleCanviarEstat(e)}
@@ -140,15 +143,25 @@ export function InventariDetall({
                 </div>
               )}
             </div>
+            {item.Accio && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                <Wrench size={12} /> Acció pendent: {item.Accio}
+              </p>
+            )}
           </section>
 
           {/* Identificació */}
           <section className="space-y-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Identificació</p>
             <InfoRow icon={<Package size={14} />} label="Categoria" value={item.Categoria} />
-            <InfoRow icon={<Cpu size={14} />} label="Marca / Model" value={`${item.Marca} ${item.Model}`} />
+            {(item.Marca || item.Model) && (
+              <InfoRow icon={<Cpu size={14} />} label="Marca / Model" value={`${item.Marca} ${item.Model}`.trim()} />
+            )}
             {item['Núm_sèrie'] && (
               <InfoRow icon={<Hash size={14} />} label="Núm. sèrie" value={item['Núm_sèrie']} />
+            )}
+            {item.SistemaOperatiu && (
+              <InfoRow icon={<Monitor size={14} />} label="Sistema operatiu" value={item.SistemaOperatiu} />
             )}
           </section>
 
@@ -158,14 +171,17 @@ export function InventariDetall({
             {isCoordinador ? (
               editUbicacio ? (
                 <div className="flex gap-2">
-                  <input
-                    type="text"
+                  <select
                     value={ubicacioDraft}
                     onChange={(e) => setUbicacioDraft(e.target.value)}
-                    placeholder="Ex: Aula 55"
                     className="input text-sm flex-1"
                     autoFocus
-                  />
+                  >
+                    <option value="">Sense ubicació</option>
+                    {ubicacions.map((u) => (
+                      <option key={u.id} value={u.Codi}>{ubicacioCompleta(u.Codi, ubicacions)}</option>
+                    ))}
+                  </select>
                   <button
                     onClick={handleUbicacio}
                     disabled={saving === 'ubicacio'}
@@ -187,14 +203,14 @@ export function InventariDetall({
                   className="flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors group"
                 >
                   <MapPin size={14} className="text-gray-400 group-hover:text-primary shrink-0" />
-                  {item.Ubicació || <span className="text-gray-400 italic">Sense ubicació — clic per editar</span>}
+                  {ubicacioCompleta(item.Ubicació, ubicacions) || <span className="text-gray-500 italic">Sense ubicació — clic per editar</span>}
                   <Pencil size={11} className="text-gray-300 group-hover:text-primary ml-1" />
                 </button>
               )
             ) : (
               <p className="text-sm text-gray-700 flex items-center gap-2">
                 <MapPin size={14} className="text-gray-400 shrink-0" />
-                {item.Ubicació || <span className="text-gray-400 italic">Sense ubicació</span>}
+                {ubicacioCompleta(item.Ubicació, ubicacions) || <span className="text-gray-500 italic">Sense ubicació</span>}
               </p>
             )}
           </section>
