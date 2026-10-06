@@ -16,6 +16,7 @@ export function UbicacionsEditor() {
   const [esborrany, setEsborrany] = useState<Dades>(BUIT)
   const [ocupat, setOcupat] = useState<string | null>(null)
   const [errorAccio, setErrorAccio] = useState<string | null>(null)
+  const enCurs = ocupat !== null
 
   async function fes(clau: string, accio: () => Promise<void>) {
     setOcupat(clau)
@@ -68,13 +69,13 @@ export function UbicacionsEditor() {
                     <button
                       type="button"
                       aria-label="Desa"
-                      disabled={ocupat === u.id || !esborrany.Codi.trim()}
+                      disabled={enCurs || !esborrany.Codi.trim()}
                       onClick={() => fes(u.id, async () => { await editar(u, esborrany); setEditantId(null) })}
                       className="p-1 text-green-700 disabled:opacity-40"
                     >
                       {ocupat === u.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                     </button>
-                    <button type="button" aria-label="Cancel·la" onClick={() => setEditantId(null)} className="p-1 text-gray-500">
+                    <button type="button" aria-label="Cancel·la" disabled={enCurs} onClick={() => setEditantId(null)} className="p-1 text-gray-500 disabled:opacity-40">
                       <X size={14} />
                     </button>
                   </td>
@@ -88,15 +89,16 @@ export function UbicacionsEditor() {
                     <button
                       type="button"
                       aria-label={`Edita ${u.Codi}`}
+                      disabled={enCurs}
                       onClick={() => { setEditantId(u.id); setEsborrany({ Codi: u.Codi, Edifici: u.Edifici, Planta: u.Planta }) }}
-                      className="p-1 text-gray-500 hover:text-primary"
+                      className="p-1 text-gray-500 hover:text-primary disabled:opacity-40"
                     >
                       <Pencil size={13} />
                     </button>
                     <button
                       type="button"
                       aria-label={`Esborra ${u.Codi}`}
-                      disabled={ocupat === u.id}
+                      disabled={enCurs}
                       onClick={() => fes(u.id, () => eliminar(u))}
                       className="p-1 text-gray-500 hover:text-red-600 disabled:opacity-40"
                     >
@@ -121,7 +123,7 @@ export function UbicacionsEditor() {
                   <button
                     type="button"
                     aria-label="Afegeix la ubicació"
-                    disabled={ocupat === 'nova' || !nova.Codi.trim()}
+                    disabled={enCurs || !nova.Codi.trim()}
                     onClick={() => fes('nova', async () => { await crear(nova); setNova(BUIT) })}
                     className="p-1.5 text-white rounded-lg disabled:opacity-40"
                     style={{ backgroundColor: '#861414' }}
