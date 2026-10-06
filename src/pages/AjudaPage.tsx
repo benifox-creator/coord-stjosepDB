@@ -389,12 +389,12 @@ export function AjudaPage() {
         </ul>
         <SubHeading>Fitxa d'un dispositiu</SubHeading>
         <FieldList rows={[
-          { term: 'Nom / Categoria / Marca / Model', desc: `Dades bàsiques d’identificació.` },
-          { term: 'Núm. sèrie / Ubicació', desc: `La ubicació es tria del catàleg d’ubicacions; l’edifici i la planta surten sols.` },
+          { term: 'Nom / Categoria / Marca / Model', desc: 'Dades bàsiques d’identificació.' },
+          { term: 'Núm. sèrie / Ubicació', desc: 'La ubicació es tria del catàleg d’ubicacions; l’edifici i la planta surten sols.' },
           { term: 'Estat', desc: 'Actiu, Avariat, En reparació, En préstec, En proves, No desplegat, Retirat temporalment, De baixa o Robat.' },
           { term: 'Acció pendent', desc: 'El que cal fer amb el dispositiu (reparar-lo, revisar-lo...). Es destaca a la fitxa i al llistat.' },
           { term: 'Sistema operatiu', desc: 'De la llista que es configura a Configuració → Inventari.' },
-          { term: 'Compra / Garantia', desc: `L’aplicació calcula sola si la garantia és vigent.` },
+          { term: 'Compra / Garantia', desc: 'L’aplicació calcula sola si la garantia és vigent.' },
           { term: 'MAC / IP', desc: 'Dades de xarxa opcionals.' },
         ]} />
         <PermBox rows={[
