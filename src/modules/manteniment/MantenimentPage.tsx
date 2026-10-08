@@ -52,7 +52,7 @@ export function MantenimentPage({ manteniments, loading, error, onRefresh, onNou
   }), [manteniments])
 
   // Mentre carrega, les píndoles mostren «…» en lloc del comptador.
-  const pindoles = useMemo(() => [
+  const pindoles: Pindola[] = useMemo(() => [
     { label: 'Pendents',  val: loading ? '…' : stats.pendents, color: '#d97706', filtre: { clau: 'estat', valor: 'Pendent' } },
     { label: 'En gestió', val: loading ? '…' : stats.enGestio, color: '#2563eb', filtre: { clau: 'estat', valor: 'En gestió' } },
     { label: 'Resolts',   val: loading ? '…' : stats.resolts,  color: '#15803d', filtre: { clau: 'estat', valor: 'Resolt' } },
@@ -83,7 +83,7 @@ export function MantenimentPage({ manteniments, loading, error, onRefresh, onNou
               {loading ? 'Carregant...' : `${filtrats.length} de ${manteniments.length} reports`}
             </span>
           </div>
-          <PindolesFiltre pindoles={pindoles as Pindola[]} valors={valors} onCanvia={canvia} />
+          <PindolesFiltre pindoles={pindoles} valors={valors} onCanvia={canvia} />
           <div className="flex items-center gap-2 ml-auto">
             <button onClick={onRefresh} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
               <RefreshCw size={16} />

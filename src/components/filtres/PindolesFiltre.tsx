@@ -2,7 +2,7 @@ import type { ValorsFiltres } from './filtres'
 
 export interface Pindola {
   label: string
-  val: number
+  val: number | string
   color: string
   // Sense `filtre` la píndola només informa, i no té clic.
   filtre?: { clau: string; valor: string }
