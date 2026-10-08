@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, RefreshCw, Copy, FileText, Upload } from 'lucide-react'
+import { MapPin, Plus, RefreshCw, Copy, FileText, Upload } from 'lucide-react'
 import { BarraFiltres } from '../../components/filtres/BarraFiltres'
 import type { DefinicioFiltre } from '../../components/filtres/filtres'
 import { opcions } from '../../components/filtres/filtres'
@@ -72,16 +72,20 @@ export function ExcursionsPage({
   return (
     <div className="flex flex-col h-full bg-surface">
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
+            <MapPin size={20} className="text-primary" />
             <h1 className="text-lg font-semibold text-text-main">Excursions</h1>
-            {pendents > 0 && (
-              <p className="text-xs text-amber-700 mt-0.5">
-                {pendents} {pendents === 1 ? 'proposta pendent' : 'propostes pendents'} d’aprovar
-              </p>
-            )}
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${visibles.length} de ${excursions.length} excursions`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          {pendents > 0 && (
+            <p className="text-xs text-amber-700">
+              {pendents} {pendents === 1 ? 'proposta pendent' : 'propostes pendents'} d’aprovar
+            </p>
+          )}
+          <div className="flex items-center gap-2 ml-auto">
             {potVeureCostos && (
               <Link
                 to="/excursions/economia"

@@ -64,7 +64,7 @@ export function BarraFiltres({ definicions, valors, onCanvia, onEsborra, cerca, 
           </div>
         )}
         {children}
-        <div ref={panellRef} className={`relative ${ambCerca ? '' : 'ml-auto'}`}>
+        <div ref={panellRef} className="relative ml-auto">
           <button
             type="button"
             aria-expanded={panellObert}

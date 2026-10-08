@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { RefreshCw, RotateCcw, Ban, ChevronDown } from 'lucide-react'
+import { RefreshCw, RotateCcw, Ban, ChevronDown, Send } from 'lucide-react'
 import { BarraFiltres } from '../../components/filtres/BarraFiltres'
 import type { DefinicioFiltre } from '../../components/filtres/filtres'
 import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
@@ -58,18 +58,22 @@ export function NotificacionsPage({ notificacions, loading, error, onRefresh, on
   return (
     <div className="flex flex-col h-full bg-surface">
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
+            <Send size={20} className="text-primary" />
             <h1 className="text-lg font-semibold text-text-main">Correus</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {(resum.failed ?? 0) > 0
-                ? `${resum.failed} ${resum.failed === 1 ? 'ha fallat' : 'han fallat'}`
-                : (resum.pending ?? 0) > 0
-                  ? `${resum.pending} a la cua`
-                  : 'Res pendent'}
-            </p>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${visibles.length} de ${notificacions.length} correus`}
+            </span>
           </div>
-          <button onClick={onRefresh} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Actualitza">
+          <p className="text-xs text-gray-500">
+            {(resum.failed ?? 0) > 0
+              ? `${resum.failed} ${resum.failed === 1 ? 'ha fallat' : 'han fallat'}`
+              : (resum.pending ?? 0) > 0
+                ? `${resum.pending} a la cua`
+                : 'Res pendent'}
+          </p>
+          <button onClick={onRefresh} className="p-2 text-gray-400 hover:text-gray-600 ml-auto" aria-label="Actualitza">
             <RefreshCw size={16} />
           </button>
         </div>
