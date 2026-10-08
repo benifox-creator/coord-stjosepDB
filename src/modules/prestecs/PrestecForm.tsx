@@ -28,6 +28,7 @@ export function PrestecForm({ onClose, onGuardar, materialDisponible = [] }: Pro
     Dispositiu_Nom: '',
     Usuari: '',
     Email: '',
+    Desti: '',
     Data_inici: avui,
     Data_fi_prevista: '',
     Notes: '',
@@ -172,6 +173,17 @@ export function PrestecForm({ onClose, onGuardar, materialDisponible = [] }: Pro
               />
             </FormField>
           </div>
+
+          {/* Destí */}
+          <FormField label="Destí (aula o grup)">
+            <input
+              type="text"
+              value={form.Desti}
+              onChange={(e) => setField('Desti', e.target.value)}
+              placeholder="Ex.: 5è A · aula 12"
+              className={cls(false)}
+            />
+          </FormField>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">

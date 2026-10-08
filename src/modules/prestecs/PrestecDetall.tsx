@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  X, User, Mail, Calendar, ChevronDown,
+  X, User, Mail, Calendar, ChevronDown, MapPin,
   CheckCircle, Loader2, MessageSquare, RotateCcw, Archive, Trash2, Infinity as InfinityIcon,
 } from 'lucide-react'
 import { Badge } from '../../components/Badge'
@@ -169,6 +169,7 @@ export function PrestecDetall({
           <section className="space-y-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Usuari</p>
             <InfoRow icon={<User size={14} />} label="Nom" value={prestec.Usuari || '—'} />
+            {prestec.Desti && <InfoRow icon={<MapPin size={14} />} label="Destí" value={prestec.Desti} />}
             {prestec.Email && (
               <InfoRow icon={<Mail size={14} />} label="Correu" value={
                 <a href={`mailto:${prestec.Email}`} className="text-primary hover:underline">

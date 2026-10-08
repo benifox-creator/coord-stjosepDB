@@ -17,6 +17,7 @@ interface PrestecRow {
   dispositiu_nom: string
   usuari: string
   email: string
+  desti: string
   data_inici: string
   data_fi_prevista: string
   data_fi_real: string
@@ -38,6 +39,7 @@ function rowToPrestec(row: PrestecRow): Prestec {
     Dispositiu_Nom: row.dispositiu_nom,
     Usuari: row.usuari,
     Email: row.email,
+    Desti: row.desti ?? '',
     Data_inici: row.data_inici,
     Data_fi_prevista: row.data_fi_prevista,
     Data_fi_real: row.data_fi_real,
@@ -84,7 +86,7 @@ export function usePrestecs() {
   async function crear(data: PrestecFormData): Promise<void> {
     await callRpc('create_loan', { p_request_id: requestId.current, p_data: {
       dispositiu_id: data.Dispositiu_ID, dispositiu_nom: data.Dispositiu_Nom,
-      usuari: data.Usuari, email: data.Email, data_inici: data.Data_inici,
+      usuari: data.Usuari, email: data.Email, desti: data.Desti, data_inici: data.Data_inici,
       data_fi_prevista: data.Data_fi_prevista, notes: data.Notes,
     }, p_items: parseMaterial(data.Material).map(m => ({ codi: m.ID, quantitat: m.Quantitat })) })
     requestId.current = crypto.randomUUID()

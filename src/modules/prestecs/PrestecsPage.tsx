@@ -14,31 +14,31 @@ const AVUI = '2026-06-23'
 const MOCK: Prestec[] = [
   {
     ID: 'PRE-001', Dispositiu_ID: 'INV-005', Dispositiu_Nom: 'MacBook Air M2',
-    Usuari: 'Pere Fonts', Email: 'pere.fonts@stjosep.org',
+    Usuari: 'Pere Fonts', Email: 'pere.fonts@stjosep.org', Desti: '',
     Data_inici: '2026-06-18', Data_fi_prevista: '2026-06-28', Data_fi_real: '',
     Material: 'MAT-001:1:Cable HDMI 2m', Estat: 'Actiu', Notes: '', id: "mock-0",
   },
   {
     ID: 'PRE-002', Dispositiu_ID: 'INV-001', Dispositiu_Nom: 'HP EliteBook 840 G8',
-    Usuari: 'Maria López', Email: 'maria.lopez@stjosep.org',
+    Usuari: 'Maria López', Email: 'maria.lopez@stjosep.org', Desti: '',
     Data_inici: '2026-06-10', Data_fi_prevista: '2026-06-25', Data_fi_real: '',
     Material: '', Estat: 'Actiu', Notes: 'Per al curs de formació', id: "mock-1",
   },
   {
     ID: 'PRE-003', Dispositiu_ID: 'INV-007', Dispositiu_Nom: 'iPad Air 5',
-    Usuari: 'Anna Puig', Email: 'anna.puig@stjosep.org',
+    Usuari: 'Anna Puig', Email: 'anna.puig@stjosep.org', Desti: '',
     Data_inici: '2026-05-20', Data_fi_prevista: '2026-05-27', Data_fi_real: '2026-05-27',
     Material: '', Estat: 'Retornat', Notes: '', id: "mock-2",
   },
   {
     ID: 'PRE-004', Dispositiu_ID: 'INV-003', Dispositiu_Nom: 'Epson EB-X41',
-    Usuari: 'Jordi Mas', Email: 'jordi.mas@stjosep.org',
+    Usuari: 'Jordi Mas', Email: 'jordi.mas@stjosep.org', Desti: '',
     Data_inici: '2026-06-01', Data_fi_prevista: '2026-06-20', Data_fi_real: '',
     Material: 'MAT-002:1:Adaptador VGA→HDMI;MAT-006:1:Puntero làser', Estat: 'Actiu', Notes: 'Per a presentació externa', id: "mock-3",
   },
   {
     ID: 'PRE-005', Dispositiu_ID: 'INV-008', Dispositiu_Nom: 'Monitor Dell 27"',
-    Usuari: 'Carla Vidal', Email: 'carla.vidal@stjosep.org',
+    Usuari: 'Carla Vidal', Email: 'carla.vidal@stjosep.org', Desti: '',
     Data_inici: AVUI, Data_fi_prevista: '2026-07-15', Data_fi_real: '',
     Material: '', Estat: 'Actiu', Notes: '', id: "mock-4",
   },
@@ -107,7 +107,7 @@ export function PrestecsPage({
       .filter((p) => {
         if (valors.estat && p._estatEfectiu !== valors.estat) return false
         if (q) {
-          const h = `${p.ID} ${p.Dispositiu_ID} ${p.Dispositiu_Nom} ${p.Usuari} ${p.Email}`.toLowerCase()
+          const h = `${p.ID} ${p.Dispositiu_ID} ${p.Dispositiu_Nom} ${p.Usuari} ${p.Email} ${p.Desti}`.toLowerCase()
           if (!h.includes(q)) return false
         }
         return true
@@ -225,6 +225,7 @@ export function PrestecsPage({
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <p className="text-sm text-gray-700">{p.Usuari}</p>
                     <p className="text-xs text-gray-400">{p.Email}</p>
+                    {p.Desti && <p className="text-xs text-gray-500">{p.Desti}</p>}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
                     {formatDate(p.Data_inici)}
