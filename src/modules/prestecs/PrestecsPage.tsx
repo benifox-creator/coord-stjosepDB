@@ -1,7 +1,13 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, RefreshCw, BookOpen } from 'lucide-react'
+import { Plus, RefreshCw, BookOpen } from 'lucide-react'
 import { Badge } from '../../components/Badge'
-import type { Prestec, EstatPrestec } from './types'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import { PindolesFiltre } from '../../components/filtres/PindolesFiltre'
+import type { Pindola } from '../../components/filtres/PindolesFiltre'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
+import type { Prestec } from './types'
 import { formatDate, estatEfectiu, diesRestants } from './prestecs.utils'
 
 const AVUI = '2026-06-23'
@@ -37,8 +43,6 @@ const MOCK: Prestec[] = [
     Material: '', Estat: 'Actiu', Notes: '', id: "mock-4",
   },
 ]
-
-const ESTATS: Array<EstatPrestec | ''> = ['', 'Actiu', 'Retornat', 'Vençut']
 
 function SkeletonRow() {
   return (
@@ -86,7 +90,10 @@ export function PrestecsPage({
   onRefresh,
 }: Props) {
   const [cerca, setCerca] = useState('')
-  const [filtreEstat, setFiltreEstat] = useState<EstatPrestec | ''>('')
+  const { valors, canvia, esborra } = useValorsFiltres({ estat: '' })
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: opcions(['Actiu', 'Retornat', 'Vençut']) },
+  ]
 
   const ambEstatEfectiu = useMemo(
     () => prestecs.map((p) => ({ ...p, _estatEfectiu: estatEfectiu(p) })),
@@ -98,14 +105,14 @@ export function PrestecsPage({
     return [...ambEstatEfectiu]
       .sort((a, b) => b.ID.localeCompare(a.ID))
       .filter((p) => {
-        if (filtreEstat && p._estatEfectiu !== filtreEstat) return false
+        if (valors.estat && p._estatEfectiu !== valors.estat) return false
         if (q) {
           const h = `${p.ID} ${p.Dispositiu_ID} ${p.Dispositiu_Nom} ${p.Usuari} ${p.Email}`.toLowerCase()
           if (!h.includes(q)) return false
         }
         return true
       })
-  }, [ambEstatEfectiu, filtreEstat, cerca])
+  }, [ambEstatEfectiu, valors, cerca])
 
   const comptadors = useMemo(() => ({
     actius: ambEstatEfectiu.filter((p) => p._estatEfectiu === 'Actiu').length,
@@ -113,21 +120,27 @@ export function PrestecsPage({
     retornats: ambEstatEfectiu.filter((p) => p._estatEfectiu === 'Retornat').length,
   }), [ambEstatEfectiu])
 
+  const pindoles: Pindola[] = [
+    { label: 'Actius', val: comptadors.actius, color: '#0c71c3', filtre: { clau: 'estat', valor: 'Actiu' } },
+    { label: 'Vençuts', val: comptadors.vençuts, color: '#861414', filtre: { clau: 'estat', valor: 'Vençut' } },
+    { label: 'Retornats', val: comptadors.retornats, color: '#15803d', filtre: { clau: 'estat', valor: 'Retornat' } },
+  ]
+
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Capçalera */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Títol, comptadors (que també filtren) i accions */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
             <BookOpen size={20} className="text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold text-text-main">Préstecs</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {loading ? 'Carregant...' : `${filtrats.length} de ${prestecs.length} préstecs`}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold text-text-main">Préstecs</h1>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${filtrats.length} de ${prestecs.length} préstecs`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <PindolesFiltre pindoles={pindoles} valors={valors} onCanvia={canvia} />
+          <div className="flex items-center gap-2 ml-auto">
             {onRefresh && (
               <button
                 onClick={onRefresh}
@@ -150,41 +163,15 @@ export function PrestecsPage({
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="flex gap-5 mb-4">
-          {[
-            { label: 'Actius',    val: comptadors.actius,    color: '#0c71c3' },
-            { label: 'Vençuts',   val: comptadors.vençuts,   color: '#861414' },
-            { label: 'Retornats', val: comptadors.retornats, color: '#15803d' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className="text-xl font-bold" style={{ color }}>{val}</span>
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Filtres */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-52">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={cerca}
-              onChange={(e) => setCerca(e.target.value)}
-              placeholder="Cercar per dispositiu, usuari, email..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <select
-            value={filtreEstat}
-            onChange={(e) => setFiltreEstat(e.target.value as EstatPrestec | '')}
-            className="input text-sm w-40"
-          >
-            <option value="">Tots els estats</option>
-            {ESTATS.slice(1).map((e) => <option key={e}>{e}</option>)}
-          </select>
-        </div>
+        <BarraFiltres
+          definicions={definicions}
+          valors={valors}
+          onCanvia={canvia}
+          onEsborra={esborra}
+          cerca={cerca}
+          onCerca={setCerca}
+          placeholder="Cercar per dispositiu, usuari, email..."
+        />
       </div>
 
       {/* Error */}
