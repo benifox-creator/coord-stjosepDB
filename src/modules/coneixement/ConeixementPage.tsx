@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  BookOpen, Plus, Search, RefreshCw, Tag, ExternalLink, EyeOff, Eye,
+  BookOpen, Plus, RefreshCw, Tag, ExternalLink, EyeOff, Eye,
   Loader2, AlertTriangle, HelpCircle, Wrench, FileText, Archive,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -9,6 +9,12 @@ import type { TipusArticle } from './articles'
 import { agrupaPerTipus, cerca, filtraPerCategoria, aLlista } from './articles'
 import { parseTags, parseLinks, formatDateISO } from './coneixement.utils'
 import { MarkdownContent } from './MarkdownContent'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import { PindolesFiltre } from '../../components/filtres/PindolesFiltre'
+import type { Pindola } from '../../components/filtres/PindolesFiltre'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 
 const TIPUS_FILTRE_OPCIONS: { valor: TipusArticle; etiqueta: string }[] = [
   { valor: 'avis', etiqueta: 'Avisos' },
@@ -256,8 +262,7 @@ export function ConeixementPage({
   publica,
 }: Props) {
   const [textCerca, setTextCerca] = useState('')
-  const [filtreTipus, setFiltreTipus] = useState<TipusArticle | ''>('')
-  const [filtreCategoria, setFiltreCategoria] = useState('')
+  const { valors, canvia, esborra } = useValorsFiltres({ tipus: '', categoria: '' })
   const [publicantId, setPublicantId] = useState<string | null>(null)
 
   const avui = useMemo(() => formatDateISO(new Date()), [])
@@ -267,12 +272,19 @@ export function ConeixementPage({
     return Array.from(set).sort()
   }, [articles])
 
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'tipus', label: 'Tipus', tipus: 'select', totes: 'Tots', opcions: TIPUS_FILTRE_OPCIONS },
+    ...(categories.length > 0
+      ? [{ clau: 'categoria', label: 'Categoria', tipus: 'select', totes: 'Totes', opcions: opcions(categories) } as DefinicioFiltre]
+      : []),
+  ]
+
   const byId = useMemo(() => new Map(articles.map((a) => [a.id, a] as const)), [articles])
   const llistes = useMemo(() => articles.map(aLlista), [articles])
   const trobatsPerText = useMemo(() => cerca(llistes, textCerca), [llistes, textCerca])
   const trobats = useMemo(
-    () => filtraPerCategoria(trobatsPerText, filtreCategoria),
-    [trobatsPerText, filtreCategoria],
+    () => filtraPerCategoria(trobatsPerText, valors.categoria),
+    [trobatsPerText, valors.categoria],
   )
   const grups = useMemo(() => agrupaPerTipus(trobats, avui), [trobats, avui])
 
@@ -281,6 +293,12 @@ export function ConeixementPage({
     publicats: articles.filter((a) => a.Publicat === 'true').length,
     esborranys: articles.filter((a) => a.Publicat !== 'true').length,
   }), [articles])
+
+  const pindoles: Pindola[] = [
+    { label: 'Total', val: stats.total, color: '#861414' },
+    { label: 'Publicats', val: stats.publicats, color: '#15803d' },
+    { label: 'Esborranys', val: stats.esborranys, color: '#d97706' },
+  ]
 
   async function handlePublica(article: Article) {
     const publicarA = article.Publicat !== 'true'
@@ -292,10 +310,10 @@ export function ConeixementPage({
     }
   }
 
-  const mostraAvisos = filtreTipus === '' || filtreTipus === 'avis'
-  const mostraPreguntes = filtreTipus === '' || filtreTipus === 'pregunta'
-  const mostraProcediments = filtreTipus === '' || filtreTipus === 'procediment'
-  const mostraDocuments = filtreTipus === '' || filtreTipus === 'document'
+  const mostraAvisos = valors.tipus === '' || valors.tipus === 'avis'
+  const mostraPreguntes = valors.tipus === '' || valors.tipus === 'pregunta'
+  const mostraProcediments = valors.tipus === '' || valors.tipus === 'procediment'
+  const mostraDocuments = valors.tipus === '' || valors.tipus === 'document'
 
   const totalVisible =
     (mostraAvisos ? grups.avisos.length : 0) +
@@ -308,18 +326,19 @@ export function ConeixementPage({
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Capçalera */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Títol, comptadors (informatius) i accions */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
             <BookOpen size={20} className="text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold text-text-main">Base de Coneixement</h1>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {loading ? 'Carregant...' : `${trobats.length} de ${stats.total} articles`}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold text-text-main">Base de Coneixement</h1>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${trobats.length} de ${stats.total} articles`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Només qui veu els esborranys en treu res, la resta ja només veu publicats */}
+          {potRedactar && <PindolesFiltre pindoles={pindoles} valors={valors} onCanvia={canvia} />}
+          <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={onRefresh}
               title="Actualitzar"
@@ -340,65 +359,15 @@ export function ConeixementPage({
           </div>
         </div>
 
-        {/* KPIs: només qui veu els esborranys en treu res, la resta ja només veu publicats */}
-        {potRedactar && (
-          <div className="flex gap-5 mb-4">
-            {[
-              { label: 'Total', val: stats.total, color: '#861414' },
-              { label: 'Publicats', val: stats.publicats, color: '#15803d' },
-              { label: 'Esborranys', val: stats.esborranys, color: '#d97706' },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <span className="text-xl font-bold" style={{ color }}>{val}</span>
-                <span className="text-xs text-gray-500">{label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Filtres */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-52">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={textCerca}
-              onChange={(e) => setTextCerca(e.target.value)}
-              placeholder="Cercar per títol, contingut o paraules clau..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <select
-            value={filtreTipus}
-            onChange={(e) => setFiltreTipus(e.target.value as TipusArticle | '')}
-            className="input text-sm w-48"
-          >
-            <option value="">Tots els tipus</option>
-            {TIPUS_FILTRE_OPCIONS.map(({ valor, etiqueta }) => (
-              <option key={valor} value={valor}>{etiqueta}</option>
-            ))}
-          </select>
-          {categories.length > 0 && (
-            <select
-              value={filtreCategoria}
-              onChange={(e) => setFiltreCategoria(e.target.value)}
-              className="input text-sm w-48"
-            >
-              <option value="">Totes les categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          )}
-          {(textCerca || filtreTipus || filtreCategoria) && (
-            <button
-              onClick={() => { setTextCerca(''); setFiltreTipus(''); setFiltreCategoria('') }}
-              className="text-xs text-gray-500 hover:text-gray-700 px-2"
-            >
-              Netejar filtres
-            </button>
-          )}
-        </div>
+        <BarraFiltres
+          definicions={definicions}
+          valors={valors}
+          onCanvia={canvia}
+          onEsborra={esborra}
+          cerca={textCerca}
+          onCerca={setTextCerca}
+          placeholder="Cercar per títol, contingut o paraules clau..."
+        />
       </div>
 
       {/* Error */}

@@ -1,12 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Trash2, Loader2, AlertTriangle, FileSpreadsheet } from 'lucide-react'
+import { Plus, Trash2, Loader2, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import { useMaterialsInfantil } from './useMaterialsInfantil'
 import { useProveidorsInfantil } from './useProveidorsInfantil'
 import { MaterialInfantilForm } from './MaterialInfantilForm'
 import { ImportarMaterialsModal } from './ImportarMaterialsModal'
 import { estocDisponible } from './materialInfantil.utils'
 import { useConfigStore } from '../../store/configStore'
-import type { MaterialInfantil, CategoriaMaterialInfantil } from './types'
+import type { MaterialInfantil } from './types'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 
 interface Props {
   potGestionar: boolean
@@ -17,7 +21,7 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
   const { proveidors, load: loadProveidors } = useProveidorsInfantil()
   const categories = useConfigStore((s) => s.getValues('material-infantil.categories'))
   const [cerca, setCerca] = useState('')
-  const [filtreCategoria, setFiltreCategoria] = useState<CategoriaMaterialInfantil | ''>('')
+  const { valors, canvia, esborra } = useValorsFiltres({ categoria: '' })
   const [nomesEstocBaix, setNomesEstocBaix] = useState(false)
   const [formObert, setFormObert] = useState(false)
   const [importObert, setImportObert] = useState(false)
@@ -27,18 +31,22 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
 
   useEffect(() => { load(); loadProveidors() }, [load, loadProveidors])
 
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'categoria', label: 'Categoria', tipus: 'select', totes: 'Totes', opcions: opcions(categories) },
+  ]
+
   const filtrats = useMemo(() => {
     const q = cerca.toLowerCase()
     return materials
       .filter((m) => {
-        if (filtreCategoria && m.Categoria !== filtreCategoria) return false
+        if (valors.categoria && m.Categoria !== valors.categoria) return false
         if (nomesEstocBaix && estocDisponible(m) > 0) return false
         if (!q) return true
         const proveidorNom = proveidors.find((p) => p.id === m.ProveidorId)?.Nom ?? ''
         return `${m.Codi} ${m.Nom} ${m.Categoria} ${proveidorNom}`.toLowerCase().includes(q)
       })
       .sort((a, b) => a.Nom.localeCompare(b.Nom))
-  }, [materials, proveidors, cerca, filtreCategoria, nomesEstocBaix])
+  }, [materials, proveidors, cerca, valors, nomesEstocBaix])
 
   async function handleEliminar(m: MaterialInfantil) {
     setEliminant(true)
@@ -54,38 +62,9 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-1 min-w-52 flex-wrap">
-          <div className="relative flex-1 min-w-40">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={cerca}
-              onChange={(e) => setCerca(e.target.value)}
-              placeholder="Cercar material..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <select
-            value={filtreCategoria}
-            onChange={(e) => setFiltreCategoria(e.target.value as CategoriaMaterialInfantil | '')}
-            className="input text-sm w-44"
-          >
-            <option value="">Totes les categories</option>
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 whitespace-nowrap px-1">
-            <input
-              type="checkbox"
-              checked={nomesEstocBaix}
-              onChange={(e) => setNomesEstocBaix(e.target.checked)}
-              className="rounded border-gray-300 text-primary focus:ring-primary/30"
-            />
-            Només amb estoc baix o zero
-          </label>
-        </div>
+      <div className="px-6 py-4 border-b border-gray-200">
         {potGestionar && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => setImportObert(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5"
@@ -101,6 +80,26 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
             </button>
           </div>
         )}
+
+        <BarraFiltres
+          definicions={definicions}
+          valors={valors}
+          onCanvia={canvia}
+          onEsborra={esborra}
+          cerca={cerca}
+          onCerca={setCerca}
+          placeholder="Cercar material..."
+        >
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 whitespace-nowrap px-1">
+            <input
+              type="checkbox"
+              checked={nomesEstocBaix}
+              onChange={(e) => setNomesEstocBaix(e.target.checked)}
+              className="rounded border-gray-300 text-primary focus:ring-primary/30"
+            />
+            Només amb estoc baix o zero
+          </label>
+        </BarraFiltres>
       </div>
 
       {error && (
