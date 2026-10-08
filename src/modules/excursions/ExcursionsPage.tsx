@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, RefreshCw, Copy, FileText, Upload } from 'lucide-react'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 import type { Excursio } from './types'
 import { ESTATS_EXCURSIO, ESTAT_COLORS, ETAPES_EXCURSIO } from './types'
 
@@ -32,19 +36,23 @@ export function ExcursionsPage({
   excursions, loading, error, potAprovar, potVeureCostos, potGestionar, pendentsDePressupostIds,
   onNova, onObrir, onRefresh, onAprovar, onCopiarCursAnterior, onDemanarPressupost, onImportarPressupost,
 }: Props) {
-  const [etapa, setEtapa] = useState('')
-  const [estat, setEstat] = useState('')
-  const [mes, setMes] = useState('')
+  const { valors, canvia, esborra } = useValorsFiltres({ etapa: '', estat: '', mes: '' })
   const [nomesPendentsPressupost, setNomesPendentsPressupost] = useState(false)
   const [seleccio, setSeleccio] = useState<string[]>([])
   const [aprovant, setAprovant] = useState(false)
 
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'etapa', label: 'Etapa', tipus: 'select', totes: 'Totes', opcions: opcions(ETAPES_EXCURSIO) },
+    { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: opcions(ESTATS_EXCURSIO) },
+    { clau: 'mes', label: 'Mes', tipus: 'select', totes: 'Tot el curs', opcions: MESOS.map((m) => ({ valor: m.valor, etiqueta: m.nom })) },
+  ]
+
   const visibles = useMemo(() => excursions.filter((e) =>
-    (!etapa || e.Etapa === etapa)
-    && (!estat || e.Estat === estat)
-    && (!mes || (e.Data ?? '').slice(5, 7) === mes)
+    (!valors.etapa || e.Etapa === valors.etapa)
+    && (!valors.estat || e.Estat === valors.estat)
+    && (!valors.mes || (e.Data ?? '').slice(5, 7) === valors.mes)
     && (!nomesPendentsPressupost || pendentsDePressupostIds.has(e.id))
-  ), [excursions, etapa, estat, mes, nomesPendentsPressupost, pendentsDePressupostIds])
+  ), [excursions, valors, nomesPendentsPressupost, pendentsDePressupostIds])
 
   const pendents = excursions.filter((e) => e.Estat === 'Proposada').length
   // Només es poden aprovar en bloc les que són visibles i estan proposades: si
@@ -117,19 +125,7 @@ export function ExcursionsPage({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          <select value={etapa} onChange={(e) => setEtapa(e.target.value)} aria-label="Filtra per etapa" className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg">
-            <option value="">Totes les etapes</option>
-            {ETAPES_EXCURSIO.map((x) => <option key={x} value={x}>{x}</option>)}
-          </select>
-          <select value={estat} onChange={(e) => setEstat(e.target.value)} aria-label="Filtra per estat" className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg">
-            <option value="">Tots els estats</option>
-            {ESTATS_EXCURSIO.map((x) => <option key={x} value={x}>{x}</option>)}
-          </select>
-          <select value={mes} onChange={(e) => setMes(e.target.value)} aria-label="Filtra per mes" className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg">
-            <option value="">Tot el curs</option>
-            {MESOS.map((m) => <option key={m.valor} value={m.valor}>{m.nom}</option>)}
-          </select>
+        <BarraFiltres definicions={definicions} valors={valors} onCanvia={canvia} onEsborra={esborra}>
           {potVeureCostos && (
             <label className="flex items-center gap-1.5 text-xs text-gray-600 px-1">
               <input
@@ -149,7 +145,7 @@ export function ExcursionsPage({
               {aprovant ? 'Aprovant…' : `Aprova ${aprovables.length}`}
             </button>
           )}
-        </div>
+        </BarraFiltres>
       </div>
 
       <div className="flex-1 overflow-auto p-6">

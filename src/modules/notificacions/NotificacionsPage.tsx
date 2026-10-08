@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
 import { RefreshCw, RotateCcw, Ban, ChevronDown } from 'lucide-react'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 import type { Notificacio } from './types'
 import { ESTATS_NOTIFICACIO, ESTAT_LABELS, ESTAT_COLORS } from './types'
 import { potReintentar, potCancellar, etiquetaReintent, dinsDelRang, quan } from './notificacions.utils'
@@ -14,18 +17,16 @@ interface Props {
 }
 
 export function NotificacionsPage({ notificacions, loading, error, onRefresh, onReintentar, onCancellar }: Props) {
-  const [estat, setEstat] = useState('')
-  const [desDe, setDesDe] = useState('')
-  const [finsA, setFinsA] = useState('')
+  const { valors, canvia, esborra } = useValorsFiltres({ estat: '', desDe: '', finsA: '' })
   const [obert, setObert] = useState<string | null>(null)
   const [ocupat, setOcupat] = useState<string | null>(null)
   const [errorAccio, setErrorAccio] = useState('')
 
   const visibles = useMemo(
     () => notificacions.filter(
-      (n) => (!estat || n.Estat === estat) && dinsDelRang(n.CreatEl, desDe, finsA),
+      (n) => (!valors.estat || n.Estat === valors.estat) && dinsDelRang(n.CreatEl, valors.desDe, valors.finsA),
     ),
-    [notificacions, estat, desDe, finsA],
+    [notificacions, valors],
   )
 
   const resum = useMemo(() => {
@@ -33,6 +34,14 @@ export function NotificacionsPage({ notificacions, loading, error, onRefresh, on
     for (const n of notificacions) r[n.Estat] = (r[n.Estat] ?? 0) + 1
     return r
   }, [notificacions])
+
+  // Els dos límits són opcionals i van per separat: sovint el que es vol
+  // saber és «què ha sortit des de dilluns», sense cap final.
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: ESTATS_NOTIFICACIO.map((e) => ({ valor: e, etiqueta: `${ESTAT_LABELS[e]}${resum[e] ? ` (${resum[e]})` : ''}` })) },
+    { clau: 'desDe', label: 'Des de', tipus: 'data', max: valors.finsA },
+    { clau: 'finsA', label: 'Fins a', tipus: 'data', min: valors.desDe },
+  ]
 
   async function fes(id: string, accio: (id: string) => Promise<void>) {
     setOcupat(id)
@@ -64,43 +73,7 @@ export function NotificacionsPage({ notificacions, loading, error, onRefresh, on
             <RefreshCw size={16} />
           </button>
         </div>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <select
-            value={estat}
-            onChange={(e) => setEstat(e.target.value)}
-            aria-label="Filtra per estat"
-            className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg"
-          >
-            <option value="">Tots els estats</option>
-            {ESTATS_NOTIFICACIO.map((e) => (
-              <option key={e} value={e}>{ESTAT_LABELS[e]}{resum[e] ? ` (${resum[e]})` : ''}</option>
-            ))}
-          </select>
-
-          {/* Els dos límits són opcionals i van per separat: sovint el que es
-              vol saber és «què ha sortit des de dilluns», sense cap final. */}
-          <label className="flex items-center gap-1.5 text-xs text-gray-400">
-            Des de
-            <input type="date" value={desDe} max={finsA || undefined} aria-label="Des de quina data"
-              onChange={(e) => setDesDe(e.target.value)}
-              className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg" />
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-gray-400">
-            Fins a
-            <input type="date" value={finsA} min={desDe || undefined} aria-label="Fins a quina data"
-              onChange={(e) => setFinsA(e.target.value)}
-              className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg" />
-          </label>
-
-          {(estat || desDe || finsA) && (
-            <button
-              onClick={() => { setEstat(''); setDesDe(''); setFinsA('') }}
-              className="px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 underline"
-            >
-              Treu els filtres
-            </button>
-          )}
-        </div>
+        <BarraFiltres definicions={definicions} valors={valors} onCanvia={canvia} onEsborra={esborra} />
       </div>
 
       <div className="flex-1 overflow-auto p-6">
