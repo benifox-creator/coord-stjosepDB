@@ -102,7 +102,24 @@ Si una píndola de la taula no correspon exactament a un valor del filtre d'esta
 - `src/modules/inventari/filtres.ts` conserva `filtraInventari`.
 - Els xips passen a sortir de `filtresActius` comú. Els valors especials (`avariats`, `qualsevol`) es declaren com a opcions amb la seva etiqueta.
 
+## 5 bis. Préstecs: camp «Destí»
+
+**Per què:** el material de robòtica va a Material i Stock (categoria «Robòtica»). Quan es presta a una classe, l'Andrés vol saber quants kits surten i **on** han anat. Avui el préstec només guarda la persona.
+
+- **Base de dades:** migració nova que afegeix `prestecs.desti text not null default ''`. Hi ha també un `create or replace` de `create_loan` que desa `p_data->>'desti'` (`coalesce` a `''`). La resta de la funció queda igual.
+  - Abans de fer-la, s'ha comprovat que la versió de producció de `create_loan` és idèntica a la de `202609130003_integrity.sql`.
+- **Tipus i dades:** `Prestec.Desti: string`, també a `PrestecFormData`. `usePrestecs` el llegeix de `desti` i l'envia a `create_loan`.
+- **Formulari:** camp opcional «Destí (aula o grup)», amb el placeholder «Ex.: 5è A · aula 12».
+- **Llistat:**
+  - el destí es veu sota la persona, en gris;
+  - la cerca de Préstecs també hi mira.
+- **Detall:** fila «Destí» quan no és buit.
+- **Fora d'abast:** editar el destí d'un préstec ja creat. Avui només les notes són editables.
+- **Ordre de desplegament:** la migració s'aplica a producció **abans** de fusionar. Si es fusionés abans, el client enviaria un camp que la funció ignora, i el llistat no en trobaria la columna.
+
 ## 6. Proves
+
+- **Base de dades** (`tests/database.test.ts`): `create_loan` desa `desti`, i sense `desti` el deixa a `''`.
 
 - **Mòdul pur `filtres.ts`**, amb Vitest:
   - etiquetes de desplegable i de data;
