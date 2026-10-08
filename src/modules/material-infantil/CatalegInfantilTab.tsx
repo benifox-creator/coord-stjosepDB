@@ -63,24 +63,6 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 py-4 border-b border-gray-200">
-        {potGestionar && (
-          <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => setImportObert(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5"
-            >
-              <FileSpreadsheet size={14} /> Importa des d'Excel
-            </button>
-            <button
-              onClick={() => setFormObert(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
-              style={{ backgroundColor: '#861414' }}
-            >
-              <Plus size={14} /> Nou material
-            </button>
-          </div>
-        )}
-
         <BarraFiltres
           definicions={definicions}
           valors={valors}
@@ -99,6 +81,23 @@ export function CatalegInfantilTab({ potGestionar }: Props) {
             />
             Només amb estoc baix o zero
           </label>
+          {potGestionar && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setImportObert(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5"
+              >
+                <FileSpreadsheet size={14} /> Importa des d'Excel
+              </button>
+              <button
+                onClick={() => setFormObert(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
+                style={{ backgroundColor: '#861414' }}
+              >
+                <Plus size={14} /> Nou material
+              </button>
+            </div>
+          )}
         </BarraFiltres>
       </div>
 

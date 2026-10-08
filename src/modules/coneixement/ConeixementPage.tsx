@@ -274,10 +274,10 @@ export function ConeixementPage({
 
   const definicions: DefinicioFiltre[] = [
     { clau: 'tipus', label: 'Tipus', tipus: 'select', totes: 'Tots', opcions: TIPUS_FILTRE_OPCIONS },
-    ...(categories.length > 0
-      ? [{ clau: 'categoria', label: 'Categoria', tipus: 'select', totes: 'Totes', opcions: opcions(categories) } as DefinicioFiltre]
-      : []),
   ]
+  if (categories.length > 0) {
+    definicions.push({ clau: 'categoria', label: 'Categoria', tipus: 'select', totes: 'Totes', opcions: opcions(categories) })
+  }
 
   const byId = useMemo(() => new Map(articles.map((a) => [a.id, a] as const)), [articles])
   const llistes = useMemo(() => articles.map(aLlista), [articles])
