@@ -60,6 +60,14 @@ const GRUPS: GrupConfig[] = [
       { clau: 'incidencies.tipus', label: 'Tipus de problema', descripcio: 'Classificació del tipus d\'incidència. "Altre" sempre és disponible.' },
       { clau: 'incidencies.localitzacions', label: 'Localitzacions', descripcio: 'Suggeriments de localització al formulari d\'incidència.' },
     ],
+    extra: (
+      <CorreuAvisEditor
+        clau="incidencies.email"
+        titol="Correu que rep els avisos d’incidències noves"
+        descripcio="Quan algú doni d’alta una incidència s’enviarà un avís a aquest correu (excepte si la dona d’alta la mateixa persona)."
+        placeholder="tic@stjosep.org"
+      />
+    ),
   },
   {
     modul: 'Base de Coneixement',
@@ -676,8 +684,15 @@ function GestioUsuaris({ emailActual }: { emailActual: string }) {
   )
 }
 
-function MantenimentEmailEditor() {
-  const savedValues = useConfigStore((s) => s.config['manteniment.email'])
+// Correu que rep un avís automàtic (Manteniment, Incidències). El servidor
+// llegeix el primer valor de la clau quan es dona d'alta un registre.
+function CorreuAvisEditor({ clau, titol, descripcio, placeholder }: {
+  clau: 'manteniment.email' | 'incidencies.email'
+  titol: string
+  descripcio: string
+  placeholder: string
+}) {
+  const savedValues = useConfigStore((s) => s.config[clau])
   const update = useConfigStore((s) => s.update)
   const email = savedValues?.[0] ?? ''
   const [valor, setValor] = useState(email)
@@ -688,7 +703,7 @@ function MantenimentEmailEditor() {
     if (!valor.trim()) return
     setSaving(true)
     try {
-      await update('manteniment.email', [valor.trim()])
+      await update(clau, [valor.trim()])
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } finally {
@@ -701,10 +716,8 @@ function MantenimentEmailEditor() {
       <div className="flex items-start gap-2 mb-3">
         <Mail size={14} className="text-gray-400 mt-0.5 shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-text-main">Correu del responsable de manteniment</p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Quan es reporti un desperfecte s'enviarà una notificació a aquest correu.
-          </p>
+          <p className="text-sm font-semibold text-text-main">{titol}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{descripcio}</p>
         </div>
       </div>
       <div className="flex gap-2">
@@ -713,7 +726,7 @@ function MantenimentEmailEditor() {
           className="input text-sm flex-1"
           value={valor}
           onChange={(e) => { setValor(e.target.value); setSaved(false) }}
-          placeholder="manteniment@stjosep.org"
+          placeholder={placeholder}
           onKeyDown={(e) => e.key === 'Enter' && handleDesar()}
         />
         <button
@@ -1075,7 +1088,14 @@ export function ConfiguracioPage() {
         id: 'manteniment',
         label: 'Manteniment',
         icona: <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />,
-        contingut: <MantenimentEmailEditor />,
+        contingut: (
+          <CorreuAvisEditor
+            clau="manteniment.email"
+            titol="Correu del responsable de manteniment"
+            descripcio="Quan es reporti un desperfecte s’enviarà una notificació a aquest correu."
+            placeholder="manteniment@stjosep.org"
+          />
+        ),
       },
       {
         // Tota la configuració del centre és de la coordinació: escriure a

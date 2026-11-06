@@ -477,6 +477,26 @@ describe('permission and transaction regressions', () => {
     expect((await db.query<{reporter:string}>('select reporter from public.incidencies where id=$1',[incident.id])).rows[0].reporter).toBe('teacher@stjosep.org')
     expect((await db.query<{recipient:string}>("select recipient from public.notifications where status='pending'")).rows[0].recipient).toBe('teacher@stjosep.org')
   })
+  it('avisa el correu de Configuració quan algú dona d’alta una incidència', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec(`insert into public.config values('incidencies.email','["tic@stjosep.org"]')`)
+    await asUser('teacher@stjosep.org')
+    await db.query("insert into public.incidencies(marca_temps,tipus_problema,prioritat,localitzacio,descripcio_detallada) values('2026-09-14 09:00','Xarxa','Alta','Aula 25','No hi ha internet')")
+    const n=(await db.query<{recipient:string;subject:string;body:string}>("select recipient,subject,body from public.notifications where event_key like 'incident-created:%'")).rows
+    expect(n).toHaveLength(1)
+    expect(n[0].recipient).toBe('tic@stjosep.org')
+    expect(n[0].subject).toMatch(/^Nova incidència INC-\d+ · Alta$/)
+    expect(n[0].body).toContain('Aula 25')
+    expect(n[0].body).toContain('teacher@stjosep.org')
+    expect(n[0].body).toContain('No hi ha internet')
+  })
+  it('no avisa si no hi ha correu configurat ni quan qui la dona d’alta és el mateix destinatari', async () => {
+    await asUser('admin@stjosep.org')
+    await db.query("insert into public.incidencies(marca_temps,tipus_problema) values('2026-09-14 09:00','Xarxa')")
+    await db.exec(`insert into public.config values('incidencies.email','["admin@stjosep.org"]')`)
+    await db.query("insert into public.incidencies(marca_temps,tipus_problema) values('2026-09-14 10:00','Xarxa')")
+    expect((await db.query("select * from public.notifications where event_key like 'incident-created:%'")).rows).toHaveLength(0)
+  })
 })
 
 describe('notification worker', () => {
