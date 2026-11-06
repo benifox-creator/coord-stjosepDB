@@ -1,9 +1,15 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, RefreshCw, CalendarDays, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, RefreshCw, CalendarDays, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Reserva, EstatReserva } from './types'
 import { formatDate, formatTime, formatDateISO, isDiaAvui } from './reserves.utils'
 import { useConfigStore } from '../../store/configStore'
 import { useUsuarisStore, potGestionar } from '../../store/usuarisStore'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import { PindolesFiltre } from '../../components/filtres/PindolesFiltre'
+import type { Pindola } from '../../components/filtres/PindolesFiltre'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 
 const AVUI = formatDateISO(new Date())
 const MOCK: Reserva[] = [
@@ -307,8 +313,12 @@ export function ReservesPage({
 }: Props) {
   const espais = useConfigStore((s) => s.getValues('reserves.espais'))
   const [cerca, setCerca] = useState('')
-  const [filtreEstat, setFiltreEstat] = useState<EstatReserva | ''>('')
-  const [filtreData, setFiltreData] = useState('')
+  const { valors, canvia, esborra } = useValorsFiltres({ estat: '', data: '' })
+
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: opcions(ESTATS.slice(1) as string[]) },
+    { clau: 'data', label: 'Data', tipus: 'data' },
+  ]
 
   const filtrades = useMemo(() => {
     const q = cerca.toLowerCase()
@@ -318,15 +328,15 @@ export function ReservesPage({
         return cmp !== 0 ? cmp : a.Hora_inici.localeCompare(b.Hora_inici)
       })
       .filter((r) => {
-        if (filtreEstat && r.Estat !== filtreEstat) return false
-        if (filtreData && r.Data !== filtreData) return false
+        if (valors.estat && r.Estat !== valors.estat) return false
+        if (valors.data && r.Data !== valors.data) return false
         if (q) {
           const h = `${r.ID} ${r.Espai} ${r.Usuari} ${r.Email} ${r.Motiu}`.toLowerCase()
           if (!h.includes(q)) return false
         }
         return true
       })
-  }, [reserves, filtreEstat, filtreData, cerca])
+  }, [reserves, valors, cerca])
 
   const comptadors = useMemo(() => ({
     avui: reserves.filter((r) => isDiaAvui(r.Data) && r.Estat !== 'Cancel·lada').length,
@@ -334,21 +344,27 @@ export function ReservesPage({
     confirmades: reserves.filter((r) => r.Estat === 'Confirmada').length,
   }), [reserves])
 
+  const pindoles: Pindola[] = [
+    { label: 'Avui', val: comptadors.avui, color: '#861414' },
+    { label: 'Pendents', val: comptadors.pendents, color: '#d97706', filtre: { clau: 'estat', valor: 'Pendent' } },
+    { label: 'Confirmades', val: comptadors.confirmades, color: '#15803d', filtre: { clau: 'estat', valor: 'Confirmada' } },
+  ]
+
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Capçalera */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Títol, comptadors (que també filtren) i accions */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
             <CalendarDays size={20} className="text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold text-text-main">Reserves d'espais</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {loading ? 'Carregant...' : `${filtrades.length} de ${reserves.length} reserves`}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold text-text-main">Reserves d'espais</h1>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${filtrades.length} de ${reserves.length} reserves`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <PindolesFiltre pindoles={pindoles} valors={valors} onCanvia={canvia} />
+          <div className="flex items-center gap-2 ml-auto">
             {onRefresh && (
               <button onClick={onRefresh} title="Actualitzar" className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors">
                 <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
@@ -364,53 +380,15 @@ export function ReservesPage({
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="flex gap-5 mb-4">
-          {[
-            { label: 'Avui', val: comptadors.avui, color: '#861414' },
-            { label: 'Pendents', val: comptadors.pendents, color: '#d97706' },
-            { label: 'Confirmades', val: comptadors.confirmades, color: '#15803d' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className="text-xl font-bold" style={{ color }}>{val}</span>
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Filtres */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-52">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text" value={cerca}
-              onChange={(e) => setCerca(e.target.value)}
-              placeholder="Cercar per espai, usuari, motiu..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <input
-            type="date" value={filtreData}
-            onChange={(e) => setFiltreData(e.target.value)}
-            className="input text-sm w-44" title="Filtrar per data"
-          />
-          <select
-            value={filtreEstat}
-            onChange={(e) => setFiltreEstat(e.target.value as EstatReserva | '')}
-            className="input text-sm w-40"
-          >
-            <option value="">Tots els estats</option>
-            {ESTATS.slice(1).map((e) => <option key={e}>{e}</option>)}
-          </select>
-          {(filtreData || filtreEstat || cerca) && (
-            <button
-              onClick={() => { setCerca(''); setFiltreData(''); setFiltreEstat('') }}
-              className="text-xs text-gray-400 hover:text-gray-600 px-2"
-            >
-              Netejar filtres
-            </button>
-          )}
-        </div>
+        <BarraFiltres
+          definicions={definicions}
+          valors={valors}
+          onCanvia={canvia}
+          onEsborra={esborra}
+          cerca={cerca}
+          onCerca={setCerca}
+          placeholder="Cercar per espai, usuari, motiu..."
+        />
       </div>
 
       {error && (
@@ -422,8 +400,8 @@ export function ReservesPage({
         <CalendariReserves
           reserves={reserves}
           espais={espais}
-          diaSeleccionat={filtreData}
-          onSeleccionarDia={setFiltreData}
+          diaSeleccionat={valors.data}
+          onSeleccionarDia={(d) => canvia('data', d)}
         />
       </div>
 
@@ -447,7 +425,7 @@ export function ReservesPage({
                 <td colSpan={5} className="px-4 py-16 text-center text-gray-400 text-sm">
                   {reserves.length === 0
                     ? 'Encara no hi ha reserves registrades.'
-                    : filtreData
+                    : valors.data
                     ? 'Cap reserva per al dia seleccionat.'
                     : 'Cap reserva coincideix amb els filtres.'}
                 </td>

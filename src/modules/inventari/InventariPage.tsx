@@ -1,14 +1,19 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { Plus, Search, RefreshCw, Package, SlidersHorizontal, X } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Plus, RefreshCw, Package } from 'lucide-react'
 import { Badge } from '../../components/Badge'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import { PindolesFiltre } from '../../components/filtres/PindolesFiltre'
+import type { Pindola } from '../../components/filtres/PindolesFiltre'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
 import { useConfigStore } from '../../store/configStore'
 import type { ItemInventari } from './types'
 import { ESTATS_INVENTARI, esAvariat } from './estats'
 import type { Ubicacio } from './ubicacions'
 import { formatDate, garantiaEstat } from './inventari.utils'
 import { ubicacioCompleta } from './ubicacions'
-import type { FiltresInventari, FiltreEstat, ClauFiltre } from './filtres'
-import { FILTRES_BUITS, filtraInventari, filtresActius } from './filtres'
+import type { FiltresInventari } from './filtres'
+import { FILTRES_BUITS, filtraInventari } from './filtres'
 
 function SkeletonRow() {
   return (
@@ -19,15 +24,6 @@ function SkeletonRow() {
         </td>
       ))}
     </tr>
-  )
-}
-
-function CampFiltre({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-gray-500">{label}</span>
-      {children}
-    </label>
   )
 }
 
@@ -53,46 +49,29 @@ export function InventariPage({
   const categories = useConfigStore((s) => s.getValues('inventari.categories'))
   const accions = useConfigStore((s) => s.getValues('inventari.accions'))
   const [filtres, setFiltres] = useState<FiltresInventari>(FILTRES_BUITS)
-  const [panellObert, setPanellObert] = useState(false)
-  const panellRef = useRef<HTMLDivElement>(null)
 
   const filtrats = useMemo(() => filtraInventari(items, filtres), [items, filtres])
-  const actius = filtresActius(filtres)
 
-  function canvia<K extends keyof FiltresInventari>(clau: K, valor: FiltresInventari[K]) {
+  const definicions: DefinicioFiltre[] = useMemo(() => [
+    { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: [{ valor: 'avariats', etiqueta: 'Avariats o en reparació' }, ...opcions(ESTATS_INVENTARI)] },
+    { clau: 'categoria', label: 'Tipus', tipus: 'select', totes: 'Tots', opcions: opcions(categories) },
+    { clau: 'ubicacio', label: 'Ubicació', tipus: 'select', totes: 'Totes', opcions: ubicacions.map((u) => ({ valor: u.Codi, etiqueta: ubicacioCompleta(u.Codi, ubicacions) })) },
+    { clau: 'accio', label: 'Acció pendent', tipus: 'select', totes: 'Totes', opcions: [{ valor: 'qualsevol', etiqueta: 'Amb alguna acció pendent' }, ...opcions(accions)] },
+  ], [categories, ubicacions, accions])
+
+  const pindoles: Pindola[] = useMemo(() => [
+    { label: 'Actius', val: items.filter((i) => i.Estat === 'Actiu').length, color: '#15803d', filtre: { clau: 'estat', valor: 'Actiu' } },
+    { label: 'Avariats o en reparació', val: items.filter((i) => esAvariat(i.Estat)).length, color: '#ca8a04', filtre: { clau: 'estat', valor: 'avariats' } },
+    { label: 'En préstec', val: items.filter((i) => i.Estat === 'En préstec').length, color: '#0c71c3', filtre: { clau: 'estat', valor: 'En préstec' } },
+    { label: 'De baixa', val: items.filter((i) => i.Estat === 'De baixa').length, color: '#861414', filtre: { clau: 'estat', valor: 'De baixa' } },
+  ], [items])
+
+  function canvia(clau: string, valor: string) {
     setFiltres((f) => ({ ...f, [clau]: valor }))
-  }
-  function treu(clau: ClauFiltre) {
-    canvia(clau, '')
   }
   function esborraFiltres() {
     setFiltres((f) => ({ ...FILTRES_BUITS, cerca: f.cerca }))
   }
-
-  // El panell es tanca clicant fora o amb Esc, com qualsevol menú.
-  useEffect(() => {
-    if (!panellObert) return
-    function clic(e: MouseEvent) {
-      if (panellRef.current && !panellRef.current.contains(e.target as Node)) setPanellObert(false)
-    }
-    function tecla(e: KeyboardEvent) {
-      if (e.key === 'Escape') setPanellObert(false)
-    }
-    document.addEventListener('mousedown', clic)
-    document.addEventListener('keydown', tecla)
-    return () => {
-      document.removeEventListener('mousedown', clic)
-      document.removeEventListener('keydown', tecla)
-    }
-  }, [panellObert])
-
-  // Les píndoles comptadores són també el filtre ràpid d'estat.
-  const pindoles: { valor: FiltreEstat; label: string; val: number; color: string }[] = useMemo(() => [
-    { valor: 'Actiu', label: 'Actius', val: items.filter((i) => i.Estat === 'Actiu').length, color: '#15803d' },
-    { valor: 'avariats', label: 'Avariats o en reparació', val: items.filter((i) => esAvariat(i.Estat)).length, color: '#ca8a04' },
-    { valor: 'En préstec', label: 'En préstec', val: items.filter((i) => i.Estat === 'En préstec').length, color: '#0c71c3' },
-    { valor: 'De baixa', label: 'De baixa', val: items.filter((i) => i.Estat === 'De baixa').length, color: '#861414' },
-  ], [items])
 
   return (
     <div className="flex flex-col h-full bg-surface">
@@ -107,27 +86,7 @@ export function InventariPage({
               {loading ? 'Carregant...' : `${filtrats.length} de ${items.length} dispositius`}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {pindoles.map(({ valor, label, val, color }) => {
-              const actiu = filtres.estat === valor
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  aria-pressed={actiu}
-                  onClick={() => canvia('estat', actiu ? '' : valor)}
-                  title={actiu ? 'Treu aquest filtre' : `Mostra només: ${label}`}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs transition-colors ${
-                    actiu ? 'border-transparent text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                  style={actiu ? { backgroundColor: color } : undefined}
-                >
-                  <span className="font-bold" style={actiu ? undefined : { color }}>{val}</span>
-                  {label}
-                </button>
-              )
-            })}
-          </div>
+          <PindolesFiltre pindoles={pindoles} valors={filtres} onCanvia={canvia} />
           <div className="flex items-center gap-2 ml-auto">
             {onRefresh && (
               <button
@@ -151,101 +110,15 @@ export function InventariPage({
           </div>
         </div>
 
-        {/* Cerca i botó de filtres */}
-        <div className="flex gap-2 mt-3">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={filtres.cerca}
-              onChange={(e) => canvia('cerca', e.target.value)}
-              placeholder="Cercar per nom, marca, ubicació, núm. sèrie..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <div ref={panellRef} className="relative">
-            <button
-              type="button"
-              aria-expanded={panellObert}
-              onClick={() => setPanellObert((o) => !o)}
-              className={`flex items-center gap-1.5 h-full px-3 text-sm font-medium border rounded-lg transition-colors ${
-                actius.length > 0 ? 'border-primary/40 text-primary bg-primary/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <SlidersHorizontal size={14} />
-              Filtres
-              {actius.length > 0 && (
-                <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">
-                  {actius.length}
-                </span>
-              )}
-            </button>
-            {panellObert && (
-              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 space-y-2.5">
-                <CampFiltre label="Estat">
-                  <select value={filtres.estat} onChange={(e) => canvia('estat', e.target.value as FiltreEstat)} className="input text-sm w-full">
-                    <option value="">Tots</option>
-                    <option value="avariats">Avariats o en reparació</option>
-                    {ESTATS_INVENTARI.map((e) => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </CampFiltre>
-                <CampFiltre label="Tipus">
-                  <select value={filtres.categoria} onChange={(e) => canvia('categoria', e.target.value)} className="input text-sm w-full">
-                    <option value="">Tots</option>
-                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </CampFiltre>
-                <CampFiltre label="Ubicació">
-                  <select value={filtres.ubicacio} onChange={(e) => canvia('ubicacio', e.target.value)} className="input text-sm w-full">
-                    <option value="">Totes</option>
-                    {ubicacions.map((u) => <option key={u.id} value={u.Codi}>{ubicacioCompleta(u.Codi, ubicacions)}</option>)}
-                  </select>
-                </CampFiltre>
-                <CampFiltre label="Acció pendent">
-                  <select value={filtres.accio} onChange={(e) => canvia('accio', e.target.value)} className="input text-sm w-full">
-                    <option value="">Totes</option>
-                    <option value="qualsevol">Amb alguna acció pendent</option>
-                    {accions.map((a) => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </CampFiltre>
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={esborraFiltres}
-                    disabled={actius.length === 0}
-                    className="text-xs text-primary hover:underline disabled:opacity-40 disabled:no-underline"
-                  >
-                    Esborra filtres
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Xips dels filtres actius */}
-        {actius.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            {actius.map(({ clau, etiqueta }) => (
-              <span key={clau} className="flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-gray-100 text-xs text-gray-700">
-                {etiqueta}
-                <button
-                  type="button"
-                  onClick={() => treu(clau)}
-                  aria-label={`Treu el filtre ${etiqueta}`}
-                  className="p-0.5 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-                >
-                  <X size={12} />
-                </button>
-              </span>
-            ))}
-            {actius.length > 1 && (
-              <button type="button" onClick={esborraFiltres} className="text-xs text-primary hover:underline ml-1">
-                Esborra-ho tot
-              </button>
-            )}
-          </div>
-        )}
+        <BarraFiltres
+          definicions={definicions}
+          valors={filtres}
+          onCanvia={canvia}
+          onEsborra={esborraFiltres}
+          cerca={filtres.cerca}
+          onCerca={(t) => canvia('cerca', t)}
+          placeholder="Cercar per nom, marca, ubicació, núm. sèrie..."
+        />
       </div>
 
       {/* Error */}

@@ -7,6 +7,7 @@ export interface Prestec {
   Dispositiu_Nom: string
   Usuari: string
   Email: string
+  Desti: string
   Data_inici: string       // ISO date
   Data_fi_prevista: string // ISO date
   Data_fi_real: string     // ISO date, buit si encara actiu

@@ -1,44 +1,48 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, RefreshCw, BookOpen } from 'lucide-react'
+import { Plus, RefreshCw, BookOpen } from 'lucide-react'
 import { Badge } from '../../components/Badge'
-import type { Prestec, EstatPrestec } from './types'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import { PindolesFiltre } from '../../components/filtres/PindolesFiltre'
+import type { Pindola } from '../../components/filtres/PindolesFiltre'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
+import type { Prestec } from './types'
 import { formatDate, estatEfectiu, diesRestants } from './prestecs.utils'
 
 const AVUI = '2026-06-23'
 const MOCK: Prestec[] = [
   {
     ID: 'PRE-001', Dispositiu_ID: 'INV-005', Dispositiu_Nom: 'MacBook Air M2',
-    Usuari: 'Pere Fonts', Email: 'pere.fonts@stjosep.org',
+    Usuari: 'Pere Fonts', Email: 'pere.fonts@stjosep.org', Desti: '',
     Data_inici: '2026-06-18', Data_fi_prevista: '2026-06-28', Data_fi_real: '',
     Material: 'MAT-001:1:Cable HDMI 2m', Estat: 'Actiu', Notes: '', id: "mock-0",
   },
   {
     ID: 'PRE-002', Dispositiu_ID: 'INV-001', Dispositiu_Nom: 'HP EliteBook 840 G8',
-    Usuari: 'Maria López', Email: 'maria.lopez@stjosep.org',
+    Usuari: 'Maria López', Email: 'maria.lopez@stjosep.org', Desti: '',
     Data_inici: '2026-06-10', Data_fi_prevista: '2026-06-25', Data_fi_real: '',
     Material: '', Estat: 'Actiu', Notes: 'Per al curs de formació', id: "mock-1",
   },
   {
     ID: 'PRE-003', Dispositiu_ID: 'INV-007', Dispositiu_Nom: 'iPad Air 5',
-    Usuari: 'Anna Puig', Email: 'anna.puig@stjosep.org',
+    Usuari: 'Anna Puig', Email: 'anna.puig@stjosep.org', Desti: '',
     Data_inici: '2026-05-20', Data_fi_prevista: '2026-05-27', Data_fi_real: '2026-05-27',
     Material: '', Estat: 'Retornat', Notes: '', id: "mock-2",
   },
   {
     ID: 'PRE-004', Dispositiu_ID: 'INV-003', Dispositiu_Nom: 'Epson EB-X41',
-    Usuari: 'Jordi Mas', Email: 'jordi.mas@stjosep.org',
+    Usuari: 'Jordi Mas', Email: 'jordi.mas@stjosep.org', Desti: '',
     Data_inici: '2026-06-01', Data_fi_prevista: '2026-06-20', Data_fi_real: '',
     Material: 'MAT-002:1:Adaptador VGA→HDMI;MAT-006:1:Puntero làser', Estat: 'Actiu', Notes: 'Per a presentació externa', id: "mock-3",
   },
   {
     ID: 'PRE-005', Dispositiu_ID: 'INV-008', Dispositiu_Nom: 'Monitor Dell 27"',
-    Usuari: 'Carla Vidal', Email: 'carla.vidal@stjosep.org',
+    Usuari: 'Carla Vidal', Email: 'carla.vidal@stjosep.org', Desti: '',
     Data_inici: AVUI, Data_fi_prevista: '2026-07-15', Data_fi_real: '',
     Material: '', Estat: 'Actiu', Notes: '', id: "mock-4",
   },
 ]
-
-const ESTATS: Array<EstatPrestec | ''> = ['', 'Actiu', 'Retornat', 'Vençut']
 
 function SkeletonRow() {
   return (
@@ -86,7 +90,10 @@ export function PrestecsPage({
   onRefresh,
 }: Props) {
   const [cerca, setCerca] = useState('')
-  const [filtreEstat, setFiltreEstat] = useState<EstatPrestec | ''>('')
+  const { valors, canvia, esborra } = useValorsFiltres({ estat: '' })
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: opcions(['Actiu', 'Retornat', 'Vençut']) },
+  ]
 
   const ambEstatEfectiu = useMemo(
     () => prestecs.map((p) => ({ ...p, _estatEfectiu: estatEfectiu(p) })),
@@ -98,14 +105,14 @@ export function PrestecsPage({
     return [...ambEstatEfectiu]
       .sort((a, b) => b.ID.localeCompare(a.ID))
       .filter((p) => {
-        if (filtreEstat && p._estatEfectiu !== filtreEstat) return false
+        if (valors.estat && p._estatEfectiu !== valors.estat) return false
         if (q) {
-          const h = `${p.ID} ${p.Dispositiu_ID} ${p.Dispositiu_Nom} ${p.Usuari} ${p.Email}`.toLowerCase()
+          const h = `${p.ID} ${p.Dispositiu_ID} ${p.Dispositiu_Nom} ${p.Usuari} ${p.Email} ${p.Desti}`.toLowerCase()
           if (!h.includes(q)) return false
         }
         return true
       })
-  }, [ambEstatEfectiu, filtreEstat, cerca])
+  }, [ambEstatEfectiu, valors, cerca])
 
   const comptadors = useMemo(() => ({
     actius: ambEstatEfectiu.filter((p) => p._estatEfectiu === 'Actiu').length,
@@ -113,21 +120,27 @@ export function PrestecsPage({
     retornats: ambEstatEfectiu.filter((p) => p._estatEfectiu === 'Retornat').length,
   }), [ambEstatEfectiu])
 
+  const pindoles: Pindola[] = [
+    { label: 'Actius', val: comptadors.actius, color: '#0c71c3', filtre: { clau: 'estat', valor: 'Actiu' } },
+    { label: 'Vençuts', val: comptadors.vençuts, color: '#861414', filtre: { clau: 'estat', valor: 'Vençut' } },
+    { label: 'Retornats', val: comptadors.retornats, color: '#15803d', filtre: { clau: 'estat', valor: 'Retornat' } },
+  ]
+
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Capçalera */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Títol, comptadors (que també filtren) i accions */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
             <BookOpen size={20} className="text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold text-text-main">Préstecs</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {loading ? 'Carregant...' : `${filtrats.length} de ${prestecs.length} préstecs`}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold text-text-main">Préstecs</h1>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${filtrats.length} de ${prestecs.length} préstecs`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <PindolesFiltre pindoles={pindoles} valors={valors} onCanvia={canvia} />
+          <div className="flex items-center gap-2 ml-auto">
             {onRefresh && (
               <button
                 onClick={onRefresh}
@@ -150,41 +163,15 @@ export function PrestecsPage({
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="flex gap-5 mb-4">
-          {[
-            { label: 'Actius',    val: comptadors.actius,    color: '#0c71c3' },
-            { label: 'Vençuts',   val: comptadors.vençuts,   color: '#861414' },
-            { label: 'Retornats', val: comptadors.retornats, color: '#15803d' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className="text-xl font-bold" style={{ color }}>{val}</span>
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Filtres */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-52">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={cerca}
-              onChange={(e) => setCerca(e.target.value)}
-              placeholder="Cercar per dispositiu, usuari, email..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <select
-            value={filtreEstat}
-            onChange={(e) => setFiltreEstat(e.target.value as EstatPrestec | '')}
-            className="input text-sm w-40"
-          >
-            <option value="">Tots els estats</option>
-            {ESTATS.slice(1).map((e) => <option key={e}>{e}</option>)}
-          </select>
-        </div>
+        <BarraFiltres
+          definicions={definicions}
+          valors={valors}
+          onCanvia={canvia}
+          onEsborra={esborra}
+          cerca={cerca}
+          onCerca={setCerca}
+          placeholder="Cercar per dispositiu, usuari, email..."
+        />
       </div>
 
       {/* Error */}
@@ -238,6 +225,7 @@ export function PrestecsPage({
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <p className="text-sm text-gray-700">{p.Usuari}</p>
                     <p className="text-xs text-gray-400">{p.Email}</p>
+                    {p.Desti && <p className="text-xs text-gray-500">{p.Desti}</p>}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
                     {formatDate(p.Data_inici)}

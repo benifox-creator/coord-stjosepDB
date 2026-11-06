@@ -251,6 +251,19 @@ describe('operational integrity', () => {
     await db.query("select public.change_loan_state($1,'Retornat')",[first.id])
     expect((await db.query<{quantitat_disponible:number}>("select quantitat_disponible from public.material where codi='TEST-001'")).rows[0].quantitat_disponible).toBe(3)
   })
+  it('desa el destí del préstec, i sense destí el deixa buit', async () => {
+    await asUser('admin@stjosep.org')
+    await db.exec('savepoint loan_desti')
+    const amb = (await db.query<{desti:string}>('select desti from public.create_loan($1,$2,$3)',[
+      JSON.stringify({usuari:'Teacher',data_inici:'2026-09-14',desti:'5è A · aula 12'}),JSON.stringify([{codi:'TEST-001',quantitat:1}]),'22222222-2222-4222-8222-222222222222',
+    ])).rows[0]
+    expect(amb.desti).toBe('5è A · aula 12')
+    const sense = (await db.query<{desti:string}>('select desti from public.create_loan($1,$2,$3)',[
+      JSON.stringify({usuari:'Teacher',data_inici:'2026-09-14'}),JSON.stringify([{codi:'TEST-001',quantitat:1}]),'33333333-3333-4333-8333-333333333333',
+    ])).rows[0]
+    expect(sense.desti).toBe('')
+    await db.exec('rollback to savepoint loan_desti')
+  })
   it('rolls back the whole loan when stock is insufficient', async () => {
     await asUser('admin@stjosep.org')
     await db.exec('savepoint failed_loan')

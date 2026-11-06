@@ -1,8 +1,14 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Plus, RefreshCw, AlertTriangle } from 'lucide-react'
 import { Badge } from '../../components/Badge'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import { PindolesFiltre } from '../../components/filtres/PindolesFiltre'
+import type { Pindola } from '../../components/filtres/PindolesFiltre'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 import { useConfigStore } from '../../store/configStore'
-import type { Incidencia, EstatIncidencia, PrioritatIncidencia, TipusProblema } from './types'
+import type { Incidencia, PrioritatIncidencia } from './types'
 import { formatDatetime, calcularDiesOberts } from './incidencies.utils'
 
 // ── Mock temporal (es substituirà per dades reals al punt 6) ──────────────────
@@ -49,7 +55,6 @@ const MOCK: Incidencia[] = [
   },
 ]
 
-const ESTATS: Array<EstatIncidencia | ''> = ['', 'Oberta', 'En curs', 'Tancada']
 const PRIORITATS: Array<PrioritatIncidencia | ''> = ['', 'Alta', 'Mitjana', 'Baixa']
 function SkeletonRow() {
   return (
@@ -82,25 +87,28 @@ export function IncidenciesPage({
 }: Props) {
   const tipus = useConfigStore((s) => s.getValues('incidencies.tipus'))
   const [cerca, setCerca] = useState('')
-  const [filtreEstat, setFiltreEstat] = useState<EstatIncidencia | ''>('')
-  const [filtrePrioritat, setFiltrePrioritat] = useState<PrioritatIncidencia | ''>('')
-  const [filtreTipus, setFiltreTipus] = useState<TipusProblema | ''>('')
+  const { valors, canvia, esborra } = useValorsFiltres({ estat: '', prioritat: '', tipus: '' })
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: opcions(['Oberta', 'En curs', 'Tancada']) },
+    { clau: 'prioritat', label: 'Prioritat', tipus: 'select', totes: 'Totes', opcions: opcions(PRIORITATS.slice(1) as string[]) },
+    { clau: 'tipus', label: 'Tipus', tipus: 'select', totes: 'Tots', opcions: opcions(tipus) },
+  ]
 
   const filtrades = useMemo(() => {
     const q = cerca.toLowerCase()
     return [...incidencies]
       .sort((a, b) => b['Marca de temps'].localeCompare(a['Marca de temps']))
       .filter((inc) => {
-        if (filtreEstat && inc.Estat !== filtreEstat) return false
-        if (filtrePrioritat && inc.Prioritat !== filtrePrioritat) return false
-        if (filtreTipus && inc['Tipus de problema'] !== filtreTipus) return false
+        if (valors.estat && inc.Estat !== valors.estat) return false
+        if (valors.prioritat && inc.Prioritat !== valors.prioritat) return false
+        if (valors.tipus && inc['Tipus de problema'] !== valors.tipus) return false
         if (q) {
           const haystack = `${inc.Ticket} ${inc.Localització} ${inc['Descripció detallada']}`.toLowerCase()
           if (!haystack.includes(q)) return false
         }
         return true
       })
-  }, [incidencies, filtreEstat, filtrePrioritat, filtreTipus, cerca])
+  }, [incidencies, valors, cerca])
 
   const comptadors = useMemo(() => ({
     oberta: incidencies.filter((i) => i.Estat === 'Oberta').length,
@@ -108,21 +116,27 @@ export function IncidenciesPage({
     tancada: incidencies.filter((i) => i.Estat === 'Tancada').length,
   }), [incidencies])
 
+  const pindoles: Pindola[] = [
+    { label: 'Obertes', val: comptadors.oberta, color: '#861414', filtre: { clau: 'estat', valor: 'Oberta' } },
+    { label: 'En curs', val: comptadors.enCurs, color: '#ff9c02', filtre: { clau: 'estat', valor: 'En curs' } },
+    { label: 'Tancades', val: comptadors.tancada, color: '#6b7280', filtre: { clau: 'estat', valor: 'Tancada' } },
+  ]
+
   return (
     <div className="flex flex-col h-full bg-surface">
       {/* Capçalera */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Títol, comptadors (que també filtren) i accions */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
             <AlertTriangle size={20} className="text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold text-text-main">Incidències</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {loading ? 'Carregant...' : `${filtrades.length} de ${incidencies.length} incidències`}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold text-text-main">Incidències</h1>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${filtrades.length} de ${incidencies.length} incidències`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <PindolesFiltre pindoles={pindoles} valors={valors} onCanvia={canvia} />
+          <div className="flex items-center gap-2 ml-auto">
             {onRefresh && (
               <button
                 onClick={onRefresh}
@@ -143,45 +157,15 @@ export function IncidenciesPage({
           </div>
         </div>
 
-        {/* KPIs ràpids */}
-        <div className="flex gap-4 mb-4">
-          {[
-            { label: 'Obertes', val: comptadors.oberta, color: '#861414' },
-            { label: 'En curs', val: comptadors.enCurs, color: '#ff9c02' },
-            { label: 'Tancades', val: comptadors.tancada, color: '#6b7280' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="flex items-center gap-2">
-              <span className="text-xl font-bold" style={{ color }}>{val}</span>
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Filtres */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-52">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={cerca}
-              onChange={(e) => setCerca(e.target.value)}
-              placeholder="Cercar per ticket, localització o descripció..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <select value={filtreEstat} onChange={(e) => setFiltreEstat(e.target.value as EstatIncidencia | '')} className="input text-sm w-36">
-            <option value="">Tots els estats</option>
-            {ESTATS.slice(1).map((e) => <option key={e}>{e}</option>)}
-          </select>
-          <select value={filtrePrioritat} onChange={(e) => setFiltrePrioritat(e.target.value as PrioritatIncidencia | '')} className="input text-sm w-40">
-            <option value="">Totes les prioritats</option>
-            {PRIORITATS.slice(1).map((p) => <option key={p}>{p}</option>)}
-          </select>
-          <select value={filtreTipus} onChange={(e) => setFiltreTipus(e.target.value as TipusProblema | '')} className="input text-sm w-48">
-            <option value="">Tots els tipus</option>
-            {tipus.map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </div>
+        <BarraFiltres
+          definicions={definicions}
+          valors={valors}
+          onCanvia={canvia}
+          onEsborra={esborra}
+          cerca={cerca}
+          onCerca={setCerca}
+          placeholder="Cercar per ticket, localització o descripció..."
+        />
       </div>
 
       {/* Error */}

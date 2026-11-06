@@ -1,7 +1,13 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, RefreshCw, Archive, AlertTriangle } from 'lucide-react'
+import { Plus, RefreshCw, Archive, AlertTriangle } from 'lucide-react'
+import { BarraFiltres } from '../../components/filtres/BarraFiltres'
+import { PindolesFiltre } from '../../components/filtres/PindolesFiltre'
+import type { Pindola } from '../../components/filtres/PindolesFiltre'
+import type { DefinicioFiltre } from '../../components/filtres/filtres'
+import { opcions } from '../../components/filtres/filtres'
+import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 import { useConfigStore } from '../../store/configStore'
-import type { ItemMaterial, CategoriaMaterial } from './types'
+import type { ItemMaterial } from './types'
 
 const MOCK: ItemMaterial[] = [
   { ID: 'MAT-001', Nom: 'Cable HDMI 2m', Categoria: 'Cable', Descripció: 'Cables HDMI estàndard per a projectors i monitors', Quantitat_total: 20, Quantitat_disponible: 15, Ubicació: 'Armari TIC', Notes: '', id: "mock-0" },
@@ -57,21 +63,24 @@ export function MaterialPage({
 }: Props) {
   const categories = useConfigStore((s) => s.getValues('material.categories'))
   const [cerca, setCerca] = useState('')
-  const [filtreCategoria, setFiltreCategoria] = useState<CategoriaMaterial | ''>('')
+  const { valors, canvia, esborra } = useValorsFiltres({ categoria: '' })
+  const definicions: DefinicioFiltre[] = [
+    { clau: 'categoria', label: 'Categoria', tipus: 'select', totes: 'Totes', opcions: opcions(categories) },
+  ]
 
   const filtrats = useMemo(() => {
     const q = cerca.toLowerCase()
     return [...items]
       .sort((a, b) => a.ID.localeCompare(b.ID))
       .filter((item) => {
-        if (filtreCategoria && item.Categoria !== filtreCategoria) return false
+        if (valors.categoria && item.Categoria !== valors.categoria) return false
         if (q) {
           const h = `${item.ID} ${item.Nom} ${item.Categoria} ${item.Ubicació} ${item.Descripció}`.toLowerCase()
           if (!h.includes(q)) return false
         }
         return true
       })
-  }, [items, filtreCategoria, cerca])
+  }, [items, valors, cerca])
 
   const stats = useMemo(() => ({
     totalItems: items.length,
@@ -80,20 +89,27 @@ export function MaterialPage({
     stockBaix: items.filter((i) => i.Quantitat_total > 0 && i.Quantitat_disponible / i.Quantitat_total <= 0.2).length,
   }), [items])
 
+  const pindoles: Pindola[] = [
+    { label: 'Ítems', val: stats.totalItems, color: '#374151' },
+    { label: 'Unitats', val: stats.totalUnitats, color: '#0c71c3' },
+    { label: 'En préstec', val: stats.enPrestec, color: '#ca8a04' },
+    { label: 'Stock baix', val: stats.stockBaix, color: '#861414' },
+  ]
+
   return (
     <div className="flex flex-col h-full bg-surface">
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {/* Títol, comptadors i accions */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
             <Archive size={20} className="text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold text-text-main">Material i Stock</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {loading ? 'Carregant...' : `${filtrats.length} de ${items.length} ítems`}
-              </p>
-            </div>
+            <h1 className="text-lg font-semibold text-text-main">Material i Stock</h1>
+            <span className="text-xs text-gray-500">
+              {loading ? 'Carregant...' : `${filtrats.length} de ${items.length} ítems`}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <PindolesFiltre pindoles={pindoles} valors={valors} onCanvia={canvia} />
+          <div className="flex items-center gap-2 ml-auto">
             {onRefresh && (
               <button onClick={onRefresh} title="Actualitzar" className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors">
                 <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
@@ -110,24 +126,9 @@ export function MaterialPage({
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="flex gap-5 mb-4 flex-wrap">
-          {[
-            { label: 'Ítems',      val: stats.totalItems,  color: '#374151' },
-            { label: 'Unitats',    val: stats.totalUnitats, color: '#0c71c3' },
-            { label: 'En préstec', val: stats.enPrestec,   color: '#ca8a04' },
-            { label: 'Stock baix', val: stats.stockBaix,   color: '#861414' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className="text-xl font-bold" style={{ color }}>{val}</span>
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
-
         {/* Alerta stock baix */}
         {stats.stockBaix > 0 && (
-          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
             <AlertTriangle size={14} className="text-amber-500 shrink-0" />
             <p className="text-xs text-amber-700">
               {stats.stockBaix} {stats.stockBaix === 1 ? 'ítem té' : 'ítems tenen'} stock per sota del 20%.
@@ -135,27 +136,15 @@ export function MaterialPage({
           </div>
         )}
 
-        {/* Filtres */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-52">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={cerca}
-              onChange={(e) => setCerca(e.target.value)}
-              placeholder="Cercar per nom, categoria, ubicació..."
-              className="input pl-8 text-sm w-full"
-            />
-          </div>
-          <select
-            value={filtreCategoria}
-            onChange={(e) => setFiltreCategoria(e.target.value as CategoriaMaterial | '')}
-            className="input text-sm w-48"
-          >
-            <option value="">Totes les categories</option>
-            {categories.map((c) => <option key={c}>{c}</option>)}
-          </select>
-        </div>
+        <BarraFiltres
+          definicions={definicions}
+          valors={valors}
+          onCanvia={canvia}
+          onEsborra={esborra}
+          cerca={cerca}
+          onCerca={setCerca}
+          placeholder="Cercar per nom, categoria, ubicació..."
+        />
       </div>
 
       {error && (

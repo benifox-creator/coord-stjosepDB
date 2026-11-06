@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filtraInventari, filtresActius, FILTRES_BUITS } from './filtres'
+import { filtraInventari, FILTRES_BUITS } from './filtres'
 import type { FiltresInventari } from './filtres'
 import type { ItemInventari } from './types'
 
@@ -50,27 +50,5 @@ describe('filtraInventari', () => {
     expect(ids({ cerca: 'acer' })).toEqual(['INV-003'])
     expect(ids({ cerca: 'ANDROID' })).toEqual(['INV-001'])
     expect(ids({ cerca: '  aula portàtil ' })).toEqual(['INV-001'])
-  })
-})
-
-describe('filtresActius', () => {
-  it('sense filtres no n’hi ha cap; la cerca no compta com a xip', () => {
-    expect(filtresActius({ ...FILTRES_BUITS, cerca: 'acer' })).toEqual([])
-  })
-
-  it('un xip per filtre, amb el nom del filtre davant', () => {
-    expect(filtresActius({ ...FILTRES_BUITS, estat: 'Robat', categoria: 'Tauleta', ubicacio: 'A4-EP-1A', accio: 'Reparar' })).toEqual([
-      { clau: 'estat', etiqueta: 'Estat: Robat' },
-      { clau: 'categoria', etiqueta: 'Tipus: Tauleta' },
-      { clau: 'ubicacio', etiqueta: 'Ubicació: A4-EP-1A' },
-      { clau: 'accio', etiqueta: 'Acció: Reparar' },
-    ])
-  })
-
-  it('els dos valors especials tenen una etiqueta llegible', () => {
-    expect(filtresActius({ ...FILTRES_BUITS, estat: 'avariats', accio: 'qualsevol' })).toEqual([
-      { clau: 'estat', etiqueta: 'Estat: Avariats o en reparació' },
-      { clau: 'accio', etiqueta: 'Acció: Amb alguna acció pendent' },
-    ])
   })
 })
