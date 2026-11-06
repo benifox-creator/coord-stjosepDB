@@ -66,8 +66,10 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Android OS', 'ChromeOS', 'DSM (Synology)', 'Linux', 'Windows 7', 'Windows 8',
     'Windows 11', 'Windows Vista', 'Windows X', 'Windows X Pro Education',
   ],
+  // Els tipus del formulari de Google que el claustre ja coneixia (2026-11-06).
   'incidencies.tipus': [
-    'Maquinari', 'Programari', 'Xarxa', 'Projector/Pantalla', 'Impressora', 'Altre',
+    'Ordinador o dispositiu no funciona', 'Projector o pissarra digital',
+    'Cables (vídeo, àudio, càrrega)', 'Connexió a internet', 'Altre',
   ],
   'incidencies.localitzacions': [
     'Aula informàtica', 'Sala de professors', 'Secretaria',
@@ -88,6 +90,7 @@ export const CONFIG_DEFAULTS: Record<string, string[]> = {
     'Xarxa', 'Equipament', 'Programari', 'Seguretat', 'Formació', 'Infraestructura',
   ],
   'manteniment.email': [],
+  'incidencies.email': [],
   'centre.dies-no-lectius': [],
   'emails.firma': ['Administració'],
   'absencies.motius': [
