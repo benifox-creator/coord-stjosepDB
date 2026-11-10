@@ -1665,3 +1665,23 @@ describe('inventari: catàleg d’ubicacions i estats nous', () => {
     expect(r.rows[0]).toEqual({ accio: 'Revisar', sistema_operatiu: 'Windows 11' })
   })
 })
+
+describe('eliminar usuaris', () => {
+  it('el coordinador elimina un usuari i aquest perd l’accés a les dades', async () => {
+    await asUser('admin@stjosep.org')
+    expect((await db.query("delete from public.usuaris where email='teacher@stjosep.org' returning id")).rows).toHaveLength(1)
+    await asUser('teacher@stjosep.org')
+    expect((await db.query('select * from public.usuaris')).rows).toHaveLength(0)
+    expect((await db.query('select * from public.material')).rows).toHaveLength(0)
+  })
+  it('qui no és coordinador no pot eliminar ningú', async () => {
+    for (const email of ['director@stjosep.org', 'teacher@stjosep.org']) {
+      await asUser(email)
+      expect((await db.query("delete from public.usuaris where email='other@stjosep.org' returning id")).rows).toHaveLength(0)
+    }
+  })
+  it('el coordinador no es pot eliminar a si mateix', async () => {
+    await asUser('admin@stjosep.org')
+    await expect(db.query("delete from public.usuaris where email='admin@stjosep.org'")).rejects.toThrow(/tu mateix/)
+  })
+})

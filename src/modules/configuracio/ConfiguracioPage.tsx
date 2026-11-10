@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings, Plus, X, Loader2, AlertCircle, RotateCcw, Users, ChevronDown, Eye, Mail, Upload } from 'lucide-react'
+import { Settings, Plus, X, Loader2, AlertCircle, RotateCcw, Users, ChevronDown, Eye, Mail, Upload, Trash2 } from 'lucide-react'
 import { useConfigStore, CONFIG_DEFAULTS, MODULS_VISIBILITAT, ROLS_VISIBILITAT, ROL_VIS_LABELS } from '../../store/configStore'
 import { useUsuarisStore } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
@@ -292,7 +292,8 @@ type ClauPermis = (typeof COLUMNES_PERMISOS)[number]['key']
 
 // Més amples que les de Visibilitat de mòduls: allà la capçalera és el nom
 // d'un rol, aquí és una frase sencera que s'ha de poder llegir.
-const GRID_PERMISOS_USUARIS = `minmax(200px, 1fr) repeat(${COLUMNES_PERMISOS.length}, 150px)`
+// L'última columna, estreta, és la del botó d'eliminar.
+const GRID_PERMISOS_USUARIS = `minmax(200px, 1fr) repeat(${COLUMNES_PERMISOS.length}, 150px) 44px`
 
 function UsuarisCapcalera() {
   return (
@@ -303,6 +304,7 @@ function UsuarisCapcalera() {
           {c.llarg}
         </div>
       ))}
+      <div />
     </div>
   )
 }
@@ -358,6 +360,21 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
   const [obert, setObert] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savingEtapa, setSavingEtapa] = useState(false)
+  const eliminar = useUsuarisStore((s) => s.eliminar)
+  const [confirmEliminar, setConfirmEliminar] = useState(false)
+  const [eliminant, setEliminant] = useState(false)
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null)
+
+  async function handleEliminar() {
+    setEliminant(true)
+    setErrorEliminar(null)
+    try {
+      await eliminar(usuari)
+    } catch (err) {
+      setErrorEliminar(err instanceof Error ? err.message : 'Error en eliminar.')
+      setEliminant(false)
+    }
+  }
   useEffect(() => {
     if (!obert) return
     function handler(e: MouseEvent) {
@@ -435,7 +452,9 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-sm font-semibold text-gray-600">
           {(usuari.Nom || usuari.Email).charAt(0).toUpperCase()}
         </div>
-        <div className="flex-1 min-w-0">
+        {/* Amb un mínim d'amplada, si no hi cap tot, l'etapa i el rol baixen a
+            una segona línia en lloc d'escapçar el nom fins a una sola lletra. */}
+        <div className="flex-1 min-w-[9rem]">
           <p className="text-sm font-medium text-text-main truncate">
             {usuari.Nom || '—'}
             {esJoMateix && <span className="ml-1.5 text-xs text-gray-400">(tu)</span>}
@@ -492,6 +511,50 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
           />
         )
       })}
+
+      <div className="flex items-center justify-center">
+        {!esJoMateix && (
+          <button
+            type="button"
+            onClick={() => { setConfirmEliminar(true); setErrorEliminar(null) }}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Eliminar usuari (treu l'accés a l'aplicació)"
+            aria-label={`Eliminar ${usuari.Email}`}
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+
+      {confirmEliminar && (
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-red-50 border-t border-red-100" style={{ gridColumn: '1 / -1' }}>
+          <p className="text-xs text-red-700 flex-1 min-w-[220px]">
+            Eliminar <strong>{usuari.Nom || usuari.Email}</strong>? Deixarà de poder entrar a l'aplicació.
+            Les dades que ha creat es conserven.
+          </p>
+          {errorEliminar && (
+            <p className="flex items-center gap-1 text-xs text-red-600 w-full order-last">
+              <AlertCircle size={12} /> {errorEliminar}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => setConfirmEliminar(false)}
+            disabled={eliminant}
+            className="px-2.5 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel·lar
+          </button>
+          <button
+            type="button"
+            onClick={handleEliminar}
+            disabled={eliminant}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
+          >
+            {eliminant && <Loader2 size={11} className="animate-spin" />} Sí, eliminar
+          </button>
+        </div>
+      )}
     </div>
   )
 }

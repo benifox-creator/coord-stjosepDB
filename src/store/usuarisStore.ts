@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { supabase, getAll, insertRow, updateRowById } from '../services/db'
+import { supabase, getAll, insertRow, updateRowById, deleteRowById } from '../services/db'
 import type { Rol, Usuari, EtapaSubstitucio } from '../modules/usuaris/types'
 import { ETAPES_USUARI, ROLS } from '../modules/usuaris/types'
 
@@ -81,6 +81,7 @@ interface UsuarisState {
   crear: (email: string, nom: string, rol: Rol, etapa?: EtapaSubstitucio | null, potGestionarMaterial?: boolean) => Promise<void>
   updateRol: (usuari: Usuari, nouRol: Rol) => Promise<void>
   updateEtapa: (usuari: Usuari, novaEtapa: EtapaSubstitucio | null) => Promise<void>
+  eliminar: (usuari: Usuari) => Promise<void>
   updatePotGestionarMaterial: (usuari: Usuari, valor: boolean) => Promise<void>
   updatePotGestionarExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
   updatePotGestionarCostosExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
@@ -160,6 +161,13 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     set((s) => ({
       usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, Rol: nouRol } : u)),
     }))
+  },
+
+  // Treure la fila és el que treu l'accés: sense fila a `usuaris`, l'app mostra
+  // «sense accés» i la base de dades no li torna cap dada.
+  async eliminar(usuari) {
+    await deleteRowById(TABLE, usuari.id)
+    set((s) => ({ usuaris: s.usuaris.filter((u) => u.id !== usuari.id) }))
   },
 
   async updateEtapa(usuari, novaEtapa) {
