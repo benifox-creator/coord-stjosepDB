@@ -12,7 +12,6 @@ begin
 end;
 $$;
 revoke all on function app_private.no_eliminar_un_mateix() from public;
-drop trigger if exists no_eliminar_un_mateix on public.usuaris;
-create trigger no_eliminar_un_mateix before delete on public.usuaris
+create or replace trigger no_eliminar_un_mateix before delete on public.usuaris
   for each row execute function app_private.no_eliminar_un_mateix();
 commit;
