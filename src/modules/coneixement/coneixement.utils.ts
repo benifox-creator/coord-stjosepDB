@@ -1,4 +1,5 @@
 import type { ArticleLink } from './types'
+import { urlSegura } from './markdown'
 
 export function formatDateISO(d: Date): string {
   // `toISOString()` dona la data en UTC, però la base de dades segella
@@ -13,7 +14,7 @@ export function parseLinks(raw: string): ArticleLink[] {
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((l) => l.label && l.url) : []
+    return Array.isArray(parsed) ? parsed.filter((l) => l.label && l.url && urlSegura(String(l.url))) : []
   } catch {
     return []
   }

@@ -30,6 +30,15 @@ export type NodeBloc =
  * prova de tancar-se; si no ho troba, el marcador d'obertura es tracta com
  * un caràcter de text més i es continua des del següent.
  */
+// Només adreces web i de correu. React ja bloqueja `javascript:`, però això no
+// cobreix `data:` ni altres esquemes, i un article el pot escriure qualsevol
+// redactor i el llegeix tot el claustre.
+export function urlSegura(url: string, nomesHttps = false): boolean {
+  const net = url.trim().toLowerCase()
+  if (nomesHttps) return net.startsWith('https://')
+  return net.startsWith('https://') || net.startsWith('http://') || net.startsWith('mailto:')
+}
+
 export function analitzaInline(text: string): NodeInline[] {
   const nodes: NodeInline[] = []
   let buffer = ''
@@ -63,7 +72,8 @@ export function analitzaInline(text: string): NodeInline[] {
           flush()
           const etiqueta = text.slice(i + 1, tancaText)
           const url = text.slice(tancaText + 2, tancaUrl)
-          nodes.push({ tipus: 'enllac', text: analitzaInline(etiqueta), url })
+          if (urlSegura(url)) nodes.push({ tipus: 'enllac', text: analitzaInline(etiqueta), url })
+          else nodes.push(...analitzaInline(etiqueta))
           i = tancaUrl + 1
           continue
         }
@@ -166,7 +176,7 @@ export function analitzaMarkdown(text: string): NodeBloc[] {
     }
 
     const imatgeMatch = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(linia.trim())
-    if (imatgeMatch) {
+    if (imatgeMatch && urlSegura(imatgeMatch[2], true)) {
       tancaTot()
       blocs.push({ tipus: 'imatge', alt: imatgeMatch[1], url: imatgeMatch[2] })
       continue

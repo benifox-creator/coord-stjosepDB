@@ -197,3 +197,20 @@ describe('els blocs', () => {
     expect(analitzaMarkdown('\n\n   \n')).toEqual([])
   })
 })
+
+describe('adreces perilloses', () => {
+  it('un enllaç que no és web ni correu queda com a text', () => {
+    for (const url of ['javascript:alert`1`', 'JaVaScRiPt:alert`1`', ' javascript:alert`1`', 'data:text/html,<script>x</script>', 'vbscript:x']) {
+      expect(analitzaInline(`[clica](${url})`)).toEqual([{ tipus: 'text', valor: 'clica' }])
+    }
+  })
+  it('els enllaços web i de correu es mantenen', () => {
+    for (const url of ['https://exemple.cat', 'http://exemple.cat', 'mailto:tic@stjosep.org']) {
+      expect(analitzaInline(`[a](${url})`)).toEqual([{ tipus: 'enllac', url, text: [{ tipus: 'text', valor: 'a' }] }])
+    }
+  })
+  it('una imatge només es mostra si ve d’una adreça https', () => {
+    expect(analitzaMarkdown('![x](javascript:alert`1`)').map((b) => b.tipus)).not.toContain('imatge')
+    expect(analitzaMarkdown('![x](http://exemple.cat/a.png)').map((b) => b.tipus)).not.toContain('imatge')
+  })
+})

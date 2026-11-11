@@ -47,3 +47,14 @@ describe('parseTags', () => {
     expect(parseTags(' a, b ,, c ')).toEqual(['a', 'b', 'c'])
   })
 })
+
+describe('parseLinks amb adreces perilloses', () => {
+  it('descarta els recursos que no són web ni correu', () => {
+    const raw = JSON.stringify([
+      { label: 'Bo', url: 'https://x.com' },
+      { label: 'Dolent', url: 'javascript:alert(1)' },
+      { label: 'Correu', url: 'mailto:tic@stjosep.org' },
+    ])
+    expect(parseLinks(raw).map((l) => l.label)).toEqual(['Bo', 'Correu'])
+  })
+})
