@@ -113,8 +113,12 @@ describe('privilegis', () => {
 
 describe('cancel·lar una notificació', () => {
   async function notificacio(autor = 'teacher@stjosep.org') {
+    // L'aplicació ja no pot cridar queue_email: s'encua com a superusuari però
+    // amb la sessió de l'autor, perquè la notificació quedi a nom seu.
     await asUser(autor)
+    await db.exec('reset role')
     await db.query("select public.queue_email('other@stjosep.org','Prova','Cos')")
+    await db.exec('set role authenticated')
     return (await db.query<{id:string}>("select id from public.notifications order by created_at desc limit 1")).rows[0].id
   }
 
@@ -1683,5 +1687,16 @@ describe('eliminar usuaris', () => {
   it('el coordinador no es pot eliminar a si mateix', async () => {
     await asUser('admin@stjosep.org')
     await expect(db.query("delete from public.usuaris where email='admin@stjosep.org'")).rejects.toThrow(/tu mateix/)
+  })
+})
+
+describe('correus lliures', () => {
+  it('ningú no pot encuar un correu amb el text que vulgui des de l’aplicació', async () => {
+    for (const email of ['teacher@stjosep.org', 'admin@stjosep.org']) {
+      await asUser(email)
+      await db.exec('savepoint s')
+      await expect(db.query("select public.queue_email('other@stjosep.org','Canvia la contrasenya','https://phishing')")).rejects.toThrow(/permission denied/)
+      await db.exec('rollback to savepoint s')
+    }
   })
 })
