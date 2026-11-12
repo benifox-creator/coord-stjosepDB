@@ -95,14 +95,20 @@ export function NotificacionsPage({ notificacions, loading, error, onRefresh, on
                 <span className={`px-2 py-0.5 text-xs rounded-full shrink-0 ${ESTAT_COLORS[n.Estat]}`}>
                   {ESTAT_LABELS[n.Estat]}
                 </span>
-                <div className="min-w-0 flex-1">
+                {/* Tota la fila obre el detall: la fletxa sola era massa petita i no es veia. */}
+                <button
+                  type="button"
+                  onClick={() => setObert(obert === n.id ? null : n.id)}
+                  aria-expanded={obert === n.id}
+                  className="min-w-0 flex-1 text-left cursor-pointer"
+                >
                   <p className="text-sm text-text-main truncate">{n.Assumpte}</p>
                   <p className="text-xs text-gray-400 truncate">
                     {n.Destinatari} · {quan(n.CreatEl)}
                     {n.Intents > 0 && ` · ${n.Intents} ${n.Intents === 1 ? 'intent' : 'intents'}`}
                     {n.EnviatEl && ` · enviat ${quan(n.EnviatEl)}`}
                   </p>
-                </div>
+                </button>
                 {potReintentar(n) && (
                   <button
                     onClick={() => fes(n.id, onReintentar)}
@@ -124,7 +130,7 @@ export function NotificacionsPage({ notificacions, loading, error, onRefresh, on
                 <button
                   onClick={() => setObert(obert === n.id ? null : n.id)}
                   aria-label={`Detall de ${n.Assumpte}`}
-                  className="p-1 text-gray-300 hover:text-gray-500"
+                  className="p-1 text-gray-500 hover:text-gray-700"
                 >
                   <ChevronDown size={16} className={obert === n.id ? 'rotate-180 transition-transform' : 'transition-transform'} />
                 </button>
