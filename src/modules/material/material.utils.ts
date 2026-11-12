@@ -1,12 +1,13 @@
 import { supabase } from '../../services/db'
 import type { MaterialPrestat } from './types'
+import { missatgeError } from '../../services/errorsDb'
 
 // Resol codis humans (MAT-001...) a uuid real, per als punts on cal creuar
 // amb prestec_items (que referencia material per id, no per codi).
 export async function getMaterialIdsByCodi(codis: string[]): Promise<Record<string, string>> {
   if (codis.length === 0) return {}
   const { data, error } = await supabase.from('material').select('id, codi').in('codi', codis)
-  if (error) throw new Error(`Error cercant material: ${error.message}`)
+  if (error) throw new Error(missatgeError(error, `Error cercant material`))
   const map: Record<string, string> = {}
   for (const row of (data ?? []) as { id: string; codi: string }[]) map[row.codi] = row.id
   return map
@@ -22,7 +23,7 @@ export async function adjustStock(adjustments: { ID: string; delta: number }[]):
     const materialId = idMap[ID]
     if (!materialId) continue
     const { error } = await supabase.rpc('adjust_material_stock', { p_material_id: materialId, p_delta: delta })
-    if (error) throw new Error(`Error ajustant estoc de ${ID}: ${error.message}`)
+    if (error) throw new Error(missatgeError(error, `Error ajustant estoc de ${ID}`))
   }
 }
 

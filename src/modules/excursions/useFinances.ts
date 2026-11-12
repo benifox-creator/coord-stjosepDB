@@ -4,6 +4,7 @@ import type { Finances, Autocar } from './finances.types'
 import { FINANCES_BUIDES } from './finances.types'
 import type { ParametresPreu } from './preu'
 import type { PreusImportats } from './pressupostImport.utils'
+import { missatgeError } from '../../services/errorsDb'
 
 interface FinancesRow {
   excursio_id: string
@@ -92,7 +93,7 @@ export const useFinances = create<FinancesState>((set, get) => ({
       ampa_cobreix_activitat: f.AmpaCobreixActivitat,
       cost_acompanyants: f.CostAcompanyants,
     })
-    if (error) throw new Error(`Error desant els costos: ${error.message}`)
+    if (error) throw new Error(missatgeError(error, `Error desant els costos`))
 
     // Els autocars es posen al dia per diferència i no esborrant-ho tot: si una
     // escriptura falla, el que ja hi havia no s'ha perdut pel camí. Mateixa idea
@@ -152,7 +153,7 @@ export const useFinances = create<FinancesState>((set, get) => ({
           ampa_cobreix_activitat: actual?.ampa_cobreix_activitat ?? false,
           cost_acompanyants: Number(actual?.cost_acompanyants ?? 0),
         })
-        if (error) throw new Error(`Error desant els costos: ${error.message}`)
+        if (error) throw new Error(missatgeError(error, `Error desant els costos`))
 
         if (dades.autocars.length > 0) {
           const vells = await getAll<AutocarRow>('excursio_autocars', 'id', { excursio_id: excursioId })

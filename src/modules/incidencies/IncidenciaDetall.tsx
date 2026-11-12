@@ -144,6 +144,13 @@ export function IncidenciaDetall({
           {/* Canvi d'estat */}
           <section>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Estat</p>
+            {/* Només qui gestiona incidències en pot canviar l'estat: la base de
+                dades ho rebutjaria igualment, millor no oferir-ho. */}
+            {!isCoordinador ? (
+              <div className="flex items-center px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                <Badge label={inc.Estat} variant="estat" />
+              </div>
+            ) : (
             <div className="relative">
               <button
                 onClick={() => setEstatObert((o) => !o)}
@@ -171,6 +178,7 @@ export function IncidenciaDetall({
                 </div>
               )}
             </div>
+            )}
           </section>
 
           {/* Informació */}
@@ -256,7 +264,7 @@ export function IncidenciaDetall({
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
                 <MessageSquare size={12} /> Comentaris
               </p>
-              {!editComentaris && (
+              {isCoordinador && !editComentaris && (
                 <button
                   onClick={() => setEditComentaris(true)}
                   className="text-xs text-primary hover:underline"
