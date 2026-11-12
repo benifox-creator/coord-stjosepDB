@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Settings, Plus, X, Loader2, AlertCircle, RotateCcw, Users, ChevronDown, Eye, Mail, Upload, Trash2 } from 'lucide-react'
+import { Settings, Plus, X, Loader2, AlertCircle, RotateCcw, Users, ChevronDown, Eye, Mail, Upload, Trash2, KeyRound } from 'lucide-react'
 import { useConfigStore, CONFIG_DEFAULTS, MODULS_VISIBILITAT, ROLS_VISIBILITAT, ROL_VIS_LABELS } from '../../store/configStore'
-import { useUsuarisStore } from '../../store/usuarisStore'
+import { useUsuarisStore, type ResultatAcces } from '../../store/usuarisStore'
 import { useAuthStore } from '../../store/authStore'
 import { ROLS, ROL_LABELS, ROL_COLORS, ROL_DESCRIPCIONS, ETAPES_USUARI } from '../usuaris/types'
 import type { Usuari, Rol, EtapaSubstitucio } from '../usuaris/types'
@@ -559,8 +559,9 @@ function UsuariRow({ usuari, esJoMateix }: { usuari: Usuari; esJoMateix: boolean
   )
 }
 
-function AfegirUsuariForm() {
+function AfegirUsuariForm({ onAvis }: { onAvis: (avis: { tipus: 'ok' | 'error'; text: string }) => void }) {
   const crear = useUsuarisStore((s) => s.crear)
+  const preparaAcces = useUsuarisStore((s) => s.preparaAcces)
   const [afegint, setAfegint] = useState(false)
   const [email, setEmail] = useState('')
   const [nom, setNom] = useState('')
@@ -588,6 +589,14 @@ function AfegirUsuariForm() {
     try {
       await crear(trimmed, nom.trim(), rol, etapa === '' ? null : etapa, potGestionarMaterial)
       tancar()
+      try {
+        const acces = await preparaAcces([trimmed])
+        onAvis(acces.errors.length === 0
+          ? { tipus: 'ok', text: `${trimmed} ja pot entrar amb el seu compte de Google.` }
+          : { tipus: 'error', text: `${trimmed} s’ha afegit, però no s’ha pogut preparar l’accés. Torna-ho a provar amb «Prepara l’accés».` })
+      } catch (err) {
+        onAvis({ tipus: 'error', text: `${trimmed} s’ha afegit, però no s’ha pogut preparar l’accés (${err instanceof Error ? err.message : 'error desconegut'}). Torna-ho a provar amb «Prepara l’accés».` })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error en desar.')
     } finally {
@@ -673,32 +682,69 @@ function AfegirUsuariForm() {
   )
 }
 
+function resumAcces(r: ResultatAcces): { tipus: 'ok' | 'error'; text: string } {
+  const parts = [
+    r.creats.length && `${r.creats.length} ${r.creats.length === 1 ? 'compte nou' : 'comptes nous'}`,
+    r.marcats.length && `${r.marcats.length} ${r.marcats.length === 1 ? 'compte actualitzat' : 'comptes actualitzats'}`,
+    r.jaFets.length && `${r.jaFets.length} ja ${r.jaFets.length === 1 ? 'estava' : 'estaven'} a punt`,
+  ].filter(Boolean)
+  const text = `Accés preparat: ${parts.join(', ') || 'res a fer'}.`
+  if (r.errors.length === 0) return { tipus: 'ok', text }
+  return { tipus: 'error', text: `${text} No s’ha pogut amb: ${r.errors.map((e) => e.email).join(', ')}. Torna-ho a provar d’aquí a una estona.` }
+}
+
 function GestioUsuaris({ emailActual }: { emailActual: string }) {
   const usuaris = useUsuarisStore((s) => s.usuaris)
   const loading = useUsuarisStore((s) => s.loading)
   const error = useUsuarisStore((s) => s.error)
   const loadAll = useUsuarisStore((s) => s.loadAll)
   const crear = useUsuarisStore((s) => s.crear)
+  const preparaAcces = useUsuarisStore((s) => s.preparaAcces)
   const [important, setImportant] = useState(false)
+  const [preparant, setPreparant] = useState(false)
+  const [avis, setAvis] = useState<{ tipus: 'ok' | 'error'; text: string } | null>(null)
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  async function handlePreparaTots() {
+    setPreparant(true)
+    setAvis(null)
+    try {
+      setAvis(resumAcces(await preparaAcces(usuaris.map((u) => u.Email))))
+    } catch (err) {
+      setAvis({ tipus: 'error', text: err instanceof Error ? err.message : 'No s’ha pogut preparar l’accés.' })
+    } finally {
+      setPreparant(false)
+    }
+  }
 
   // Alta seqüencial i no en paral·lel: amb un claustre són poques desenes de
   // files i la velocitat és igual, però així se sap exactament quina ha fallat
   // en lloc de quedar-se amb mitja importació feta i cap pista de quina part.
   async function handleImportar(dades: DadesUsuariImportat[]): Promise<ResultatImportacio> {
     const errors: ResultatImportacio['errors'] = []
-    let creats = 0
+    const creats: string[] = []
     for (const u of dades) {
       try {
         await crear(u.Email, u.Nom, u.Rol, u.Etapa, u.PotGestionarMaterial)
-        creats++
+        creats.push(u.Email)
       } catch (err) {
         errors.push({ correu: u.Email, error: err instanceof Error ? err.message : 'Error desconegut' })
       }
     }
+    // Sense això, els que acaben d'entrar a la llista encara no podrien
+    // iniciar sessió. Si falla, surten com a error perquè no passi per alt.
+    if (creats.length > 0) {
+      try {
+        const acces = await preparaAcces(creats)
+        for (const e of acces.errors) errors.push({ correu: e.email, error: 'Afegit, però sense accés preparat. Torna-ho a provar amb «Prepara l’accés».' })
+      } catch (err) {
+        const motiu = err instanceof Error ? err.message : 'error desconegut'
+        for (const correu of creats) errors.push({ correu, error: `Afegit, però sense accés preparat (${motiu}). Torna-ho a provar amb «Prepara l’accés».` })
+      }
+    }
     await loadAll()
-    return { creats, errors }
+    return { creats: creats.length, errors }
   }
 
   if (loading && usuaris.length === 0) {
@@ -715,6 +761,16 @@ function GestioUsuaris({ emailActual }: { emailActual: string }) {
         <p className="text-xs text-gray-400 leading-relaxed">
           Afegeix un usuari abans que iniciï sessió per assignar-li el perfil correcte des del primer moment.
         </p>
+        <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={handlePreparaTots}
+          disabled={preparant || usuaris.length === 0}
+          title="Crea el compte de Google a qui encara no el té i li dona permís per entrar. No canvia res a qui ja pot entrar."
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        >
+          {preparant ? <Loader2 size={13} className="animate-spin" /> : <KeyRound size={13} />} Prepara l’accés
+        </button>
         <button
           type="button"
           onClick={() => setImportant(true)}
@@ -722,7 +778,15 @@ function GestioUsuaris({ emailActual }: { emailActual: string }) {
         >
           <Upload size={13} /> Importa d’Excel
         </button>
+        </div>
       </div>
+      {avis && (
+        <p className={`flex items-start gap-1.5 text-xs rounded-lg px-3 py-2 ${avis.tipus === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {avis.tipus === 'error' && <AlertCircle size={13} className="mt-px shrink-0" />}
+          <span className="flex-1">{avis.text}</span>
+          <button type="button" onClick={() => setAvis(null)} className="opacity-60 hover:opacity-100"><X size={12} /></button>
+        </p>
+      )}
       {important && (
         <ImportarUsuarisModal
           usuarisExistents={usuaris}
@@ -742,7 +806,7 @@ function GestioUsuaris({ emailActual }: { emailActual: string }) {
           </>
         )}
       </div>
-      <AfegirUsuariForm />
+      <AfegirUsuariForm onAvis={setAvis} />
     </div>
   )
 }

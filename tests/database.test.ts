@@ -1700,3 +1700,13 @@ describe('correus lliures', () => {
     }
   })
 })
+
+describe('es_coordinador', () => {
+  it('diu si qui crida és coordinador, i a ningú més', async () => {
+    const casos: [string, boolean][] = [['admin@stjosep.org', true], ['director@stjosep.org', false], ['teacher@stjosep.org', false], ['nou@stjosep.org', false]]
+    for (const [email, esperat] of casos) {
+      await asUser(email)
+      expect((await db.query<{ es_coordinador: boolean }>('select public.es_coordinador()')).rows[0].es_coordinador).toBe(esperat)
+    }
+  })
+})
