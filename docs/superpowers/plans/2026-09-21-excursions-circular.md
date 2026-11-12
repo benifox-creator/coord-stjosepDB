@@ -622,7 +622,7 @@ El logo del centre és dins la plantilla de Word antiga. Es guarda al projecte p
 
 ```bash
 cd /tmp && rm -rf plantilla && mkdir plantilla && cd plantilla
-unzip -q "/Users/andresmorenoarroyo/Desktop/ClaudeProjectos/Coordinacion Digital/excursioplantilla4.dotx"
+unzip -q "<carpeta del projecte>/excursioplantilla4.dotx"
 ls -la word/media/image1.jpeg    # ~22 KB
 ```
 
