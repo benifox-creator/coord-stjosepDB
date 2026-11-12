@@ -12,7 +12,7 @@ function excel(files: unknown[][], capçaleres: readonly string[] = CAPÇALERES_
 }
 
 const existent: Usuari = {
-  id: '1', Email: 'amoreno@stjosep.org', Nom: 'Andrés', Rol: 'coordinador',
+  id: '1', Email: 'coordinador@stjosep.org', Nom: 'Coordinació', Rol: 'coordinador',
   Etapa: null, PotGestionarMaterial: false, PotGestionarExcursions: false,
   PotGestionarCostosExcursions: false, PotRedactarConeixement: false, Data_alta: '2026-09-01',
 }
@@ -52,7 +52,7 @@ describe('importació d’usuaris des d’Excel', () => {
   })
 
   it('salta els correus que ja estan donats d’alta, sense marcar-los com a error', async () => {
-    const [fila] = await parsejaExcelUsuaris(excel([['AMORENO@stjosep.org', 'Andrés', 'Professorat', '', '']]), [existent])
+    const [fila] = await parsejaExcelUsuaris(excel([['COORDINADOR@stjosep.org', 'Coordinació', 'Professorat', '', '']]), [existent])
     expect(fila.valid).toBe(false)
     expect(fila.jaExisteix).toBe(true)
     expect(fila.error).toBeUndefined()

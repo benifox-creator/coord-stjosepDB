@@ -11,50 +11,6 @@ import { useConfigStore } from '../../store/configStore'
 import type { Incidencia, PrioritatIncidencia } from './types'
 import { formatDatetime, calcularDiesOberts } from './incidencies.utils'
 
-// ── Mock temporal (es substituirà per dades reals al punt 6) ──────────────────
-const MOCK: Incidencia[] = [
-  {
-    Ticket: 'INC-001', 'Marca de temps': '2026-06-20T08:30:00Z', Estat: 'Oberta',
-    Prioritat: 'Alta', Reporter: 'professor1@stjosep.org', 'Tipus de problema': 'Maquinari',
-    Localització: 'Aula 55', Dispositiu: 'INV-012 HP EliteBook — Aula 55',
-    'Descripció detallada': 'El portàtil no arrenca. Sembla que és la bateria.',
-    'Assignat a': 'amoreno@stjosep.org', 'Data Resolució': '', 'Dies Tasca Oberta': '',
-    Comentaris: '', Notificat: 'false', id: "mock-0",
-  },
-  {
-    Ticket: 'INC-002', 'Marca de temps': '2026-06-21T10:15:00Z', Estat: 'En curs',
-    Prioritat: 'Mitjana', Reporter: 'professor2@stjosep.org', 'Tipus de problema': 'Xarxa',
-    Localització: 'Sala de Professors', Dispositiu: 'Altre',
-    'Descripció detallada': 'No hi ha connexió a internet des de primera hora del matí.',
-    'Assignat a': 'amoreno@stjosep.org', 'Data Resolució': '', 'Dies Tasca Oberta': '',
-    Comentaris: 'Revisada la connexió al switch principal.', Notificat: 'false', id: "mock-1",
-  },
-  {
-    Ticket: 'INC-003', 'Marca de temps': '2026-06-19T09:00:00Z', Estat: 'Tancada',
-    Prioritat: 'Baixa', Reporter: 'professor3@stjosep.org', 'Tipus de problema': 'Programari',
-    Localització: 'BAXT-1A', Dispositiu: 'INV-005 iMac — BAXT-1A',
-    'Descripció detallada': 'El navegador no obre certs webs de la plataforma Moodle.',
-    'Assignat a': '', 'Data Resolució': '2026-06-20T11:00:00Z', 'Dies Tasca Oberta': '1',
-    Comentaris: 'Esborrat caché i cookies. Solucionat.', Notificat: 'true', id: "mock-2",
-  },
-  {
-    Ticket: 'INC-004', 'Marca de temps': '2026-06-22T07:45:00Z', Estat: 'Oberta',
-    Prioritat: 'Alta', Reporter: 'professor4@stjosep.org', 'Tipus de problema': 'Projector/Pantalla',
-    Localització: 'Aula 32', Dispositiu: 'Projector Aula 32',
-    'Descripció detallada': 'El projector no detecta el cable HDMI del portàtil del professor.',
-    'Assignat a': '', 'Data Resolució': '', 'Dies Tasca Oberta': '',
-    Comentaris: '', Notificat: 'false', id: "mock-3",
-  },
-  {
-    Ticket: 'INC-005', 'Marca de temps': '2026-06-18T14:20:00Z', Estat: 'Tancada',
-    Prioritat: 'Mitjana', Reporter: 'professor5@stjosep.org', 'Tipus de problema': 'Impressora',
-    Localització: 'Secretaria', Dispositiu: 'Impressora HP LaserJet',
-    'Descripció detallada': 'La impressora fa un soroll estrany i no imprimeix correctament.',
-    'Assignat a': 'amoreno@stjosep.org', 'Data Resolució': '2026-06-19T10:00:00Z', 'Dies Tasca Oberta': '1',
-    Comentaris: 'Canviat el tòner. Funcionant.', Notificat: 'true', id: "mock-4",
-  },
-]
-
 const PRIORITATS: Array<PrioritatIncidencia | ''> = ['', 'Alta', 'Mitjana', 'Baixa']
 function SkeletonRow() {
   return (
@@ -81,7 +37,7 @@ export function IncidenciesPage({
   onNova,
   onVeureDetall,
   loading = false,
-  incidencies = MOCK,
+  incidencies = [],
   error = null,
   onRefresh,
 }: Props) {

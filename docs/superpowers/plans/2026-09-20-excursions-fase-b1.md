@@ -119,7 +119,7 @@ console.log(`${excursions.length} excursions desades`)
 
 ```bash
 mkdir -p tests/fixtures scripts
-node scripts/extreu-excursions-excel.mjs "/Users/andresmorenoarroyo/Desktop/ClaudeProjectos/Coordinacion Digital/Excursió Curs.xlsm"
+node scripts/extreu-excursions-excel.mjs "<carpeta del projecte>/Excursió Curs.xlsm"
 ```
 
 Esperat: diu quantes n'ha desat. **Si no en surten entre 40 i 48, atura't**: vol dir que les columnes no són les que es van verificar i la resta del pla es basa en dades equivocades.

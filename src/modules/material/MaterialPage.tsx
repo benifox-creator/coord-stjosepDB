@@ -9,15 +9,6 @@ import { useValorsFiltres } from '../../components/filtres/useValorsFiltres'
 import { useConfigStore } from '../../store/configStore'
 import type { ItemMaterial } from './types'
 
-const MOCK: ItemMaterial[] = [
-  { ID: 'MAT-001', Nom: 'Cable HDMI 2m', Categoria: 'Cable', Descripció: 'Cables HDMI estàndard per a projectors i monitors', Quantitat_total: 20, Quantitat_disponible: 15, Ubicació: 'Armari TIC', Notes: '', id: "mock-0" },
-  { ID: 'MAT-002', Nom: 'Adaptador VGA→HDMI', Categoria: 'Adaptador', Descripció: '', Quantitat_total: 8, Quantitat_disponible: 6, Ubicació: 'Armari TIC', Notes: '', id: "mock-1" },
-  { ID: 'MAT-003', Nom: 'Ratolí sense fils', Categoria: 'Perifèric', Descripció: 'Ratolins USB sense fils', Quantitat_total: 12, Quantitat_disponible: 10, Ubicació: 'Armari TIC', Notes: '', id: "mock-2" },
-  { ID: 'MAT-004', Nom: 'Teclat USB', Categoria: 'Perifèric', Descripció: '', Quantitat_total: 5, Quantitat_disponible: 4, Ubicació: 'Armari TIC', Notes: '', id: "mock-3" },
-  { ID: 'MAT-005', Nom: 'Pendrive 32GB', Categoria: 'Emmagatzematge', Descripció: '', Quantitat_total: 15, Quantitat_disponible: 12, Ubicació: 'Calaix Coordinació', Notes: '', id: "mock-4" },
-  { ID: 'MAT-006', Nom: 'Puntero làser', Categoria: 'Projecció', Descripció: '', Quantitat_total: 6, Quantitat_disponible: 5, Ubicació: 'Armari TIC', Notes: '', id: "mock-5" },
-]
-
 function SkeletonRow() {
   return (
     <tr className="border-b border-gray-100">
@@ -57,7 +48,7 @@ export function MaterialPage({
   onNou,
   onVeureDetall,
   loading = false,
-  items = MOCK,
+  items = [],
   error = null,
   onRefresh,
 }: Props) {

@@ -3,7 +3,7 @@ import { motiuRebuig } from './auth'
 
 describe('motiu de rebuig d’un inici de sessió', () => {
   it('accepta un compte del centre', () => {
-    expect(motiuRebuig('amoreno@stjosep.org')).toBeNull()
+    expect(motiuRebuig('coordinador@stjosep.org')).toBeNull()
     expect(motiuRebuig('  Prova1@StJosep.ORG  ')).toBeNull()
   })
 
