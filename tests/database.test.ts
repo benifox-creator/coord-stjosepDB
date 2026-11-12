@@ -485,7 +485,7 @@ describe('permission and transaction regressions', () => {
     expect(n.body).toContain('Data de resolució: 15/09/2026')
     expect(n.body).toContain('No es veu la imatge')
     expect(n.body).toContain('Resolució:\nS’ha canviat el cable HDMI')
-    expect(n.body).toContain('Coordinació Digital\nEscola Sant Josep Obrer')
+    expect(n.body).toContain('Coordinació Digital\nSant Josep Obrer')
     expect(n.body).not.toContain('Dispositiu:')
   })
   it('does not let closing an incident redirect its notification to an arbitrary reporter', async () => {
