@@ -31,8 +31,19 @@ async function rpc(name:string,args:Record<string,unknown>={}) {
   return text ? JSON.parse(text) : null
 }
 interface Notification { id:string;recipient:string;subject:string;body:string;claim_token:string }
+// Dues vies poden demanar l'enviament: el cron de GitHub, amb el secret de la
+// funció, i pg_cron des de la base de dades, amb el que hi ha desat a Vault
+// (migració 202611120002). Si coincideixen no es repeteix res: la cua reserva
+// cada correu amb `for update skip locked`.
+async function autoritzat(request: Request) {
+  if (request.method!=='POST') return false
+  const secret = request.headers.get('x-scheduler-secret') ?? ''
+  if (!secret) return false
+  if (secret===Deno.env.get('NOTIFICATION_SCHEDULER_SECRET')) return true
+  try { return (await rpc('valida_secret_cron',{p_secret:secret}))===true } catch { return false }
+}
 Deno.serve(async request => {
-  if (request.method!=='POST' || request.headers.get('x-scheduler-secret')!==env('NOTIFICATION_SCHEDULER_SECRET')) return new Response('Unauthorized',{status:401})
+  if (!(await autoritzat(request))) return new Response('Unauthorized',{status:401})
   try {
     const token = await gmailToken()
     const batch = await rpc('claim_notifications') as Notification[]
