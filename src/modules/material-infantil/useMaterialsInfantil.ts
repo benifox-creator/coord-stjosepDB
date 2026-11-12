@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase, getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
 import type { MaterialInfantil, MaterialInfantilFormData } from './types'
+import { missatgeError } from '../../services/errorsDb'
 import {
   TABLE_MATERIALS, rowToMaterial, materialToInsert, materialToUpdate, type MaterialInfantilRow,
 } from './materialInfantil.utils'
@@ -56,7 +57,7 @@ export const useMaterialsInfantil = create<MaterialsInfantilState>((set, get) =>
     const email = (useAuthStore.getState().user?.email ?? '').toLowerCase()
     const payload = dades.map((d) => materialToInsert({ ...d, Creat_per: email }))
     const { data, error } = await supabase.from(TABLE_MATERIALS).insert(payload).select()
-    if (error) throw new Error(`Error important materials: ${error.message}`)
+    if (error) throw new Error(missatgeError(error, `Error important materials`))
     const nous = (data as MaterialInfantilRow[]).map(rowToMaterial)
     set((s) => ({ materials: [...s.materials, ...nous] }))
   },

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { auth } from './firebase'
+import { missatgeError } from './errorsDb'
 
 export const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY, {
   accessToken: async () => {
@@ -19,7 +20,7 @@ export async function getAll<T>(table: string, orderBy = 'id', filters: ReadFilt
     let query = supabase.from(table).select('*', { count: 'exact' }).match(filters).order(orderBy)
     if (orderBy !== primaryKey) query = query.order(primaryKey)
     const { data, error, count } = await query.range(rows.length, rows.length + pageSize - 1)
-    if (error) throw new Error(`Error llegint ${table}: ${error.message}`)
+    if (error) throw new Error(missatgeError(error, `Error llegint ${table}`))
     if (count === null) throw new Error(`No es pot verificar la lectura completa de ${table}.`)
     rows.push(...(data ?? []) as T[])
     if (auth.currentUser?.uid !== identity) throw new Error('La sessió ha canviat.')
@@ -30,24 +31,24 @@ export async function getAll<T>(table: string, orderBy = 'id', filters: ReadFilt
 
 export async function insertRow<T>(table: string, data: Record<string, unknown>): Promise<T> {
   const { data: row, error } = await supabase.from(table).insert(data).select().single()
-  if (error) throw new Error(`Error afegint registre a ${table}: ${error.message}`)
+  if (error) throw new Error(missatgeError(error, `Error afegint registre a ${table}`))
   return row as T
 }
 
 export async function updateRowById<T>(table: string, id: string, data: Record<string, unknown>): Promise<T> {
   const { data: row, error } = await supabase.from(table).update(data).eq('id', id).select().single()
-  if (error) throw new Error(`Error actualitzant registre a ${table}: ${error.message}`)
+  if (error) throw new Error(missatgeError(error, `Error actualitzant registre a ${table}`))
   return row as T
 }
 
 export async function deleteRowById(table: string, id: string): Promise<void> {
   const { data, error } = await supabase.from(table).delete().eq('id', id).select('id')
-  if (error) throw new Error(`Error eliminant registre de ${table}: ${error.message}`)
+  if (error) throw new Error(missatgeError(error, `Error eliminant registre de ${table}`))
   if (!data?.length) throw new Error('El registre ja no existeix o no tens permís per eliminar-lo.')
 }
 
 export async function callRpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(name, args)
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(missatgeError(error))
   return data as T
 }

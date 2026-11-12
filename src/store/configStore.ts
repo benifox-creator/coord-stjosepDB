@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { getAll, supabase } from '../services/db'
 import { schoolYear } from '../utils/schoolCalendar'
+import { missatgeError } from '../services/errorsDb'
 
 const TABLE = 'config'
 
@@ -237,7 +238,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   async update(clau, valors) {
     const { error } = await supabase.from(TABLE).upsert({ clau, valors })
-    if (error) throw new Error(`Error desant configuració: ${error.message}`)
+    if (error) throw new Error(missatgeError(error, `Error desant configuració`))
     set((s) => ({ config: { ...s.config, [clau]: valors } }))
   },
 }))
