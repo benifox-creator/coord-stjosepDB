@@ -1710,3 +1710,18 @@ describe('es_coordinador', () => {
     }
   })
 })
+
+describe('disparador de correus des de la base de dades', () => {
+  it('la contrasenya del disparador només la pot comprovar el servidor', async () => {
+    await db.exec('reset role')
+    const pot = async (rol: string) => (await db.query<{ p: boolean }>(
+      `select has_function_privilege('${rol}', 'public.valida_secret_cron(text)', 'execute') p`)).rows[0].p
+    expect(await pot('authenticated')).toBe(false)
+    expect(await pot('anon')).toBe(false)
+    expect(await pot('service_role')).toBe(true)
+  })
+  it('ningú no pot llançar l’enviament des de l’aplicació', async () => {
+    await asUser('admin@stjosep.org')
+    await expect(db.query('select app_private.dispara_correus()')).rejects.toThrow(/permission denied/)
+  })
+})
