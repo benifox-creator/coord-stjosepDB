@@ -473,6 +473,21 @@ describe('permission and transaction regressions', () => {
     expect((await db.query<{notificat:string;reporter:string}>('select notificat,reporter from public.incidencies')).rows[0]).toEqual({notificat:'queued',reporter:'admin@stjosep.org'})
     expect((await db.query("select * from public.notifications where status='pending'")).rows).toHaveLength(1)
   })
+  it('el correu de tancament inclou les dades, la resolució i la signatura', async () => {
+    await asUser('teacher@stjosep.org')
+    const incident=(await db.query<{id:string}>("insert into public.incidencies(marca_temps,tipus_problema,localitzacio,descripcio_detallada) values('2026-09-14 09:00','Projector','Aula 25','No es veu la imatge') returning id")).rows[0]
+    await asUser('admin@stjosep.org')
+    await db.query("update public.incidencies set estat='Tancada',data_resolucio='15/09/2026',comentaris='S’ha canviat el cable HDMI' where id=$1",[incident.id])
+    const n=(await db.query<{subject:string;body:string}>("select subject,body from public.notifications where status='pending'")).rows[0]
+    expect(n.subject).toMatch(/^Incidència INC-\d+ resolta$/)
+    expect(n.body).toContain('Bon dia,')
+    expect(n.body).toContain('Localització: Aula 25')
+    expect(n.body).toContain('Data de resolució: 15/09/2026')
+    expect(n.body).toContain('No es veu la imatge')
+    expect(n.body).toContain('Resolució:\nS’ha canviat el cable HDMI')
+    expect(n.body).toContain('Coordinació Digital\nEscola Sant Josep Obrer')
+    expect(n.body).not.toContain('Dispositiu:')
+  })
   it('does not let closing an incident redirect its notification to an arbitrary reporter', async () => {
     await asUser('teacher@stjosep.org')
     const incident=(await db.query<{id:string}>("insert into public.incidencies(marca_temps,tipus_problema) values('2026-09-14 09:00','Xarxa') returning id")).rows[0]
