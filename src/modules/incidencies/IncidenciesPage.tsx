@@ -43,7 +43,10 @@ export function IncidenciesPage({
 }: Props) {
   const tipus = useConfigStore((s) => s.getValues('incidencies.tipus'))
   const [cerca, setCerca] = useState('')
-  const { valors, canvia, esborra } = useValorsFiltres({ estat: '', prioritat: '', tipus: '' })
+  const { valors, canvia, esborra } = useValorsFiltres(
+    { estat: '', prioritat: '', tipus: '' },
+    { estat: 'Oberta', prioritat: '', tipus: '' },
+  )
   const definicions: DefinicioFiltre[] = [
     { clau: 'estat', label: 'Estat', tipus: 'select', totes: 'Tots', opcions: opcions(['Oberta', 'En curs', 'Tancada']) },
     { clau: 'prioritat', label: 'Prioritat', tipus: 'select', totes: 'Totes', opcions: opcions(PRIORITATS.slice(1) as string[]) },
