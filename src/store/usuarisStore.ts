@@ -67,6 +67,17 @@ export function potAprovarAbsencies(rol: Rol | null): boolean {
   return rol === 'coordinador' || rol === 'direccio' || rol === 'titular'
 }
 
+// ---------- Accés a Firebase ----------
+
+/** Resultat de preparar l'accés a Firebase (funció `provisiona-usuaris`). */
+export interface ResultatAcces {
+  creats: string[]
+  marcats: string[]
+  jaFets: string[]
+  descartats: string[]
+  errors: { email: string; error: string }[]
+}
+
 // ---------- Store ----------
 
 interface UsuarisState {
@@ -82,6 +93,7 @@ interface UsuarisState {
   updateRol: (usuari: Usuari, nouRol: Rol) => Promise<void>
   updateEtapa: (usuari: Usuari, novaEtapa: EtapaSubstitucio | null) => Promise<void>
   eliminar: (usuari: Usuari) => Promise<void>
+  preparaAcces: (emails: string[]) => Promise<ResultatAcces>
   updatePotGestionarMaterial: (usuari: Usuari, valor: boolean) => Promise<void>
   updatePotGestionarExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
   updatePotGestionarCostosExcursions: (usuari: Usuari, valor: boolean) => Promise<void>
@@ -161,6 +173,22 @@ export const useUsuarisStore = create<UsuarisState>((set) => ({
     set((s) => ({
       usuaris: s.usuaris.map((u) => (u.id === usuari.id ? { ...u, Rol: nouRol } : u)),
     }))
+  },
+
+  // Sense el claim de Firebase, Supabase rebutja la persona encara que sigui a
+  // la llista. La funció del servidor el posa (i crea el compte si cal).
+  async preparaAcces(emails) {
+    const { data, error } = await supabase.functions.invoke<ResultatAcces & { error?: string }>('provisiona-usuaris', {
+      body: { emails },
+    })
+    if (error) {
+      let missatge = 'No s’ha pogut preparar l’accés.'
+      const context = (error as { context?: Response }).context
+      try { const cos = await context?.json(); if (cos?.error) missatge = cos.error } catch { /* cos no llegible */ }
+      throw new Error(missatge, { cause: error })
+    }
+    if (!data) throw new Error('No s’ha pogut preparar l’accés.')
+    return data
   },
 
   // Treure la fila és el que treu l'accés: sense fila a `usuaris`, l'app mostra
