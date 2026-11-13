@@ -473,6 +473,13 @@ describe('permission and transaction regressions', () => {
     expect((await db.query<{notificat:string;reporter:string}>('select notificat,reporter from public.incidencies')).rows[0]).toEqual({notificat:'queued',reporter:'admin@stjosep.org'})
     expect((await db.query("select * from public.notifications where status='pending'")).rows).toHaveLength(1)
   })
+  it('qui gestiona incidències en pot canviar la prioritat', async () => {
+    await asUser('teacher@stjosep.org')
+    const incident=(await db.query<{id:string}>("insert into public.incidencies(marca_temps,tipus_problema) values('2026-09-14 09:00','Xarxa') returning id")).rows[0]
+    await asUser('admin@stjosep.org')
+    await db.query("update public.incidencies set prioritat='Alta' where id=$1",[incident.id])
+    expect((await db.query<{prioritat:string}>('select prioritat from public.incidencies where id=$1',[incident.id])).rows[0].prioritat).toBe('Alta')
+  })
   it('el correu de tancament inclou les dades, la resolució i la signatura', async () => {
     await asUser('teacher@stjosep.org')
     const incident=(await db.query<{id:string}>("insert into public.incidencies(marca_temps,tipus_problema,localitzacio,descripcio_detallada) values('2026-09-14 09:00','Projector','Aula 25','No es veu la imatge') returning id")).rows[0]

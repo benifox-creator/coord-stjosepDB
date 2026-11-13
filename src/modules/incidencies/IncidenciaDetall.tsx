@@ -5,15 +5,17 @@ import {
 } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { formatDatetime, formatDate, calcularDiesOberts } from './incidencies.utils'
-import type { Incidencia, EstatIncidencia } from './types'
+import type { Incidencia, EstatIncidencia, PrioritatIncidencia } from './types'
 
 const ESTATS: EstatIncidencia[] = ['Oberta', 'En curs', 'Tancada']
+const PRIORITATS: PrioritatIncidencia[] = ['Alta', 'Mitjana', 'Baixa']
 
 interface Props {
   incidencia: Incidencia
   onClose: () => void
   isCoordinador?: boolean
   onCanviarEstat: (inc: Incidencia, estat: EstatIncidencia) => Promise<{ emailProgramat?: boolean }>
+  onCanviarPrioritat?: (inc: Incidencia, prioritat: PrioritatIncidencia) => Promise<void>
   onAssignar: (inc: Incidencia, assignat: string) => Promise<void>
   onEditarComentaris: (inc: Incidencia, comentaris: string) => Promise<void>
   onEliminar?: (inc: Incidencia) => Promise<void>
@@ -25,6 +27,7 @@ export function IncidenciaDetall({
   onClose,
   isCoordinador = false,
   onCanviarEstat,
+  onCanviarPrioritat,
   onAssignar,
   onEditarComentaris,
   onEliminar,
@@ -60,6 +63,19 @@ export function IncidenciaDetall({
     } finally {
       setSaving(null)
       setEstatObert(false)
+    }
+  }
+
+  async function handleCanviarPrioritat(prioritat: PrioritatIncidencia) {
+    if (prioritat === inc.Prioritat || !onCanviarPrioritat) return
+    setActionError(null)
+    setSaving('prioritat')
+    try {
+      await onCanviarPrioritat(inc, prioritat)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No s’ha pogut desar el canvi')
+    } finally {
+      setSaving(null)
     }
   }
 
@@ -178,6 +194,33 @@ export function IncidenciaDetall({
                 </div>
               )}
             </div>
+            )}
+          </section>
+
+          {/* Prioritat: com l'estat, només la canvia qui gestiona incidències. */}
+          <section>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Prioritat</p>
+            {!isCoordinador || !onCanviarPrioritat ? (
+              <div className="flex items-center px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                <Badge label={inc.Prioritat} variant="prioritat" />
+              </div>
+            ) : (
+              <div role="radiogroup" aria-label="Prioritat" className="flex gap-2">
+                {PRIORITATS.map((p) => (
+                  <button
+                    key={p}
+                    role="radio"
+                    aria-checked={p === inc.Prioritat}
+                    onClick={() => handleCanviarPrioritat(p)}
+                    disabled={saving === 'prioritat'}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors disabled:opacity-60 ${
+                      p === inc.Prioritat ? 'border-gray-400 bg-gray-50' : 'border-gray-200 opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <Badge label={p} variant="prioritat" />
+                  </button>
+                ))}
+              </div>
             )}
           </section>
 

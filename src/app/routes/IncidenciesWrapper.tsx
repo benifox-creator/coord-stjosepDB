@@ -8,7 +8,7 @@ import { useInventari } from '../../modules/inventari/useInventari'
 import { useUsuarisStore, potGestionar, potEliminar } from '../../store/usuarisStore'
 
 export default function IncidenciesWrapper() {
-  const { incidencies, loading, error, crear, canviarEstat, assignar, editarComentaris, eliminar, refetch } = useIncidencies()
+  const { incidencies, loading, error, crear, canviarEstat, canviarPrioritat, assignar, editarComentaris, eliminar, refetch } = useIncidencies()
   const { items: inventariItems } = useInventari()
   const inventariPerSelector = inventariItems.map((item) => ({ id: item.ID, nom: item.Nom, ubicacio: item.Ubicació }))
   const rol = useUsuarisStore((s) => s.rol)
@@ -21,6 +21,11 @@ export default function IncidenciesWrapper() {
     const result = await canviarEstat(inc, estat)
     setSeleccionada((prev) => prev ? { ...prev, Estat: estat } : null)
     return result
+  }
+
+  async function handleCanviarPrioritat(inc: Incidencia, prioritat: Parameters<typeof canviarPrioritat>[1]) {
+    await canviarPrioritat(inc, prioritat)
+    setSeleccionada((prev) => prev ? { ...prev, Prioritat: prioritat } : null)
   }
 
   return (
@@ -48,6 +53,7 @@ export default function IncidenciesWrapper() {
           isCoordinador={pGestionar}
           potEliminar={pEliminar}
           onCanviarEstat={handleCanviarEstat}
+          onCanviarPrioritat={handleCanviarPrioritat}
           onAssignar={assignar}
           onEditarComentaris={editarComentaris}
           onEliminar={async (inc) => { await eliminar(inc); setSeleccionada(null) }}
