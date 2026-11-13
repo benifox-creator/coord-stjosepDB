@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getAll, insertRow, updateRowById, deleteRowById } from '../../services/db'
 import { useAuthStore } from '../../store/authStore'
 import { formatTimestamp, calcularDiesOberts } from './incidencies.utils'
-import type { Incidencia, EstatIncidencia, IncidenciaFormData } from './types'
+import type { Incidencia, EstatIncidencia, PrioritatIncidencia, IncidenciaFormData } from './types'
 
 const TABLE = 'incidencies'
 
@@ -103,6 +103,11 @@ export function useIncidencies() {
     return { emailProgramat: row.notificat === 'queued' }
   }
 
+  async function canviarPrioritat(inc: Incidencia, prioritat: PrioritatIncidencia): Promise<void> {
+    await updateRowById(TABLE, inc.id, { prioritat })
+    await fetchData()
+  }
+
   async function assignar(inc: Incidencia, assignat: string): Promise<void> {
     await updateRowById(TABLE, inc.id, { assignat_a: assignat })
     await fetchData()
@@ -118,5 +123,5 @@ export function useIncidencies() {
     await fetchData()
   }
 
-  return { incidencies, loading, error, crear, canviarEstat, assignar, editarComentaris, eliminar, refetch: fetchData }
+  return { incidencies, loading, error, crear, canviarEstat, canviarPrioritat, assignar, editarComentaris, eliminar, refetch: fetchData }
 }
